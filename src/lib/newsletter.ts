@@ -176,8 +176,7 @@ export async function saveSubscribers(subscribers: NewsletterSubscriber[]): Prom
  * Fetch subscribers from Supabase database table and cloud storage, merged seamlessly with local cache
  */
 export async function syncSubscribersFromCloud(): Promise<NewsletterSubscriber[]> {
-  const localList = getStoredSubscribers();
-  if (!supabase) return localList;
+  if (!supabase) return [];
 
   // 1. Direct query to Supabase Database table 'newsletter_subscribers'
   try {
@@ -185,6 +184,9 @@ export async function syncSubscribersFromCloud(): Promise<NewsletterSubscriber[]
       .from('newsletter_subscribers')
       .select('*')
       .order('created_at', { ascending: false });
+
+    console.log("Supabase Subscribers Fetch Result:", dbData);
+    console.log("Supabase Subscribers Fetch Error:", dbErr);
 
     if (!dbErr && Array.isArray(dbData)) {
       const dbList: NewsletterSubscriber[] = dbData
@@ -199,35 +201,16 @@ export async function syncSubscribersFromCloud(): Promise<NewsletterSubscriber[]
           tags: Array.isArray(row.tags) ? row.tags : ['مشترك معتمد'],
         }));
 
-      // Merge by unique email
-      const emailMap = new Map<string, NewsletterSubscriber>();
-      dbList.forEach((s) => emailMap.set(s.email.toLowerCase(), s));
-      localList.forEach((s) => {
-        if (!emailMap.has(s.email.toLowerCase())) {
-          emailMap.set(s.email.toLowerCase(), s);
-          // Sync any missing local subscriber to the remote database
-          supabase?.from('newsletter_subscribers').insert({
-            email: s.email,
-            created_at: s.subscribed_at,
-            source: s.source,
-            status: s.status,
-          }).then(() => {});
-        }
-      });
-
-      const merged = Array.from(emailMap.values());
       if (typeof window !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(dbList));
       }
-      // Backup to cloud storage
-      saveSubscribers(merged);
-      return merged;
+      return dbList;
     }
   } catch (dbError) {
-    console.warn('Supabase DB table query fallback to storage:', dbError);
+    console.log("Supabase Subscribers Fetch Error:", dbError);
   }
 
-  // 2. Query Supabase Cloud Storage config/newsletter_subscribers.json
+  // 2. Query Supabase Cloud Storage config/newsletter_subscribers.json if table missing
   try {
     const { data: pubData } = supabase.storage.from('product-images').getPublicUrl(SUPABASE_FILE_PATH);
     if (pubData?.publicUrl) {
@@ -235,27 +218,24 @@ export async function syncSubscribersFromCloud(): Promise<NewsletterSubscriber[]
       if (res.ok) {
         const cloudList: NewsletterSubscriber[] = await res.json();
         if (Array.isArray(cloudList)) {
-          const emailMap = new Map<string, NewsletterSubscriber>();
-          cloudList.forEach((s) => {
-            if (s && s.email) emailMap.set(s.email.toLowerCase().trim(), s);
-          });
-          localList.forEach((s) => {
-            if (s && s.email && !emailMap.has(s.email.toLowerCase().trim())) {
-              emailMap.set(s.email.toLowerCase().trim(), s);
-            }
-          });
-          const merged = Array.from(emailMap.values());
+          const list = cloudList
+            .filter((s) => s && s.email)
+            .map((s) => ({
+              ...s,
+              email: s.email.trim().toLowerCase(),
+            }));
           if (typeof window !== 'undefined') {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
           }
-          return merged;
+          return list;
         }
       }
     }
   } catch (err) {
     console.warn('Could not sync subscribers from cloud storage:', err);
   }
-  return localList;
+
+  return [];
 }
 
 /**

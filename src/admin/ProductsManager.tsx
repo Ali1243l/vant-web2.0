@@ -455,11 +455,17 @@ export const ProductsManager: React.FC = () => {
                       <td className="py-4.5 px-6">
                         <div className="flex items-center gap-4">
                           <div className="relative shrink-0">
-                            <img
-                              src={p.imageUrl}
-                              alt={p.name}
-                              className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover bg-slate-800 border border-slate-700/80 shadow-md group-hover:scale-[1.02] transition-transform"
-                            />
+                            {p.imageUrl?.trim() ? (
+                              <img
+                                src={p.imageUrl}
+                                alt={p.name}
+                                className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover bg-slate-800 border border-slate-700/80 shadow-md group-hover:scale-[1.02] transition-transform"
+                              />
+                            ) : (
+                              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-slate-800 border border-slate-700/80 flex items-center justify-center text-slate-500 shadow-md">
+                                <Package className="w-6 h-6" />
+                              </div>
+                            )}
                             {hasOffer && (
                               <span
                                 onClick={(e) => {
@@ -741,12 +747,16 @@ export const ProductsManager: React.FC = () => {
                 hoverable
                 className="flex flex-col justify-between overflow-hidden p-0 relative group rounded-2xl border-slate-800/80 bg-slate-900/90 shadow-lg"
               >
-                <div className="relative aspect-video w-full bg-slate-800 overflow-hidden">
-                  <img
-                    src={p.imageUrl}
-                    alt={p.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+                <div className="relative aspect-video w-full bg-slate-800 overflow-hidden flex items-center justify-center">
+                  {p.imageUrl?.trim() ? (
+                    <img
+                      src={p.imageUrl}
+                      alt={p.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <Package className="w-10 h-10 text-slate-600" />
+                  )}
 
                   {/* Badges on Image */}
                   <div className="absolute top-3 end-3 flex items-center gap-1.5">

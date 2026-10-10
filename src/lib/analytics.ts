@@ -26,6 +26,7 @@ export interface AnalyticsEvent {
   device: 'mobile' | 'desktop' | 'tablet';
   sessionId: string;
   data: Record<string, any>;
+  isCloudLog?: boolean;
 }
 
 // -------------------------------------------------------------
@@ -54,6 +55,7 @@ export interface HesitationSignal {
   recoveryWhatsAppMessage: string;
   suggestedPromoCode?: string;
   timestamp: number;
+  isFromCloud?: boolean;
 }
 
 // -------------------------------------------------------------
@@ -95,6 +97,7 @@ export interface CustomerSessionProfile {
   intentTier: 'vip' | 'high_intent' | 'enthusiast' | 'explorer' | 'browser';
   isHesitantBuyer?: boolean;
   hesitationReason?: string;
+  isFromCloud?: boolean;
   // Algorithmic Enrichments:
   persona: CustomerPersonaType;
   personaLabel: string;
@@ -351,12 +354,9 @@ function scheduleSupabaseSync(events: AnalyticsEvent[]) {
   }, 4000);
 }
 
-// Fetch telemetry events directly from Supabase `logs` database table & Storage
+// Fetch telemetry events directly from Supabase `logs` database table
 export async function syncFromSupabaseCloud(): Promise<AnalyticsEvent[]> {
-  if (!supabase) return getStoredEvents();
-  const local = getStoredEvents();
-  const combinedMap = new Map<string, AnalyticsEvent>();
-  local.forEach((ev) => combinedMap.set(ev.id, ev));
+  if (!supabase) return [];
 
   try {
     const { data: dbLogs, error: dbErr } = await supabase
@@ -365,46 +365,38 @@ export async function syncFromSupabaseCloud(): Promise<AnalyticsEvent[]> {
       .order('created_at', { ascending: false })
       .limit(1000);
 
-    if (!dbErr && Array.isArray(dbLogs) && dbLogs.length > 0) {
-      dbLogs.forEach((row: any) => {
+    console.log("Supabase Fetch Result:", dbLogs);
+    console.log("Supabase Fetch Error:", dbErr);
+
+    if (!dbErr && Array.isArray(dbLogs)) {
+      if (dbLogs.length === 0) {
+        try { localStorage.removeItem(STORAGE_KEY); } catch {}
+        return [];
+      }
+      const cloudEvents: AnalyticsEvent[] = dbLogs.map((row: any) => {
         const id = String(row.id || `log_${row.created_at}`);
         const timestamp = new Date(row.created_at).getTime() || Date.now();
-        combinedMap.set(id, {
+        return {
           id,
           type: (row.event_type || row.type || 'page_view') as AnalyticsEvent['type'],
           timestamp,
           device: (row.device || 'mobile') as 'mobile' | 'desktop' | 'tablet',
           sessionId: String(row.session_id || 'sess_cloud'),
           data: typeof row.data === 'object' && row.data !== null ? row.data : {},
-        });
+        };
       });
+
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudEvents));
+      } catch {}
+
+      return cloudEvents;
     }
   } catch (err) {
-    console.warn('Supabase logs query fallback:', err);
+    console.log("Supabase Fetch Error:", err);
   }
 
-  try {
-    const { data, error } = await supabase.storage.from('product-images').download(TELEMETRY_FILE);
-    if (!error && data) {
-      const text = await data.text();
-      const parsed = JSON.parse(text);
-      if (parsed?.events && Array.isArray(parsed.events)) {
-        parsed.events.forEach((ev: AnalyticsEvent) => combinedMap.set(ev.id, ev));
-      }
-    }
-  } catch {
-    // fallback
-  }
-
-  const merged = Array.from(combinedMap.values())
-    .sort((a, b) => b.timestamp - a.timestamp)
-    .slice(0, 2000);
-
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-  } catch {}
-
-  return merged;
+  return [];
 }
 
 // Extract real recorded customer location (if tracked from order/checkout or IP)
@@ -742,6 +734,11 @@ export function getAggregatedAnalytics(productsList: any[] = []): UserBehaviorSt
       }
     }
 
+    const isFromCloud = sEvents.some((ev) => Boolean(ev.isCloudLog));
+    if (hesitationSignal) {
+      hesitationSignal.isFromCloud = isFromCloud;
+    }
+
     customerSessions.push({
       sessionId: sId,
       device,
@@ -765,6 +762,7 @@ export function getAggregatedAnalytics(productsList: any[] = []): UserBehaviorSt
       intentTier,
       isHesitantBuyer,
       hesitationReason,
+      isFromCloud,
       persona,
       personaLabel,
       personaBadgeColor,

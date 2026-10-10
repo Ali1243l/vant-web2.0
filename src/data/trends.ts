@@ -1,62 +1,6 @@
 import type { TrendItem } from '../types';
 
-export const DEFAULT_FEATURED_TRENDS: TrendItem[] = [
-  {
-    id: 'trend-1',
-    category: 'Tailoring',
-    titleEn: 'Sculptural Tailoring',
-    titleAr: 'الخياطة المنحوتة',
-    subtitleEn: 'Sharp shoulders & dropped closures',
-    subtitleAr: 'أكتاف هندسية وتفاصيل حرة',
-    tagEn: '01 / STRUCTURE',
-    tagAr: '01 / الهيكل',
-    image: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 'trend-2',
-    category: 'Outerwear',
-    titleEn: 'Raw Edge Cashmere',
-    titleAr: 'الكشمير الطبيعي الخام',
-    subtitleEn: '650gsm unlined double-face',
-    subtitleAr: 'كشمير منغولي مزدوج الوجه',
-    tagEn: '02 / TEXTURE',
-    tagAr: '02 / الملمس',
-    image: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 'trend-3',
-    category: 'Knitwear',
-    titleEn: 'Heavy Rib Knitwear',
-    titleAr: 'التريكو السميك المضلع',
-    subtitleEn: 'Sculptural 7-gauge merino',
-    subtitleAr: 'صوف ميرينو سميك عيار 7',
-    tagEn: '03 / VOLUME',
-    tagAr: '03 / الحجم',
-    image: 'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 'trend-4',
-    category: 'Accessories',
-    titleEn: 'Monolithic Leather',
-    titleAr: 'الجلود المعمارية الصلبة',
-    subtitleEn: 'Full-grain box calf & palladium',
-    subtitleAr: 'جلد عجل فرنسي بقطع البلاديوم',
-    tagEn: '04 / ACCENT',
-    tagAr: '04 / التفاصيل',
-    image: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 'trend-5',
-    category: 'Footwear',
-    titleEn: 'Bevelled Square-Toe',
-    titleAr: 'الأحذية بمقدمة مربعة',
-    subtitleEn: 'Stacked leather & hand-waxed finish',
-    subtitleAr: 'جلد ملمع بنعل كلاسيكي مكدس',
-    tagEn: '05 / GROUND',
-    tagAr: '05 / الأساس',
-    image: 'https://images.unsplash.com/photo-1582588678413-dbf45f4823e9?auto=format&fit=crop&w=800&q=80',
-  },
-];
+export const DEFAULT_FEATURED_TRENDS: TrendItem[] = [];
 
 /**
  * Image Dimension Recommendations Guide for Perfect Visual Quality

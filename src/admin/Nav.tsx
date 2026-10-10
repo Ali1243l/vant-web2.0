@@ -308,28 +308,6 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
           </button>
         )}
       </div>
-
-      {/* Footer / Mini Quick Card */}
-      {!collapsed && (
-        <div className="p-3 m-3 rounded-xl bg-slate-900/90 border border-slate-800/80 text-start">
-          <div className="flex items-center gap-2 mb-1.5">
-            <Sparkles className="w-4 h-4 text-indigo-400 shrink-0" />
-            <span className="text-xs font-semibold text-white">
-              {isAr ? 'حالة المزامنة السحابية' : 'Cloud Sync Status'}
-            </span>
-          </div>
-          <p className="text-[11px] text-slate-400 leading-relaxed mb-2">
-            {isAr ? 'جميع المعاملات والمنتجات محدثة لحظياً.' : 'Catalog and orders synced in real-time.'}
-          </p>
-          <div className="flex items-center justify-between text-[11px] text-slate-400">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              {isAr ? 'الخادم نشط' : 'Server Online'}
-            </span>
-            <span className="font-mono text-slate-500">v3.0.0</span>
-          </div>
-        </div>
-      )}
     </nav>
   );
 };

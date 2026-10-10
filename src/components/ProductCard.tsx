@@ -73,7 +73,12 @@ export default React.memo(function ProductCard({
   onToggleWishlist,
   onOpen,
 }: Props) {
-  const { formatPrice } = useSiteControls();
+  const { formatPrice, getControl } = useSiteControls();
+  const cardWishlistControl = getControl('card_wishlist_btn');
+  const cardBadgeControl = getControl('card_status_badge');
+  const cardPriceControl = getControl('card_price_tag');
+  const cardCategoryControl = getControl('card_category_label');
+  const cardHoverControl = getControl('card_hover_preview');
   const [loaded, setLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -109,8 +114,8 @@ export default React.memo(function ProductCard({
       ? [product.image_url]
       : [];
 
-  const primaryImage = colorImages[0] || product.image_url;
-  const secondaryImage = colorImages.length > 1 ? colorImages[1] : null;
+  const primaryImage = (colorImages[0] || product.image_url)?.trim() || null;
+  const secondaryImage = colorImages.length > 1 && colorImages[1]?.trim() ? colorImages[1].trim() : null;
 
   const { width, height } = product;
   const dynamicRatioStyle = useMemo(() => {
@@ -124,7 +129,7 @@ export default React.memo(function ProductCard({
     const enrichedProduct: Product = {
       ...product,
       images: Array.isArray(product.images) && product.images.length > 0 ? product.images : colorImages,
-      image_url: primaryImage,
+      image_url: primaryImage || product.image_url || '',
       price: activeVariant.price,
       sku: activeVariant.sku,
       variants: variantInfo.variants,
@@ -214,11 +219,11 @@ export default React.memo(function ProductCard({
             </div>
           )}
 
-          {!imgError ? (
+          {!imgError && primaryImage?.trim() ? (
             <div className="relative h-full w-full overflow-hidden">
               {/* Primary Image with seamless opacity cross-fade on lazy load finish & smooth hover transition */}
               <img
-                src={primaryImage}
+                src={primaryImage.trim()}
                 alt={displayTitle}
                 width={width ?? undefined}
                 height={height ?? undefined}
@@ -245,9 +250,9 @@ export default React.memo(function ProductCard({
               />
 
               {/* Secondary Image on Hover (Luxury Crossfade Transition) */}
-              {secondaryImage && (
+              {cardHoverControl.visible && Boolean(secondaryImage?.trim()) ? (
                 <img
-                  src={secondaryImage}
+                  src={secondaryImage!.trim()}
                   alt={`${displayTitle} - 2`}
                   loading="lazy"
                   decoding="async"
@@ -256,7 +261,7 @@ export default React.memo(function ProductCard({
                     isHovered ? 'opacity-100 scale-105' : 'opacity-0 scale-100 pointer-events-none'
                   }`}
                 />
-              )}
+              ) : null}
             </div>
           ) : (
             /* Resilient luxury fallback card */
@@ -269,52 +274,58 @@ export default React.memo(function ProductCard({
           )}
 
           {/* Clean Micro-Tag: Only rendered for special status or sale discount without suffocating the image */}
-          <div className="absolute top-2.5 sm:top-3 ltr:left-2.5 rtl:right-2.5 ltr:sm:left-3 rtl:sm:right-3 z-20 flex flex-col items-start gap-1 pointer-events-none select-none">
-            {discountPct && (
-              <span className="inline-flex items-center rounded-full bg-[#004ad7] px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9.5px] sm:text-[10.5px] font-black text-white shadow-sm shadow-[#004ad7]/30 border border-white/20 backdrop-blur-xs">
-                %{discountPct}-
-              </span>
-            )}
-            {statusBadge && (
-              <span
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9px] sm:text-[10px] font-semibold tracking-wide backdrop-blur-md border shadow-2xs ${statusBadge.classes}`}
-              >
-                <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusBadge.dot}`} />
-                <span>{statusBadge.text}</span>
-              </span>
-            )}
-          </div>
+          {cardBadgeControl.visible && (
+            <div className="absolute top-2.5 sm:top-3 ltr:left-2.5 rtl:right-2.5 ltr:sm:left-3 rtl:sm:right-3 z-20 flex flex-col items-start gap-1 pointer-events-none select-none">
+              {discountPct && (
+                <span className="inline-flex items-center rounded-full bg-[#004ad7] px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9.5px] sm:text-[10.5px] font-black text-white shadow-sm shadow-[#004ad7]/30 border border-white/20 backdrop-blur-xs">
+                  %{discountPct}-
+                </span>
+              )}
+              {statusBadge && (
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9px] sm:text-[10px] font-semibold tracking-wide backdrop-blur-md border shadow-2xs ${statusBadge.classes}`}
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusBadge.dot}`} />
+                  <span>{statusBadge.text}</span>
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Wishlist Heart Button - Sculpted Frosted Glass in Signature Brand Blue */}
-          <button
-            type="button"
-            onClick={handleHeartClick}
-            className={`absolute top-2.5 sm:top-3 ltr:right-2.5 rtl:left-2.5 ltr:sm:right-3 rtl:sm:left-3 z-20 flex h-8 w-8 sm:h-8.5 sm:w-8.5 md:h-10 md:w-10 lg:h-11 lg:w-11 items-center justify-center rounded-full transition-all duration-200 cursor-pointer backdrop-blur-md active:scale-90 hover:scale-105 group/heart ${
-              isWishlisted
-                ? 'bg-[#004ad7] dark:bg-[#3b82f6] text-white shadow-md shadow-[#004ad7]/25 border border-[#004ad7]/40 dark:border-[#3b82f6]/50'
-                : 'bg-white/90 dark:bg-[#12141a]/90 text-neutral-600 dark:text-neutral-300 hover:text-[#004ad7] dark:hover:text-[#3b82f6] hover:bg-white dark:hover:bg-[#181a22] border border-black/8 dark:border-white/12 shadow-2xs'
-            }`}
-            aria-label={isWishlisted ? (isAr ? 'إزالة من المفضلة' : 'Remove from Wishlist') : (isAr ? 'إضافة إلى المفضلة' : 'Add to Wishlist')}
-            title={isWishlisted ? (isAr ? 'في المفضلة' : 'Wishlisted') : (isAr ? 'إضافة للمفضلة' : 'Add to Wishlist')}
-          >
-            <Heart
-              className={`h-4 w-4 sm:h-[16px] sm:w-[16px] md:h-4.5 md:w-4.5 lg:h-5 lg:w-5 transition-all duration-200 ${
+          {cardWishlistControl.visible && (
+            <button
+              type="button"
+              onClick={handleHeartClick}
+              className={`absolute top-2.5 sm:top-3 ltr:right-2.5 rtl:left-2.5 ltr:sm:right-3 rtl:sm:left-3 z-20 flex h-8 w-8 sm:h-8.5 sm:w-8.5 md:h-10 md:w-10 lg:h-11 lg:w-11 items-center justify-center rounded-full transition-all duration-200 cursor-pointer backdrop-blur-md active:scale-90 hover:scale-105 group/heart ${
                 isWishlisted
-                  ? 'fill-white stroke-white stroke-[2.2] scale-105'
-                  : 'stroke-[2] group-hover/heart:scale-110 group-hover/heart:stroke-[#004ad7] dark:group-hover/heart:stroke-[#3b82f6]'
+                  ? 'bg-[#004ad7] dark:bg-[#3b82f6] text-white shadow-md shadow-[#004ad7]/25 border border-[#004ad7]/40 dark:border-[#3b82f6]/50'
+                  : 'bg-white/90 dark:bg-[#12141a]/90 text-neutral-600 dark:text-neutral-300 hover:text-[#004ad7] dark:hover:text-[#3b82f6] hover:bg-white dark:hover:bg-[#181a22] border border-black/8 dark:border-white/12 shadow-2xs'
               }`}
-            />
-          </button>
+              aria-label={isWishlisted ? (isAr ? 'إزالة من المفضلة' : 'Remove from Wishlist') : (isAr ? 'إضافة إلى المفضلة' : 'Add to Wishlist')}
+              title={isWishlisted ? (isAr ? 'في المفضلة' : 'Wishlisted') : (isAr ? 'إضافة للمفضلة' : 'Add to Wishlist')}
+            >
+              <Heart
+                className={`h-4 w-4 sm:h-[16px] sm:w-[16px] md:h-4.5 md:w-4.5 lg:h-5 lg:w-5 transition-all duration-200 ${
+                  isWishlisted
+                    ? 'fill-white stroke-white stroke-[2.2] scale-105'
+                    : 'stroke-[2] group-hover/heart:scale-110 group-hover/heart:stroke-[#004ad7] dark:group-hover/heart:stroke-[#3b82f6]'
+                }`}
+              />
+            </button>
+          )}
         </div>
 
         {/* Product Meta (Title, Category, Price) - Right-aligned in RTL, distinct hierarchy, and comfortable padding */}
         <div className="mt-2.5 sm:mt-3 md:mt-3.5 px-1 sm:px-1.5 md:px-2 pb-1.5 space-y-1.5 sm:space-y-2 rtl:text-right ltr:text-left">
           {/* 1. Category name - Subtle, smaller, refined grayish color */}
-          <div className="flex items-center rtl:justify-start ltr:justify-start">
-            <span className="text-[11px] sm:text-xs md:text-[12.5px] font-medium text-black/45 dark:text-white/45 tracking-tight line-clamp-1">
-              {lang === 'ar' && product.category_ar ? product.category_ar : product.category}
-            </span>
-          </div>
+          {cardCategoryControl.visible && (
+            <div className="flex items-center rtl:justify-start ltr:justify-start">
+              <span className="text-[11px] sm:text-xs md:text-[12.5px] font-medium text-black/45 dark:text-white/45 tracking-tight line-clamp-1">
+                {lang === 'ar' && product.category_ar ? product.category_ar : product.category}
+              </span>
+            </div>
+          )}
 
           {/* 2. Product Name - Prominent, strong visual weight */}
           <div className="flex items-start rtl:justify-start ltr:justify-start">
@@ -324,16 +335,18 @@ export default React.memo(function ProductCard({
           </div>
 
           {/* 3. Price - Bold, distinct signature blue */}
-          <div className="flex items-baseline gap-2 pt-0.5 rtl:justify-start ltr:justify-start">
-            <span className="font-mono font-black text-sm sm:text-base md:text-[17px] lg:text-lg text-[#004ad7] dark:text-[#3b82f6] tabular-nums tracking-tight">
-              {formatPrice(activeVariant.price)}
-            </span>
-            {product.is_offer && product.original_price && product.original_price > activeVariant.price && (
-              <span className="text-[11px] sm:text-xs md:text-[13px] text-black/35 dark:text-white/35 line-through tabular-nums font-mono">
-                {formatPrice(product.original_price)}
+          {cardPriceControl.visible && (
+            <div className="flex items-baseline gap-2 pt-0.5 rtl:justify-start ltr:justify-start">
+              <span className="font-mono font-black text-sm sm:text-base md:text-[17px] lg:text-lg text-[#004ad7] dark:text-[#3b82f6] tabular-nums tracking-tight">
+                {formatPrice(activeVariant.price)}
               </span>
-            )}
-          </div>
+              {product.is_offer && product.original_price && product.original_price > activeVariant.price && (
+                <span className="text-[11px] sm:text-xs md:text-[13px] text-black/35 dark:text-white/35 line-through tabular-nums font-mono">
+                  {formatPrice(product.original_price)}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </motion.article>

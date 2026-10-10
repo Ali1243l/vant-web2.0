@@ -681,11 +681,13 @@ export const SettingsView: React.FC = () => {
             </span>
             <div className="relative rounded-2xl overflow-hidden border border-slate-800 aspect-[21/9] sm:aspect-[24/8] bg-slate-950 flex flex-col justify-end p-4 sm:p-8 group shadow-2xl">
               {/* Background image */}
-              <img
-                src={formData.heroBannerBg}
-                alt="Hero Banner"
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
+              {formData.heroBannerBg?.trim() ? (
+                <img
+                  src={formData.heroBannerBg}
+                  alt="Hero Banner"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+              ) : null}
               {/* Gradient scrim */}
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
               <div className="absolute inset-0 bg-indigo-950/20 mix-blend-overlay" />

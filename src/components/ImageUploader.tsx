@@ -427,11 +427,13 @@ export default function ImageUploader({
                   }`}
                 >
                   {/* Image Preview with foolproof direct display */}
-                  <img
-                    src={imgUrl}
-                    alt=""
-                    className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
-                  />
+                  {imgUrl?.trim() ? (
+                    <img
+                      src={imgUrl}
+                      alt=""
+                      className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                    />
+                  ) : null}
 
                   {/* Gradient Overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent opacity-80 group-hover:opacity-95 transition-opacity" />

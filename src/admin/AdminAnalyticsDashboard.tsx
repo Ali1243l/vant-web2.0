@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   TrendingUp,
   TrendingDown,
@@ -39,7 +39,7 @@ import {
 type AnalyticsTab = 'overview' | 'hesitation' | 'personas' | 'demand-sizing';
 
 export const AdminAnalyticsDashboard: React.FC = () => {
-  const { lang, products, offers, subscribers, setActiveView } = useAdminBridge();
+  const { lang, products, offers, subscribers, orders = [], setActiveView } = useAdminBridge();
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview');
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | 'year'>('30d');
   const [hoveredDataIndex, setHoveredDataIndex] = useState<number | null>(null);
@@ -57,103 +57,225 @@ export const AdminAnalyticsDashboard: React.FC = () => {
 
   const isAr = lang === 'ar';
 
-  // Fetch aggregated analytics from engine
-  const analyticsData = getAggregatedAnalytics(refreshSeed);
+  // Fetch real aggregated analytics from live products and orders
+  const analyticsData = useMemo(
+    () => getAggregatedAnalytics(products, orders),
+    [products, orders, refreshSeed]
+  );
 
-  // Dynamic datasets by time range
-  const datasets: Record<'7d' | '30d' | '90d' | 'year', {
-    titleAr: string;
-    titleEn: string;
-    subAr: string;
-    subEn: string;
-    peakAr: string;
-    peakEn: string;
-    growth: string;
-    points: Array<{ labelAr: string; labelEn: string; sales: number; orders: number }>;
-    totalRevenue: number;
-    totalOrders: number;
-    aov: number;
-  }> = {
-    '7d': {
-      titleAr: 'منحنى الإيرادات الأسبوعية (دينار عراقي)',
-      titleEn: 'Weekly Revenue Trajectory (IQD)',
-      subAr: 'حجم المبيعات اليومية مقارنة بالطلبات المكتملة',
-      subEn: 'Daily revenue volume compared to completed orders',
-      peakAr: 'أعلى يوم مبيعاً: الخميس (34,100,000 IQD)',
-      peakEn: 'Peak Day: Thursday (34,100,000 IQD)',
-      growth: '+24%',
-      points: [
-        { labelAr: 'السبت', labelEn: 'Sat', sales: 14200000 + (refreshSeed % 3) * 500000, orders: 48 + (refreshSeed % 2) },
-        { labelAr: 'الأحد', labelEn: 'Sun', sales: 18500000 + (refreshSeed % 4) * 400000, orders: 62 },
-        { labelAr: 'الإثنين', labelEn: 'Mon', sales: 16900000 - (refreshSeed % 2) * 300000, orders: 54 },
-        { labelAr: 'الثلاثاء', labelEn: 'Tue', sales: 22400000 + (refreshSeed % 5) * 600000, orders: 75 },
-        { labelAr: 'الأربعاء', labelEn: 'Wed', sales: 28900000 + (refreshSeed % 3) * 450000, orders: 92 },
-        { labelAr: 'الخميس', labelEn: 'Thu', sales: 34100000 + (refreshSeed % 4) * 700000, orders: 118 },
-        { labelAr: 'الجمعة', labelEn: 'Fri', sales: 31200000 + (refreshSeed % 2) * 500000, orders: 104 },
-      ],
-      totalRevenue: 166200000 + (refreshSeed % 5) * 2000000,
-      totalOrders: 553 + (refreshSeed % 3) * 6,
-      aov: 300540,
-    },
-    '30d': {
-      titleAr: 'منحنى الإيرادات الشهرية (30 يوماً)',
-      titleEn: 'Monthly Revenue Trajectory (30D)',
-      subAr: 'توزيع الإيرادات والطلبات عبر الأسابيع الأربعة',
-      subEn: 'Weekly breakdown across the 4 weeks of the month',
-      peakAr: 'أعلى أسبوع: الأسبوع الرابع (166,200,000 IQD)',
-      peakEn: 'Peak Week: Week 4 (166,200,000 IQD)',
-      growth: '+18.4%',
-      points: [
-        { labelAr: 'الأسبوع 1', labelEn: 'Wk 1', sales: 112400000 + (refreshSeed % 3) * 2000000, orders: 384 },
-        { labelAr: 'الأسبوع 2', labelEn: 'Wk 2', sales: 128750000 + (refreshSeed % 4) * 2500000, orders: 422 },
-        { labelAr: 'الأسبوع 3', labelEn: 'Wk 3', sales: 146300000 + (refreshSeed % 2) * 1800000, orders: 490 },
-        { labelAr: 'الأسبوع 4', labelEn: 'Wk 4', sales: 166200000 + (refreshSeed % 5) * 3000000, orders: 553 },
-      ],
-      totalRevenue: 553650000 + (refreshSeed % 5) * 6000000,
-      totalOrders: 1849 + (refreshSeed % 4) * 15,
-      aov: 299430,
-    },
-    '90d': {
-      titleAr: 'منحنى الأداء الفصلي (90 يوماً)',
-      titleEn: 'Quarterly Revenue Performance (90D)',
-      subAr: 'مقارنة الشهور الثلاثة الأخيرة لمعدلات النمو',
-      subEn: 'Comparative telemetry for the last three months',
-      peakAr: 'أعلى شهر: سبتمبر (595,000,000 IQD)',
-      peakEn: 'Peak Month: September (595,000,000 IQD)',
-      growth: '+32.8%',
-      points: [
-        { labelAr: 'يوليو', labelEn: 'July', sales: 480000000 + (refreshSeed % 3) * 5000000, orders: 1620 },
-        { labelAr: 'أغسطس', labelEn: 'Aug', sales: 535000000 + (refreshSeed % 4) * 6000000, orders: 1780 },
-        { labelAr: 'سبتمبر', labelEn: 'Sept', sales: 595000000 + (refreshSeed % 5) * 8000000, orders: 1940 },
-      ],
-      totalRevenue: 1610000000 + (refreshSeed % 4) * 12000000,
-      totalOrders: 5340 + (refreshSeed % 3) * 45,
-      aov: 301490,
-    },
-    'year': {
-      titleAr: 'منحنى الأداء السنوي الشامل 2026',
-      titleEn: 'Annual Revenue Trajectory 2026',
-      subAr: 'إجمالي أداء الأرباع المالية الأربعة',
-      subEn: 'Comprehensive performance across all four quarters',
-      peakAr: 'أعلى ربع مالي: الربع الرابع Q4 (1,890,000,000 IQD)',
-      peakEn: 'Peak Quarter: Q4 (1,890,000,000 IQD)',
-      growth: '+44.2%',
-      points: [
-        { labelAr: 'الربع 1', labelEn: 'Q1', sales: 1240000000 + (refreshSeed % 2) * 10000000, orders: 4200 },
-        { labelAr: 'الربع 2', labelEn: 'Q2', sales: 1480000000 + (refreshSeed % 3) * 15000000, orders: 4950 },
-        { labelAr: 'الربع 3', labelEn: 'Q3', sales: 1610000000 + (refreshSeed % 4) * 18000000, orders: 5340 },
-        { labelAr: 'الربع 4', labelEn: 'Q4', sales: 1890000000 + (refreshSeed % 5) * 20000000, orders: 6180 },
-      ],
-      totalRevenue: 6220000000 + (refreshSeed % 5) * 35000000,
-      totalOrders: 20670 + (refreshSeed % 4) * 90,
-      aov: 300910,
-    },
-  };
+  // Dynamic datasets computed strictly from real database orders with true date math
+  const datasets = useMemo(() => {
+    const now = Date.now();
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
+    const parseOrderTime = (o: any): number => {
+      if (!o) return now;
+      if (o.orderDate) {
+        const parsed = new Date(o.orderDate).getTime();
+        if (!isNaN(parsed)) return parsed;
+      }
+      if (o.createdAt) {
+        const parsed = new Date(o.createdAt).getTime();
+        if (!isNaN(parsed)) return parsed;
+      }
+      return now;
+    };
+
+    // Filter non-cancelled real orders from database
+    const validOrders = orders.filter((o) => o && o.status !== 'cancelled');
+
+    // Helper for period calculations
+    const getPeriodStats = (startDaysAgo: number, endDaysAgo: number = 0) => {
+      const minTime = now - startDaysAgo * DAY_MS;
+      const maxTime = now - endDaysAgo * DAY_MS;
+      const matched = validOrders.filter((o) => {
+        const t = parseOrderTime(o);
+        return t >= minTime && t <= maxTime;
+      });
+      const revenue = matched.reduce((acc, o) => acc + (Number(o.totalPrice) || 0), 0);
+      const count = matched.length;
+      const aov = count > 0 ? Math.round(revenue / count) : 0;
+      return { matched, revenue, count, aov };
+    };
+
+    // 1. 7-Day breakdown (last 7 days by day offset)
+    const dayNamesAr = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const dayNamesEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    const points7d = Array.from({ length: 7 }).map((_, i) => {
+      const daysAgo = 6 - i;
+      const dayStart = new Date(now - daysAgo * DAY_MS);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(dayStart.getTime() + DAY_MS - 1);
+
+      const dayOrders = validOrders.filter((o) => {
+        const t = parseOrderTime(o);
+        return t >= dayStart.getTime() && t <= dayEnd.getTime();
+      });
+      const daySales = dayOrders.reduce((acc, o) => acc + (Number(o.totalPrice) || 0), 0);
+      const dayIdx = dayStart.getDay();
+
+      return {
+        labelAr: dayNamesAr[dayIdx],
+        labelEn: dayNamesEn[dayIdx],
+        sales: daySales,
+        orders: dayOrders.length,
+      };
+    });
+
+    // 2. 30-Day breakdown (4 weeks of 7.5 days each)
+    const weekNamesAr = ['الأسبوع 1', 'الأسبوع 2', 'الأسبوع 3', 'الأسبوع 4'];
+    const weekNamesEn = ['Wk 1', 'Wk 2', 'Wk 3', 'Wk 4'];
+
+    const points30d = Array.from({ length: 4 }).map((_, i) => {
+      const startDays = 30 - i * 7.5;
+      const endDays = 30 - (i + 1) * 7.5;
+      const stats = getPeriodStats(startDays, endDays);
+      return {
+        labelAr: weekNamesAr[i],
+        labelEn: weekNamesEn[i],
+        sales: stats.revenue,
+        orders: stats.count,
+      };
+    });
+
+    // 3. 90-Day breakdown (3 months of 30 days each)
+    const monthNamesAr = ['الشهر 3 (السابق)', 'الشهر 2', 'الشهر 1 (الحالي)'];
+    const monthNamesEn = ['Month 3', 'Month 2', 'Month 1'];
+
+    const points90d = Array.from({ length: 3 }).map((_, i) => {
+      const startDays = 90 - i * 30;
+      const endDays = 90 - (i + 1) * 30;
+      const stats = getPeriodStats(startDays, endDays);
+      return {
+        labelAr: monthNamesAr[i],
+        labelEn: monthNamesEn[i],
+        sales: stats.revenue,
+        orders: stats.count,
+      };
+    });
+
+    // 4. Year breakdown (4 Quarters of 91 days each)
+    const qNamesAr = ['الربع 1', 'الربع 2', 'الربع 3', 'الربع 4 (الحالي)'];
+    const qNamesEn = ['Q1', 'Q2', 'Q3', 'Q4'];
+
+    const pointsYear = Array.from({ length: 4 }).map((_, i) => {
+      const startDays = 365 - i * 91;
+      const endDays = 365 - (i + 1) * 91;
+      const stats = getPeriodStats(startDays, endDays);
+      return {
+        labelAr: qNamesAr[i],
+        labelEn: qNamesEn[i],
+        sales: stats.revenue,
+        orders: stats.count,
+      };
+    });
+
+    // Compute period comparisons for real growth math
+    const calcGrowth = (curr: number, prev: number) => {
+      if (prev === 0 && curr === 0) return 0;
+      if (prev === 0 && curr > 0) return 100;
+      return Math.round(((curr - prev) / prev) * 100);
+    };
+
+    const curr7d = getPeriodStats(7, 0);
+    const prev7d = getPeriodStats(14, 7);
+    const growth7d = calcGrowth(curr7d.revenue, prev7d.revenue);
+
+    const curr30d = getPeriodStats(30, 0);
+    const prev30d = getPeriodStats(60, 30);
+    const growth30d = calcGrowth(curr30d.revenue, prev30d.revenue);
+
+    const curr90d = getPeriodStats(90, 0);
+    const prev90d = getPeriodStats(180, 90);
+    const growth90d = calcGrowth(curr90d.revenue, prev90d.revenue);
+
+    const currYear = getPeriodStats(365, 0);
+    const prevYear = getPeriodStats(730, 365);
+    const growthYear = calcGrowth(currYear.revenue, prevYear.revenue);
+
+    const totalRevenueAll = validOrders.reduce((a, b) => a + (Number(b.totalPrice) || 0), 0);
+    const totalOrdersAll = validOrders.length;
+    const aovAll = totalOrdersAll > 0 ? Math.round(totalRevenueAll / totalOrdersAll) : 0;
+
+    const peak7d = points7d.reduce((prev, cur) => (cur.sales > prev.sales ? cur : prev), points7d[0]);
+
+    return {
+      '7d': {
+        titleAr: 'منحنى الإيرادات الأسبوعية (آخر 7 أيام)',
+        titleEn: 'Weekly Revenue Trajectory (Last 7 Days)',
+        subAr: 'حجم المبيعات اليومية المحسوب من تواريخ الطلبات الحقيقية',
+        subEn: 'Daily revenue volume computed from real order dates',
+        peakAr: peak7d && peak7d.sales > 0 ? `أعلى يوم: ${peak7d.labelAr} (${peak7d.sales.toLocaleString()} IQD)` : (isAr ? '0 مبيعات مسجلة في آخر 7 أيام' : '0 sales recorded in last 7 days'),
+        peakEn: peak7d && peak7d.sales > 0 ? `Peak: ${peak7d.labelEn} (${peak7d.sales.toLocaleString()} IQD)` : '0 sales in last 7 days',
+        growth: `${growth7d >= 0 ? '+' : ''}${growth7d}%`,
+        growthVal: growth7d,
+        points: points7d,
+        totalRevenue: curr7d.revenue,
+        totalOrders: curr7d.count,
+        aov: curr7d.aov,
+        prevRevenue: prev7d.revenue,
+        prevOrders: prev7d.count,
+        prevAov: prev7d.aov,
+      },
+      '30d': {
+        titleAr: 'منحنى الإيرادات الشهرية (30 يوماً)',
+        titleEn: 'Monthly Revenue Trajectory (30D)',
+        subAr: 'توزيع الإيرادات والطلبات عبر الأسابيع من قاعدة البيانات',
+        subEn: 'Weekly breakdown across the month from real database',
+        peakAr: curr30d.revenue > 0 ? `إجمالي 30 يوماً: ${curr30d.revenue.toLocaleString()} IQD` : (isAr ? '0 مبيعات مسجلة في آخر 30 يوماً' : '0 sales recorded in 30 days'),
+        peakEn: curr30d.revenue > 0 ? `Total 30D: ${curr30d.revenue.toLocaleString()} IQD` : '0 sales in last 30 days',
+        growth: `${growth30d >= 0 ? '+' : ''}${growth30d}%`,
+        growthVal: growth30d,
+        points: points30d,
+        totalRevenue: curr30d.revenue,
+        totalOrders: curr30d.count,
+        aov: curr30d.aov,
+        prevRevenue: prev30d.revenue,
+        prevOrders: prev30d.count,
+        prevAov: prev30d.aov,
+      },
+      '90d': {
+        titleAr: 'منحنى الأداء الفصلي (90 يوماً)',
+        titleEn: 'Quarterly Revenue Performance (90D)',
+        subAr: 'البيانات المسجلة الحقيقية خلال الـ 90 يوماً',
+        subEn: 'Comparative telemetry for the last three months',
+        peakAr: curr90d.revenue > 0 ? `إجمالي 90 يوماً: ${curr90d.revenue.toLocaleString()} IQD` : (isAr ? '0 مبيعات مسجلة في الـ 90 يوماً' : '0 sales in last 90 days'),
+        peakEn: curr90d.revenue > 0 ? `Total 90D: ${curr90d.revenue.toLocaleString()} IQD` : '0 sales in last 90 days',
+        growth: `${growth90d >= 0 ? '+' : ''}${growth90d}%`,
+        growthVal: growth90d,
+        points: points90d,
+        totalRevenue: curr90d.revenue,
+        totalOrders: curr90d.count,
+        aov: curr90d.aov,
+        prevRevenue: prev90d.revenue,
+        prevOrders: prev90d.count,
+        prevAov: prev90d.aov,
+      },
+      'year': {
+        titleAr: 'منحنى الأداء السنوي الشامل',
+        titleEn: 'Annual Revenue Trajectory',
+        subAr: 'إجمالي أداء الأرباع السنوية من قاعدة البيانات الحقيقية',
+        subEn: 'Comprehensive performance across quarters from real database',
+        peakAr: currYear.revenue > 0 ? `إجمالي السنة: ${currYear.revenue.toLocaleString()} IQD` : (isAr ? '0 مبيعات مسجلة هذا العام' : '0 sales this year'),
+        peakEn: currYear.revenue > 0 ? `Total Year: ${currYear.revenue.toLocaleString()} IQD` : '0 sales this year',
+        growth: `${growthYear >= 0 ? '+' : ''}${growthYear}%`,
+        growthVal: growthYear,
+        points: pointsYear,
+        totalRevenue: currYear.revenue,
+        totalOrders: currYear.count,
+        aov: currYear.aov,
+        prevRevenue: prevYear.revenue,
+        prevOrders: prevYear.count,
+        prevAov: prevYear.aov,
+      },
+    };
+  }, [orders, isAr]);
 
   const currentDataset = datasets[timeRange];
   const chartData = currentDataset.points;
-  const maxSales = Math.max(...chartData.map((d) => d.sales));
-  const maxOrders = Math.max(...chartData.map((d) => d.orders));
+  const maxSales = Math.max(1, ...chartData.map((d) => d.sales));
+  const maxOrders = Math.max(1, ...chartData.map((d) => d.orders));
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -163,16 +285,24 @@ export const AdminAnalyticsDashboard: React.FC = () => {
     }, 450);
   };
 
+  const revenueGrowth = currentDataset.growthVal;
+  const ordersGrowth = currentDataset.prevOrders > 0
+    ? Math.round(((currentDataset.totalOrders - currentDataset.prevOrders) / currentDataset.prevOrders) * 100)
+    : (currentDataset.totalOrders > 0 ? 100 : 0);
+  const aovGrowth = currentDataset.prevAov > 0
+    ? Math.round(((currentDataset.aov - currentDataset.prevAov) / currentDataset.prevAov) * 100)
+    : (currentDataset.aov > 0 ? 100 : 0);
+
   const stats = [
     {
       titleAr: 'إجمالي الإيرادات (IQD)',
       titleEn: 'Total Revenue (IQD)',
       value: currentDataset.totalRevenue,
       isCurrency: true,
-      change: parseFloat(currentDataset.growth.replace(/[+%]/g, '')),
-      trend: 'up',
-      subAr: isAr ? `خلال ${timeRange === '7d' ? '7 أيام' : timeRange === '30d' ? '30 يوماً' : timeRange === '90d' ? '90 يوماً' : 'سنة كاملة'}` : `Over ${timeRange}`,
-      subEn: `Over ${timeRange}`,
+      change: revenueGrowth,
+      trend: revenueGrowth >= 0 ? 'up' : 'down',
+      subAr: isAr ? `من إجمالي ${currentDataset.totalOrders} طلب حقيقي مسجل` : `From ${currentDataset.totalOrders} real recorded orders`,
+      subEn: `From ${currentDataset.totalOrders} real orders`,
       icon: DollarSign,
       color: 'text-indigo-400',
     },
@@ -181,22 +311,22 @@ export const AdminAnalyticsDashboard: React.FC = () => {
       titleEn: 'Total Orders',
       value: currentDataset.totalOrders,
       isCurrency: false,
-      change: 12.8,
-      trend: 'up',
-      subAr: isAr ? `متوسط ${Math.round(currentDataset.totalOrders / (timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : timeRange === '90d' ? 90 : 365) * 10) / 10} طلب / يوم` : 'Avg orders / day',
-      subEn: 'Avg orders / day',
+      change: ordersGrowth,
+      trend: ordersGrowth >= 0 ? 'up' : 'down',
+      subAr: isAr ? `${orders.filter((o) => o.status === 'delivered').length} طلب تم تسليمه` : `${orders.filter((o) => o.status === 'delivered').length} delivered orders`,
+      subEn: 'Delivered orders',
       icon: ShoppingBag,
       color: 'text-emerald-400',
     },
     {
-      titleAr: 'متوسط قيمة السلة (IQD)',
+      titleAr: 'متوسط قيمة الطلب (IQD)',
       titleEn: 'Average Order Value (IQD)',
       value: currentDataset.aov,
       isCurrency: true,
-      change: 4.2,
-      trend: 'up',
-      subAr: 'زيادة مستمرة للعميل',
-      subEn: 'Steady customer growth',
+      change: aovGrowth,
+      trend: aovGrowth >= 0 ? 'up' : 'down',
+      subAr: isAr ? 'محسوب من طلبات قاعدة البيانات الحقيقية' : 'Calculated from real database orders',
+      subEn: 'Based on real database orders',
       icon: CreditCard,
       color: 'text-amber-400',
     },
@@ -204,29 +334,75 @@ export const AdminAnalyticsDashboard: React.FC = () => {
       titleAr: 'معدل التحويل الكلي',
       titleEn: 'Conversion Rate',
       valueText: `${analyticsData.overview.conversionRate}%`,
-      change: -0.3,
-      trend: 'down',
-      subAr: 'من 14,500 زائر',
-      subEn: 'from 14,500 visitors',
+      change: 0,
+      trend: analyticsData.overview.conversionRate > 0 ? 'up' : 'down',
+      subAr: isAr ? 'نسبة التحويل من الزيارات الحقيقية' : 'Real visitor conversion rate',
+      subEn: 'Real visitor conversion rate',
       icon: Users,
       color: 'text-purple-400',
     },
   ];
 
-  // Category sales share in Iraqi Dinars
-  const categoriesShare = [
-    { nameAr: 'المعاطف والسترات الكشمير', nameEn: 'Cashmere & Coats', percentage: 46, sales: 76450000, color: 'bg-indigo-500' },
-    { nameAr: 'الأزياء الرسمية والبدلات', nameEn: 'Bespoke Suits', percentage: 34, sales: 56500000, color: 'bg-emerald-500' },
-    { nameAr: 'التريكو والأحذية الفاخرة', nameEn: 'Knitwear & Leather', percentage: 20, sales: 33250000, color: 'bg-amber-500' },
-  ];
+  // Category sales distribution derived strictly from real non-cancelled orders in database
+  const categoriesShare = useMemo(() => {
+    if (!products || products.length === 0) return [];
+    const catMap = new Map<string, { count: number; sales: number }>();
 
-  // Recent orders
-  const recentOrders = [
-    { id: '#ORD-9821', customer: 'عمر البصري', date: 'اليوم، 14:20', items: 2, total: 195000, status: 'success', statusLabelAr: 'تم التجهيز', statusLabelEn: 'Ready' },
-    { id: '#ORD-9820', customer: 'سارة الكرخي', date: 'اليوم، 13:05', items: 1, total: 65000, status: 'warning', statusLabelAr: 'قيد الشحن', statusLabelEn: 'Shipping' },
-    { id: '#ORD-9819', customer: 'علي الرافدين', date: 'اليوم، 11:45', items: 3, total: 125000, status: 'success', statusLabelAr: 'مكتمل', statusLabelEn: 'Delivered' },
-    { id: '#ORD-9818', customer: 'حيدر الجبوري', date: 'أمس، 22:15', items: 1, total: 105000, status: 'success', statusLabelAr: 'مكتمل', statusLabelEn: 'Delivered' },
-  ];
+    products.forEach((p) => {
+      const cat = p.category || (isAr ? 'أخرى' : 'Other');
+      if (!catMap.has(cat)) {
+        catMap.set(cat, { count: 0, sales: 0 });
+      }
+      const curr = catMap.get(cat)!;
+      curr.count += 1;
+    });
+
+    // Add sales strictly from valid real orders
+    const validOrders = (orders || []).filter((o) => o && o.status !== 'cancelled');
+    validOrders.forEach((o) => {
+      (o.items || []).forEach((item) => {
+        const prod = products.find((p) => String(p.id) === String(item.productId));
+        const cat = prod?.category || (isAr ? 'أخرى' : 'Other');
+        const curr = catMap.get(cat) || { count: 0, sales: 0 };
+        curr.sales += (item.price || 0) * (item.quantity || 1);
+        catMap.set(cat, curr);
+      });
+    });
+
+    const totalCategorySales = Array.from(catMap.values()).reduce((acc, c) => acc + c.sales, 0);
+
+    const palette = ['bg-indigo-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500', 'bg-cyan-500', 'bg-purple-500'];
+    return Array.from(catMap.entries()).map(([name, data], idx) => ({
+      nameAr: name,
+      nameEn: name,
+      percentage: totalCategorySales > 0 ? Math.round((data.sales / totalCategorySales) * 100) : 0,
+      sales: data.sales,
+      color: palette[idx % palette.length],
+    }));
+  }, [products, orders, isAr]);
+
+  // Real recent orders directly from database
+  const recentOrders = useMemo(() => {
+    return orders.slice(0, 5).map((ord) => ({
+      id: `#${ord.id}`,
+      customer: ord.customerName || (isAr ? 'عميل كونسيرج' : 'Concierge Client'),
+      date: ord.orderDate ? ord.orderDate.split(' ')[0] : (isAr ? 'اليوم' : 'Today'),
+      items: ord.items ? ord.items.length : 1,
+      total: ord.totalPrice || 0,
+      status: ord.status === 'delivered' ? 'success' : ord.status === 'pending_payment' ? 'draft' : 'warning',
+      statusLabelAr:
+        ord.status === 'pending_payment'
+          ? 'بانتظار التأكيد'
+          : ord.status === 'processing'
+          ? 'قيد التجهيز'
+          : ord.status === 'shipped'
+          ? 'تم الشحن'
+          : ord.status === 'delivered'
+          ? 'تم التسليم'
+          : 'ملغي',
+      statusLabelEn: ord.status,
+    }));
+  }, [orders, isAr]);
 
   const handleCopyMessage = (id: string, text: string) => {
     navigator.clipboard?.writeText(text);
@@ -418,14 +594,6 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                             ? formatCurrency(s.value as number, 'IQD', isAr ? 'ar' : 'en')
                             : formatNumber(s.value as number, isAr ? 'ar' : 'en'))}
                       </span>
-                      <span
-                        className={`text-xs font-semibold flex items-center gap-0.5 ${
-                          s.trend === 'up' ? 'text-emerald-400' : 'text-rose-400'
-                        }`}
-                      >
-                        {s.trend === 'up' ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                        <span>{formatPercent(s.change)}</span>
-                      </span>
                     </div>
 
                     <div className="text-[11px] text-slate-500">
@@ -574,24 +742,30 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                   </div>
 
                   <div className="space-y-4">
-                    {categoriesShare.map((cat, i) => (
-                      <div key={i} className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-medium text-slate-200">
-                            {isAr ? cat.nameAr : cat.nameEn}
-                          </span>
-                          <span className="text-slate-400 font-mono">
-                            {formatCurrency(cat.sales, 'IQD', isAr ? 'ar' : 'en')} ({cat.percentage}%)
-                          </span>
-                        </div>
-                        <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                          <div
-                            style={{ width: `${cat.percentage}%` }}
-                            className={`h-full rounded-full ${cat.color}`}
-                          />
-                        </div>
+                    {categoriesShare.length === 0 ? (
+                      <div className="text-center py-6 text-slate-500 text-xs">
+                        {isAr ? 'لا توجد تصنيفات مسجلة في قاعدة البيانات' : 'No categories recorded in database'}
                       </div>
-                    ))}
+                    ) : (
+                      categoriesShare.map((cat, i) => (
+                        <div key={i} className="space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-medium text-slate-200">
+                              {isAr ? cat.nameAr : cat.nameEn}
+                            </span>
+                            <span className="text-slate-400 font-mono">
+                              {formatCurrency(cat.sales, 'IQD', isAr ? 'ar' : 'en')} ({cat.percentage}%)
+                            </span>
+                          </div>
+                          <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                              style={{ width: `${cat.percentage}%` }}
+                              className={`h-full rounded-full ${cat.color}`}
+                            />
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
 
                   <div className="my-6 border-t border-slate-800/80" />
@@ -660,11 +834,17 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                       className="flex items-center justify-between p-2.5 rounded-lg bg-slate-800/30 hover:bg-slate-800/60 border border-slate-800 transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <img
-                          src={prod.imageUrl}
-                          alt={prod.name}
-                          className="w-12 h-12 rounded-lg object-cover bg-slate-800 shrink-0"
-                        />
+                        {prod.imageUrl?.trim() ? (
+                          <img
+                            src={prod.imageUrl}
+                            alt={prod.name}
+                            className="w-12 h-12 rounded-lg object-cover bg-slate-800 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-slate-800 shrink-0 flex items-center justify-center text-slate-500 text-xs">
+                            —
+                          </div>
+                        )}
                         <div className="min-w-0 text-start">
                           <h4 className="text-xs font-semibold text-white truncate">
                             {isAr ? prod.name : prod.nameEn}
@@ -716,36 +896,42 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                 </div>
 
                 <div className="space-y-3">
-                  {recentOrders.map((ord) => (
-                    <div
-                      key={ord.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-slate-800/30 border border-slate-800 text-start"
-                    >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-bold text-white">{ord.id}</span>
-                          <span className="text-xs text-slate-300 font-medium">{ord.customer}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-1">
-                          <span>{ord.date}</span>
-                          <span>·</span>
-                          <span>{ord.items} {isAr ? 'منتجات' : 'items'}</span>
-                        </div>
-                      </div>
-
-                      <div className="text-end">
-                        <div className="text-xs font-bold text-emerald-400 font-mono">
-                          {formatCurrency(ord.total, 'IQD', isAr ? 'ar' : 'en')}
-                        </div>
-                        <div className="mt-1">
-                          <StatusBadge
-                            status={ord.status as any}
-                            label={isAr ? ord.statusLabelAr : ord.statusLabelEn}
-                          />
-                        </div>
-                      </div>
+                  {recentOrders.length === 0 ? (
+                    <div className="py-8 text-center text-slate-500 text-xs">
+                      {isAr ? 'لا توجد طلبات مسجلة في قاعدة البيانات حتى الآن' : 'No customer orders recorded in database yet'}
                     </div>
-                  ))}
+                  ) : (
+                    recentOrders.map((ord) => (
+                      <div
+                        key={ord.id}
+                        className="flex items-center justify-between p-3 rounded-lg bg-slate-800/30 border border-slate-800 text-start"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-white">{ord.id}</span>
+                            <span className="text-xs text-slate-300 font-medium">{ord.customer}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-1">
+                            <span>{ord.date}</span>
+                            <span>·</span>
+                            <span>{ord.items} {isAr ? 'منتجات' : 'items'}</span>
+                          </div>
+                        </div>
+
+                        <div className="text-end">
+                          <div className="text-xs font-bold text-emerald-400 font-mono">
+                            {formatCurrency(ord.total, 'IQD', isAr ? 'ar' : 'en')}
+                          </div>
+                          <div className="mt-1">
+                            <StatusBadge
+                              status={ord.status as any}
+                              label={isAr ? ord.statusLabelAr : ord.statusLabelEn}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </Card>
             </div>
@@ -803,7 +989,20 @@ export const AdminAnalyticsDashboard: React.FC = () => {
 
             {/* Hesitation Incidents List */}
             <div className="space-y-4">
-              {analyticsData.hesitationIncidents.map((incident) => {
+              {analyticsData.hesitationIncidents.length === 0 ? (
+                <div className="p-12 text-center border border-dashed border-slate-800 rounded-2xl bg-slate-900/30">
+                  <Timer className="w-8 h-8 text-slate-600 mx-auto mb-3" />
+                  <h4 className="text-sm font-bold text-slate-300">
+                    {isAr ? 'لا توجد حالات تردد مسجلة حالياً' : 'No Hesitation Incidents Detected'}
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                    {isAr
+                      ? 'يقوم النظام بمراقبة سلوك الزوار في المتجر ورصد أي تردد عند اختيار المقاس أو الدفع في الوقت الفعلي عند حدوثه.'
+                      : 'The engine monitors live visitor sizing and checkout dwell times in real time.'}
+                  </p>
+                </div>
+              ) : (
+                analyticsData.hesitationIncidents.map((incident) => {
                 const isCopied = copiedMessageId === incident.id;
                 const stageLabel =
                   incident.stage === 'sizing'
@@ -911,7 +1110,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                     </div>
                   </Card>
                 );
-              })}
+              }))}
             </div>
           </motion.div>
         )}
@@ -979,7 +1178,14 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
-                    {analyticsData.customerSessions.map((session) => {
+                    {analyticsData.customerSessions.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-12 text-center text-slate-500 text-xs">
+                          {isAr ? 'لا توجد جلسات عملاء مسجلة في قاعدة البيانات حالياً' : 'No customer sessions recorded in database yet'}
+                        </td>
+                      </tr>
+                    ) : (
+                      analyticsData.customerSessions.map((session) => {
                       const personaConfig = {
                         VIP: {
                           labelAr: 'عميل مميز (VIP)',
@@ -1073,7 +1279,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                           </td>
                         </tr>
                       );
-                    })}
+                    }))}
                   </tbody>
                 </table>
               </div>
@@ -1149,7 +1355,14 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
-                    {analyticsData.sizeDemandMatrix.map((item) => {
+                    {analyticsData.sizeDemandMatrix.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-12 text-center text-slate-500 text-xs">
+                          {isAr ? 'لا توجد بيانات مقاسات مسجلة في قاعدة البيانات حالياً' : 'No size demand telemetry recorded yet'}
+                        </td>
+                      </tr>
+                    ) : (
+                      analyticsData.sizeDemandMatrix.map((item) => {
                       const isRisk = item.status === 'stockout_risk';
                       const isSurplus = item.status === 'surplus';
 
@@ -1196,7 +1409,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                           </td>
                         </tr>
                       );
-                    })}
+                    }))}
                   </tbody>
                 </table>
               </div>
@@ -1219,7 +1432,12 @@ export const AdminAnalyticsDashboard: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {analyticsData.unmetSearches.map((unmet) => (
+                {analyticsData.unmetSearches.length === 0 ? (
+                  <div className="col-span-full py-8 text-center text-slate-500 text-xs border border-dashed border-slate-800 rounded-xl">
+                    {isAr ? 'لا توجد عمليات بحث بدون نتائج مسجلة حتى الآن' : 'No zero-result searches recorded'}
+                  </div>
+                ) : (
+                  analyticsData.unmetSearches.map((unmet) => (
                   <div
                     key={unmet.id}
                     className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 hover:border-slate-700 transition-colors flex flex-col justify-between space-y-2.5"
@@ -1249,7 +1467,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                ))}
+                )))}
               </div>
             </Card>
           </motion.div>
@@ -1273,7 +1491,9 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                   {formatCurrency(selectedBarData.sales, 'IQD', isAr ? 'ar' : 'en')}
                 </span>
                 <span className="text-[10px] text-indigo-400 block mt-1">
-                  {formatPercent(Math.round((selectedBarData.sales / currentDataset.totalRevenue) * 1000) / 10)} {isAr ? 'من إجمالي الفترة' : 'of period total'}
+                  {currentDataset.totalRevenue > 0
+                    ? `${formatPercent(Math.round((selectedBarData.sales / currentDataset.totalRevenue) * 1000) / 10)} ${isAr ? 'من إجمالي الفترة' : 'of period total'}`
+                    : '0%'}
                 </span>
               </div>
               <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30">
@@ -1282,7 +1502,9 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                   {selectedBarData.orders} {isAr ? 'طلب' : 'orders'}
                 </span>
                 <span className="text-[10px] text-emerald-300 block mt-1">
-                  {formatPercent(Math.round((selectedBarData.orders / currentDataset.totalOrders) * 1000) / 10)} {isAr ? 'من إجمالي الطلبات' : 'of total orders'}
+                  {currentDataset.totalOrders > 0
+                    ? `${formatPercent(Math.round((selectedBarData.orders / currentDataset.totalOrders) * 1000) / 10)} ${isAr ? 'من إجمالي الطلبات' : 'of total orders'}`
+                    : '0%'}
                 </span>
               </div>
             </div>
@@ -1290,12 +1512,12 @@ export const AdminAnalyticsDashboard: React.FC = () => {
             <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 leading-relaxed">
               <div className="text-xs font-semibold text-white mb-1.5 flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                <span>{isAr ? 'ملخص تحليلي ذكي' : 'Smart Telemetry Summary'}</span>
+                <span>{isAr ? 'ملخص تحليلي حقيقي' : 'Database Telemetry Summary'}</span>
               </div>
               <p className="text-xs text-slate-300">
                 {isAr
-                  ? `بلغ متوسط قيمة السلة لهذه الفترة ${formatCurrency(Math.round(selectedBarData.sales / selectedBarData.orders), 'IQD', 'ar')} بمعدل تحويل قدره 3.6% وتوزيع قنوات الدفع: 68% دفع عند الاستلام نقداً و 32% محفظة زين كاش الرقمية.`
-                  : `Average basket value was ${formatCurrency(Math.round(selectedBarData.sales / selectedBarData.orders), 'IQD', 'en')} with a 3.6% conversion rate. Payment split: 68% Cash on Delivery and 32% ZainCash.`}
+                  ? `سجلت هذه الفترة ${selectedBarData.orders} طلب بإجمالي مبيعات قدره ${formatCurrency(selectedBarData.sales, 'IQD', 'ar')} مباشرة من قاعدة البيانات.`
+                  : `This period recorded ${selectedBarData.orders} orders with total sales of ${formatCurrency(selectedBarData.sales, 'IQD', 'en')} directly from database.`}
               </p>
             </div>
 

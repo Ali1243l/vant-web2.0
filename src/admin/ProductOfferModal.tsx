@@ -280,11 +280,17 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 p-3.5 sm:p-4 rounded-xl bg-slate-950/70 border border-slate-800/90 shadow-md">
           <div className="flex items-center gap-3.5 min-w-0">
             <div className="relative shrink-0">
-              <img
-                src={product.imageUrl}
-                alt={product.name}
-                className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover bg-slate-800 border border-slate-700/80 shadow-md"
-              />
+              {product.imageUrl?.trim() ? (
+                <img
+                  src={product.imageUrl}
+                  alt={product.name}
+                  className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover bg-slate-800 border border-slate-700/80 shadow-md"
+                />
+              ) : (
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-slate-800 border border-slate-700/80 flex items-center justify-center text-slate-500 shadow-md">
+                  <Tag className="w-6 h-6" />
+                </div>
+              )}
               {hasCurrentOffer && (
                 <span className="absolute -top-1.5 -start-1.5 px-1.5 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black text-[10px] shadow-lg ring-2 ring-slate-950">
                   %

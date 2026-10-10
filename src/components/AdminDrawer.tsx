@@ -212,7 +212,7 @@ export default function AdminDrawer({ lang = 'ar' }: Props) {
           labelEn: 'Size Guide',
           icon: Ruler,
           badge: null,
-          description: isAr ? 'جداول مقاسات الصدر والخصر وأبعاد القطع' : 'Measurements & fit guidelines',
+          description: isAr ? 'جداول مقاسات الطول والوزن المعروضة للزبائن' : 'Height & weight size guidelines',
         },
       ],
     },
@@ -1684,7 +1684,7 @@ export default function AdminDrawer({ lang = 'ar' }: Props) {
                     {filteredProducts.map((p) => {
                       const displayTitle = isAr && p.title_ar ? p.title_ar : p.title;
                       const isExpanded = expandedProductIds.has(p.id);
-                      const allImages = p.images && p.images.length > 0 ? p.images : [p.image_url];
+                      const allImages = (p.images && p.images.length > 0 ? p.images : p.image_url ? [p.image_url] : []).map((s) => s?.trim()).filter(Boolean) as string[];
                       
                       // Calculate piece-specific live engagement from analyticsStats
                       const pieceStats = analyticsStats.topProducts.find((tp) => String(tp.id) === String(p.id)) || {
@@ -1722,11 +1722,17 @@ export default function AdminDrawer({ lang = 'ar' }: Props) {
                                 }}
                                 className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black/40 cursor-pointer group"
                               >
-                                <img
-                                  src={p.image_url}
-                                  alt={displayTitle}
-                                  className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                                />
+                                {p.image_url?.trim() ? (
+                                  <img
+                                    src={p.image_url}
+                                    alt={displayTitle}
+                                    className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                                  />
+                                ) : (
+                                  <div className="h-full w-full flex items-center justify-center text-white/30 text-[10px]">
+                                    —
+                                  </div>
+                                )}
                                 {p.is_offer && (
                                   <span className="absolute top-1 ltr:left-1 rtl:right-1 rounded-md bg-rose-600 px-1 py-0.2 text-[8px] font-bold text-white shadow-xs">
                                     {p.offer_badge_ar || 'خصم'}
@@ -1828,18 +1834,20 @@ export default function AdminDrawer({ lang = 'ar' }: Props) {
                                   </span>
                                   <div className="flex items-center gap-2 overflow-x-auto pb-1">
                                     {allImages.map((img, imgIdx) => (
-                                      <a
-                                        key={imgIdx}
-                                        href={img}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="relative h-16 w-16 shrink-0 rounded-xl overflow-hidden border border-white/10 hover:border-[#3b82f6] transition-all"
-                                      >
-                                        <img src={img} alt="" className="h-full w-full object-cover" />
-                                        <span className="absolute bottom-0.5 ltr:right-0.5 rtl:left-0.5 rounded bg-black/70 px-1 text-[8px] text-white/80 font-mono">
-                                          #{imgIdx + 1}
-                                        </span>
-                                      </a>
+                                      img?.trim() ? (
+                                        <a
+                                          key={imgIdx}
+                                          href={img.trim()}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="relative h-16 w-16 shrink-0 rounded-xl overflow-hidden border border-white/10 hover:border-[#3b82f6] transition-all"
+                                        >
+                                          <img src={img.trim()} alt="" className="h-full w-full object-cover" />
+                                          <span className="absolute bottom-0.5 ltr:right-0.5 rtl:left-0.5 rounded bg-black/70 px-1 text-[8px] text-white/80 font-mono">
+                                            #{imgIdx + 1}
+                                          </span>
+                                        </a>
+                                      ) : null
                                     ))}
                                   </div>
                                 </div>
@@ -2314,10 +2322,10 @@ export default function AdminDrawer({ lang = 'ar' }: Props) {
                           />
                         </label>
 
-                        {controls['banner_hero_bg']?.actionValue && (
+                        {Boolean(controls['banner_hero_bg']?.actionValue?.trim()) && (
                           <div className="h-10 w-24 shrink-0 rounded-xl overflow-hidden border border-white/20 relative group">
                             <img
-                              src={controls['banner_hero_bg'].actionValue}
+                              src={controls['banner_hero_bg'].actionValue!}
                               alt="Preview"
                               className="h-full w-full object-cover"
                             />
@@ -2539,7 +2547,7 @@ export default function AdminDrawer({ lang = 'ar' }: Props) {
                                 />
                               </label>
 
-                              {trend.image && (
+                              {Boolean(trend.image?.trim()) && (
                                 <div className="h-9 w-12 shrink-0 rounded-lg overflow-hidden border border-white/20">
                                   <img src={trend.image} alt="" className="h-full w-full object-cover" />
                                 </div>

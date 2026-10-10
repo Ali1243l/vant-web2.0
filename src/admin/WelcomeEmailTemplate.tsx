@@ -358,13 +358,15 @@ export const WelcomeEmailTemplate: React.FC<WelcomeEmailTemplateProps> = ({
                     key={idx}
                     className="bg-slate-950/70 border border-slate-800 rounded-xl p-2.5 text-center flex flex-col justify-between"
                   >
-                    <div className="aspect-square w-full rounded-lg overflow-hidden bg-slate-900 mb-2">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
+                    {item.image?.trim() ? (
+                      <div className="aspect-square w-full rounded-lg overflow-hidden bg-slate-900 mb-2">
+                        <img
+                          src={item.image.trim()}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : null}
                     <div>
                       <div className="text-xs font-bold text-white line-clamp-1">
                         {item.name}

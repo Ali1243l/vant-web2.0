@@ -13,7 +13,9 @@ export default function Footer({ lang, onAdminTrigger }: Props) {
   const isAr = lang === 'ar';
   const tapCountRef = useRef(0);
   const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { socialLinks } = useSiteControls();
+  const { socialLinks, getControl } = useSiteControls();
+  const socialLinksControl = getControl('footer_social_links');
+  const copyrightControl = getControl('footer_copyright_brand');
 
   const handleCopyrightClick = () => {
     if (!onAdminTrigger) return;
@@ -67,7 +69,7 @@ export default function Footer({ lang, onAdminTrigger }: Props) {
     <footer className="mt-auto border-t border-black/5 dark:border-white/10 pt-6 pb-8 text-center text-xs text-[#6b7280] dark:text-[#9ca3af]">
       <div className="mx-auto max-w-[1920px] w-full px-3 sm:px-6 lg:px-8 xl:px-12 2xl:px-16">
         {/* Social Accounts Showcase - Ergonomic Capsule Row for Mobile & Desktop (CSS Selector 1) */}
-        {activeLinks.length > 0 && (
+        {socialLinksControl.visible && activeLinks.length > 0 && (
           <div
             className="flex flex-wrap items-center justify-center gap-2 sm:gap-3.5 pb-5 mb-5 border-b border-black/5 dark:border-white/8 text-xs"
             aria-label={isAr ? 'حسابات ومنصات التواصل والتوثيق الرسمية' : 'Official Social & Platform Profiles'}
@@ -101,14 +103,16 @@ export default function Footer({ lang, onAdminTrigger }: Props) {
         )}
 
         {/* Lower row: Centered Copyright for both desktop and mobile (CSS Selector 2) */}
-        <div className="flex items-center justify-center text-center text-xs">
-          <p
-            onClick={handleCopyrightClick}
-            className="tracking-wide select-none cursor-default outline-none [-webkit-tap-highlight-color:transparent] text-center mx-auto text-[#6b7280] dark:text-[#9ca3af]"
-          >
-            {isAr ? 'ڤانت · كتالوج الأزياء الحصري © 2026' : 'VANT · Capsule Lookbook © 2026'}
-          </p>
-        </div>
+        {copyrightControl.visible && (
+          <div className="flex items-center justify-center text-center text-xs">
+            <p
+              onClick={handleCopyrightClick}
+              className="tracking-wide select-none cursor-default outline-none [-webkit-tap-highlight-color:transparent] text-center mx-auto text-[#6b7280] dark:text-[#9ca3af]"
+            >
+              {isAr ? copyrightControl.label_ar : copyrightControl.label_en}
+            </p>
+          </div>
+        )}
       </div>
     </footer>
   );

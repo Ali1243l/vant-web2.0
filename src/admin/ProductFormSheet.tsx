@@ -1747,8 +1747,8 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
                                     type="text"
                                     placeholder={
                                       isAr
-                                        ? 'مقاس مخصص (مثال: 4XL، 38، 42mm)'
-                                        : 'Custom size (e.g. 4XL, 38, 42mm)'
+                                        ? 'مقاس مخصص (مثال: 4XL، 50، 52، تفصيل خاص)'
+                                        : 'Custom size (e.g. 4XL, 50, 52, Bespoke)'
                                     }
                                     value={variantCustomSizeInputs[variant.id] || ''}
                                     onChange={(e) =>
@@ -2010,8 +2010,8 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
                     type="text"
                     placeholder={
                       isAr
-                        ? 'أدخل مقاساً مخصصاً (مثال: 49mm، 15.6 بوصة، 42)'
-                        : 'e.g. 49mm, 15.6 inch, 42'
+                        ? 'أدخل مقاساً مخصصاً (مثال: 4XL، 50، 52، تفصيل خاص)'
+                        : 'e.g. 4XL, 50, 52, Bespoke'
                     }
                     value={customSizeInput}
                     onChange={(e) => setCustomSizeInput(e.target.value)}

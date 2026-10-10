@@ -36,6 +36,8 @@ export default function CategoryFilter({
 }: Props) {
   const { getControl } = useSiteControls();
   const filterControl = getControl('btn_filter_availability');
+  const offersControl = getControl('btn_filter_offers');
+  const tabsControl = getControl('sec_category_tabs');
   const activeRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -138,7 +140,7 @@ export default function CategoryFilter({
             className="no-scrollbar flex items-center gap-1.5 sm:gap-2 md:gap-2.5 overflow-x-auto [scroll-snap-type:x_proximity] select-none py-1 md:py-1.5"
           >
             {/* Special Offers & Discounts Button */}
-            {onToggleOffersOnly && (
+            {onToggleOffersOnly && offersControl.visible && (
               <button
                 type="button"
                 ref={isOffersOnly ? activeRef : undefined}
@@ -163,11 +165,11 @@ export default function CategoryFilter({
                     transition={{ type: 'spring', stiffness: 480, damping: 35 }}
                   />
                 )}
-                <span className="relative z-10">{isAr ? 'العروضات والخصومات' : 'Offers & Discounts'}</span>
+                <span className="relative z-10">{isAr ? offersControl.label_ar : offersControl.label_en}</span>
               </button>
             )}
 
-            {categories.map((c) => {
+            {tabsControl.visible && categories.map((c) => {
               const isActive = c === active && !isOffersOnly;
               const displayLabel = getLabel ? getLabel(c) : c;
 

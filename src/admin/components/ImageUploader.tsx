@@ -230,6 +230,19 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         )}
       </div>
 
+      {/* Direct upload button */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+          className="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-indigo-500/40 text-slate-200 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-sm"
+        >
+          <Upload className="w-3.5 h-3.5 text-indigo-400" />
+          <span>رفع صورة كملف من جهازك (اختيار من الهاتف أو الكمبيوتر)</span>
+        </button>
+      </div>
+
       {uploadNotice && (
         <div className="text-[11px] text-emerald-400 flex items-center gap-1.5 animate-in fade-in">
           <CheckCircle2 className="w-3.5 h-3.5" />
@@ -252,11 +265,13 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
                     : 'border-slate-800 hover:border-slate-700'
                 }`}
               >
-                <img
-                  src={url}
-                  alt={`Product thumb ${index + 1}`}
-                  className="w-full h-full object-cover"
-                />
+                {url?.trim() ? (
+                  <img
+                    src={url}
+                    alt={`Product thumb ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : null}
 
                 {/* Primary Badge */}
                 {isPrimary && (
@@ -348,7 +363,9 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             className="w-7 h-7 rounded-lg border border-slate-700 overflow-hidden shrink-0 hover:scale-105 transition-transform"
             title="إضافة عينة سريعة"
           >
-            <img src={thumb} alt="sample" className="w-full h-full object-cover" />
+            {thumb?.trim() ? (
+              <img src={thumb} alt="sample" className="w-full h-full object-cover" />
+            ) : null}
           </button>
         ))}
       </div>

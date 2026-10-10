@@ -421,15 +421,24 @@ export const OrdersManager: React.FC = () => {
                           {/* Items Preview thumbnails */}
                           <div className="flex items-center gap-2 mb-3">
                             <div className="flex -space-x-2 rtl:space-x-reverse overflow-hidden">
-                              {order.items.slice(0, 3).map((item, i) => (
-                                <img
-                                  key={i}
-                                  src={item.imageUrl}
-                                  alt={item.name}
-                                  className="w-7 h-7 rounded-full border-2 border-slate-900 object-cover bg-slate-800"
-                                  title={`${item.name} (${item.selectedSize})`}
-                                />
-                              ))}
+                              {order.items.slice(0, 3).map((item, i) =>
+                                item.imageUrl?.trim() ? (
+                                  <img
+                                    key={i}
+                                    src={item.imageUrl}
+                                    alt={item.name}
+                                    className="w-7 h-7 rounded-full border-2 border-slate-900 object-cover bg-slate-800"
+                                    title={`${item.name} (${item.selectedSize})`}
+                                  />
+                                ) : (
+                                  <div
+                                    key={i}
+                                    className="w-7 h-7 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center text-[9px] text-slate-400"
+                                  >
+                                    •
+                                  </div>
+                                )
+                              )}
                             </div>
                             <span className="text-[11px] text-slate-400 truncate flex-1">
                               {order.items.length === 1
@@ -554,14 +563,23 @@ export const OrdersManager: React.FC = () => {
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-2">
                             <div className="flex -space-x-2 rtl:space-x-reverse overflow-hidden">
-                              {order.items.slice(0, 2).map((item, i) => (
-                                <img
-                                  key={i}
-                                  src={item.imageUrl}
-                                  alt={item.name}
-                                  className="w-6 h-6 rounded-full border border-slate-800 object-cover bg-slate-800"
-                                />
-                              ))}
+                              {order.items.slice(0, 2).map((item, i) =>
+                                item.imageUrl?.trim() ? (
+                                  <img
+                                    key={i}
+                                    src={item.imageUrl}
+                                    alt={item.name}
+                                    className="w-6 h-6 rounded-full border border-slate-800 object-cover bg-slate-800"
+                                  />
+                                ) : (
+                                  <div
+                                    key={i}
+                                    className="w-6 h-6 rounded-full border border-slate-800 bg-slate-800 flex items-center justify-center text-[8px] text-slate-400"
+                                  >
+                                    •
+                                  </div>
+                                )
+                              )}
                             </div>
                             <span className="text-xs text-slate-300 truncate max-w-[180px]">
                               {order.items.map((i) => (isAr ? i.name : i.nameEn)).join(', ')}

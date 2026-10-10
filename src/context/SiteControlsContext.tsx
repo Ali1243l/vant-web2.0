@@ -8,7 +8,7 @@ import { saveSiteConfigToSupabase, fetchSiteConfigFromSupabase, uploadDataUrlToS
 
 export interface SiteControlItem {
   id: string;
-  category: 'product' | 'header' | 'filter' | 'global' | 'banner';
+  category: 'product' | 'header' | 'filter' | 'global' | 'banner' | 'card' | 'footer';
   name_ar: string;
   name_en: string;
   visible: boolean;
@@ -24,69 +24,7 @@ export type CurrencyType = 'د.ع' | 'IQD' | 'USD';
 export type CurrencyCode = CurrencyType;
 
 export const DEFAULT_SITE_CONTROLS: Record<string, SiteControlItem> = {
-  // Product Drawer Controls
-  btn_product_whatsapp: {
-    id: 'btn_product_whatsapp',
-    category: 'product',
-    name_ar: 'زر طلب القطعة عبر واتساب',
-    name_en: 'WhatsApp Order Button',
-    visible: true,
-    enabled: true,
-    label_ar: 'طلب عبر واتساب',
-    label_en: 'Order via WhatsApp',
-    description_ar: 'الزر الأساسي للتواصل والطلب الفوري في صفحة تفاصيل القطعة',
-    description_en: 'Primary direct purchase CTA in product details',
-  },
-  btn_product_share: {
-    id: 'btn_product_share',
-    category: 'product',
-    name_ar: 'زر مشاركة الرابط',
-    name_en: 'Share Link Button',
-    visible: true,
-    enabled: true,
-    label_ar: 'مشاركة',
-    label_en: 'Share',
-    description_ar: 'زر فتح نافذة نسخ ومشاركة رابط القطعة السريع',
-    description_en: 'Triggers quick copy and social sharing sheet',
-  },
-  btn_product_copy: {
-    id: 'btn_product_copy',
-    category: 'product',
-    name_ar: 'زر نسخ اسم القطعة',
-    name_en: 'Copy Title Button',
-    visible: true,
-    enabled: true,
-    label_ar: 'نسخ الاسم',
-    label_en: 'Copy Name',
-    description_ar: 'زر النسخ السريع لاسم وتفاصيل القطعة للحافظة',
-    description_en: 'Quick clipboard copy of the product title',
-  },
-  btn_product_size_guide: {
-    id: 'btn_product_size_guide',
-    category: 'product',
-    name_ar: 'زر دليل القياسات التفاعلي',
-    name_en: 'Interactive Size Guide Trigger',
-    visible: true,
-    enabled: true,
-    label_ar: 'دليل القياسات الذكي',
-    label_en: 'Smart Fit Guide',
-    description_ar: 'زر فتح حاسبة الطول والوزن وجدول المقاسات',
-    description_en: 'Opens the height/weight recommender & measurement table',
-  },
-  btn_product_bespoke: {
-    id: 'btn_product_bespoke',
-    category: 'product',
-    name_ar: 'زر طلب التفصيل الخاص (Bespoke)',
-    name_en: 'Bespoke Tailoring Button',
-    visible: true,
-    enabled: true,
-    label_ar: 'طلب تفصيل خاص عبر واتساب',
-    label_en: 'Inquire Bespoke on WhatsApp',
-    description_ar: 'يظهر عند إدخال قياسات خارج النطاق الجاهز لتحويل العميل للخياطة الخاصة',
-    description_en: 'Appears for custom builds exceeding ready-to-wear sizing',
-  },
-
-  // Header & Navigation Controls
+  // 1. Header & Navigation Controls
   btn_header_search: {
     id: 'btn_header_search',
     category: 'header',
@@ -148,49 +86,7 @@ export const DEFAULT_SITE_CONTROLS: Record<string, SiteControlItem> = {
     description_en: 'Kinetic typography logo in header center with smooth cycling animation',
   },
 
-  // Category & Filter Controls
-  btn_filter_availability: {
-    id: 'btn_filter_availability',
-    category: 'filter',
-    name_ar: 'قائمة فلترة التوفر المنسدلة',
-    name_en: 'Availability Filter Dropdown',
-    visible: true,
-    enabled: true,
-    label_ar: 'حالة التوفر',
-    label_en: 'Availability',
-    description_ar: 'القائمة المنسدلة المدمجة لتصفية (متوفر، قريباً، منتهي)',
-    description_en: 'The compact dropdown for filtering stock status',
-  },
-
-  // Global Action Settings
-  cfg_whatsapp_phone: {
-    id: 'cfg_whatsapp_phone',
-    category: 'global',
-    name_ar: 'رقم واتساب المبيعات والطلبات',
-    name_en: 'Sales WhatsApp Phone Number',
-    visible: true,
-    enabled: true,
-    label_ar: 'رقم الواتساب الرسمي',
-    label_en: 'Official WhatsApp Phone',
-    actionValue: '',
-    description_ar: 'رقم الواتساب المستهدف عند نقر أزرار الطلب (مثال: +9647XXXXXXXXX)',
-    description_en: 'Target WhatsApp international phone number',
-  },
-  cfg_bespoke_phone: {
-    id: 'cfg_bespoke_phone',
-    category: 'global',
-    name_ar: 'رقم واتساب التفصيل الخاص (الكونسيرج)',
-    name_en: 'Bespoke Concierge WhatsApp Phone',
-    visible: true,
-    enabled: true,
-    label_ar: 'رقم كونسيرج التفصيل',
-    label_en: 'Bespoke Concierge Phone',
-    actionValue: '',
-    description_ar: 'رقم هاتف قسم الخياطة والتفصيل الخاص',
-    description_en: 'Direct phone number for Made-to-Measure concierge',
-  },
-
-  // Banner & Site Copy Controls
+  // 2. Banner & Hero Section Controls
   banner_hero_visible: {
     id: 'banner_hero_visible',
     category: 'banner',
@@ -202,6 +98,18 @@ export const DEFAULT_SITE_CONTROLS: Record<string, SiteControlItem> = {
     label_en: 'Welcome Hero Banner',
     description_ar: 'التحكم بإظهار أو إخفاء البنر الترحيبي أعلى الكتالوج',
     description_en: 'Toggle display of the top hero banner',
+  },
+  banner_hero_tag: {
+    id: 'banner_hero_tag',
+    category: 'banner',
+    name_ar: 'شارة أعلى البنر الترحيبي',
+    name_en: 'Welcome Hero Banner Top Tag',
+    visible: true,
+    enabled: true,
+    label_ar: 'ڤانت · كتالوج شتاء 2026',
+    label_en: 'MAISON VANT · WINTER CAPSULE 2026',
+    description_ar: 'الشريط الأرشيفي الصغير في أعلى البنر',
+    description_en: 'Small editorial tag line above title',
   },
   banner_hero_title: {
     id: 'banner_hero_title',
@@ -227,28 +135,16 @@ export const DEFAULT_SITE_CONTROLS: Record<string, SiteControlItem> = {
     description_ar: 'النص التعريفي لبيان وفلسفة الدار',
     description_en: 'Manifesto description under the main headline',
   },
-  banner_hero_tag: {
-    id: 'banner_hero_tag',
-    category: 'banner',
-    name_ar: 'شارة أعلى البنر الترحيبي',
-    name_en: 'Welcome Hero Banner Top Tag',
-    visible: true,
-    enabled: true,
-    label_ar: 'ڤانت · كتالوج شتاء 2026',
-    label_en: 'MAISON VANT · WINTER CAPSULE 2026',
-    description_ar: 'الشريط الأرشيفي الصغير في أعلى البنر',
-    description_en: 'Small editorial tag line above title',
-  },
   banner_hero_btn: {
     id: 'banner_hero_btn',
     category: 'banner',
-    name_ar: 'نص زر التصفح في البنر',
+    name_ar: 'زر التصفح في البنر',
     name_en: 'Welcome Hero Action Button',
     visible: true,
     enabled: true,
     label_ar: 'تصفح كافة القطع',
     label_en: 'Browse All Pieces',
-    description_ar: 'نص الزر التفاعلي للانتقال إلى المعروضات',
+    description_ar: 'نص الزر التفاعلي للانتقال إلى المعروضات والكتالوج',
     description_en: 'Button label linking to catalog grid',
   },
   banner_hero_bg: {
@@ -261,8 +157,8 @@ export const DEFAULT_SITE_CONTROLS: Record<string, SiteControlItem> = {
     label_ar: 'صورة الخلفية',
     label_en: 'Background Image',
     actionValue: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1600&q=80',
-    description_ar: 'رابط صورة الغلاف الفنية التحريرية للبنر',
-    description_en: 'Editorial cover background image URL',
+    description_ar: 'رابط صورة الغلاف الفنية التحريرية للبنر أو رفع ملف صورة',
+    description_en: 'Editorial cover background image URL or uploaded file',
   },
   banner_trends_title: {
     id: 'banner_trends_title',
@@ -275,6 +171,294 @@ export const DEFAULT_SITE_CONTROLS: Record<string, SiteControlItem> = {
     label_en: 'Featured Trends 2026',
     description_ar: 'عنوان قسم التريندات المتنقلة',
     description_en: 'Headline for the horizontal trends carousel',
+  },
+  sec_trends_carousel: {
+    id: 'sec_trends_carousel',
+    category: 'banner',
+    name_ar: 'شريط كروت تريند الموسم',
+    name_en: 'Trends Carousel Section',
+    visible: true,
+    enabled: true,
+    label_ar: 'كروت التريندات',
+    label_en: 'Trends Cards Carousel',
+    description_ar: 'إظهار أو إخفاء شريط التريندات الدوار أسفل البنر',
+    description_en: 'Show or hide the interactive trends cards carousel',
+  },
+
+  // 3. Category & Filter Controls
+  sec_category_tabs: {
+    id: 'sec_category_tabs',
+    category: 'filter',
+    name_ar: 'شريط تصنيفات الكتالوج',
+    name_en: 'Catalog Categories Tabs Bar',
+    visible: true,
+    enabled: true,
+    label_ar: 'التصنيفات',
+    label_en: 'Categories',
+    description_ar: 'شريط أزرار التصنيفات (الكل، الأزياء الرسمية، المعاطف، التريكو، الأحذية، الإكسسوارات)',
+    description_en: 'Pills bar for switching categories across the lookbook',
+  },
+  btn_filter_availability: {
+    id: 'btn_filter_availability',
+    category: 'filter',
+    name_ar: 'قائمة فلترة التوفر المنسدلة',
+    name_en: 'Availability Filter Dropdown',
+    visible: true,
+    enabled: true,
+    label_ar: 'حالة التوفر',
+    label_en: 'Availability',
+    description_ar: 'القائمة المنسدلة المدمجة لتصفية (متوفر، قريباً، منتهي)',
+    description_en: 'The compact dropdown for filtering stock status',
+  },
+  btn_filter_offers: {
+    id: 'btn_filter_offers',
+    category: 'filter',
+    name_ar: 'زر تصفية العروض والخصومات',
+    name_en: 'Offers Only Filter Button',
+    visible: true,
+    enabled: true,
+    label_ar: 'العروض الخاصة',
+    label_en: 'Special Offers',
+    description_ar: 'زر الفلترة السريعة للقطع المشمولة بالتخفيضات والكوبونات',
+    description_en: 'Quick filter toggle for sale and discounted pieces',
+  },
+
+  // 4. Product Card Controls
+  card_wishlist_btn: {
+    id: 'card_wishlist_btn',
+    category: 'card',
+    name_ar: 'زر المفضلة على كرت المنتج',
+    name_en: 'Product Card Wishlist Button',
+    visible: true,
+    enabled: true,
+    label_ar: 'إضافة للمفضلة',
+    label_en: 'Wishlist',
+    description_ar: 'أيقونة القلب الزجاجية أعلى زاوية صورة المنتج لحفظ القطعة',
+    description_en: 'Floating frosted glass heart button on product cards',
+  },
+  card_status_badge: {
+    id: 'card_status_badge',
+    category: 'card',
+    name_ar: 'شارة حالة التوفر والخصم بالكرت',
+    name_en: 'Card Status & Discount Badge',
+    visible: true,
+    enabled: true,
+    label_ar: 'شارة الحالة',
+    label_en: 'Status Badge',
+    description_ar: 'شارات (متوفر، نفد، قريباً، نسبة الخصم) على صورة المنتج',
+    description_en: 'Badges indicating stock status or discount percentage on cards',
+  },
+  card_price_tag: {
+    id: 'card_price_tag',
+    category: 'card',
+    name_ar: 'عرض السعر على كرت المنتج',
+    name_en: 'Product Card Price Tag',
+    visible: true,
+    enabled: true,
+    label_ar: 'السعر',
+    label_en: 'Price',
+    description_ar: 'عرض السعر الفعلي والسعر المشطوب عند وجود خصم',
+    description_en: 'Current and strikethrough price display on cards',
+  },
+  card_category_label: {
+    id: 'card_category_label',
+    category: 'card',
+    name_ar: 'اسم التصنيف على كرت المنتج',
+    name_en: 'Card Category Small Label',
+    visible: true,
+    enabled: true,
+    label_ar: 'التصنيف',
+    label_en: 'Category',
+    description_ar: 'النص المصغر الرمادي الدال على التصنيف أعلى اسم القطعة',
+    description_en: 'Small category label above the product title',
+  },
+  card_hover_preview: {
+    id: 'card_hover_preview',
+    category: 'card',
+    name_ar: 'تبديل الصورة عند تمرير الماوس',
+    name_en: 'Card Hover Secondary Image',
+    visible: true,
+    enabled: true,
+    label_ar: 'المعاينة البديلة',
+    label_en: 'Hover Preview',
+    description_ar: 'عرض الزاوية الثانية للمنتج تلقائياً عند مرور مؤشر الماوس',
+    description_en: 'Smooth cross-fade to secondary product view on hover',
+  },
+
+  // 5. Product Drawer & Purchasing Controls
+  btn_product_whatsapp: {
+    id: 'btn_product_whatsapp',
+    category: 'product',
+    name_ar: 'زر طلب القطعة عبر واتساب',
+    name_en: 'WhatsApp Order Button',
+    visible: true,
+    enabled: true,
+    label_ar: 'طلب عبر واتساب',
+    label_en: 'Order via WhatsApp',
+    description_ar: 'الزر الأساسي للتواصل والطلب الفوري في صفحة تفاصيل القطعة والشريط السفلي',
+    description_en: 'Primary direct purchase CTA in product details and bottom bar',
+  },
+  btn_product_size_guide: {
+    id: 'btn_product_size_guide',
+    category: 'product',
+    name_ar: 'زر دليل القياسات التفاعلي',
+    name_en: 'Interactive Size Guide Trigger',
+    visible: true,
+    enabled: true,
+    label_ar: 'دليل القياسات الذكي',
+    label_en: 'Smart Fit Guide',
+    description_ar: 'زر فتح حاسبة الطول والوزن وجدول المقاسات',
+    description_en: 'Opens the height/weight recommender & measurement table',
+  },
+  btn_product_bespoke: {
+    id: 'btn_product_bespoke',
+    category: 'product',
+    name_ar: 'زر طلب التفصيل الخاص (Bespoke)',
+    name_en: 'Bespoke Tailoring Button',
+    visible: true,
+    enabled: true,
+    label_ar: 'طلب تفصيل خاص عبر واتساب',
+    label_en: 'Inquire Bespoke on WhatsApp',
+    description_ar: 'يظهر عند إدخال قياسات خارج النطاق الجاهز لتحويل العميل للخياطة الخاصة',
+    description_en: 'Appears for custom builds exceeding ready-to-wear sizing',
+  },
+  btn_product_share: {
+    id: 'btn_product_share',
+    category: 'product',
+    name_ar: 'زر مشاركة الرابط',
+    name_en: 'Share Link Button',
+    visible: true,
+    enabled: true,
+    label_ar: 'مشاركة',
+    label_en: 'Share',
+    description_ar: 'زر فتح نافذة نسخ ومشاركة رابط القطعة السريع',
+    description_en: 'Triggers quick copy and social sharing sheet',
+  },
+  btn_product_copy: {
+    id: 'btn_product_copy',
+    category: 'product',
+    name_ar: 'زر نسخ اسم القطعة',
+    name_en: 'Copy Title Button',
+    visible: true,
+    enabled: true,
+    label_ar: 'نسخ الاسم',
+    label_en: 'Copy Name',
+    description_ar: 'زر النسخ السريع لاسم وتفاصيل القطعة للحافظة',
+    description_en: 'Quick clipboard copy of the product title',
+  },
+  sec_product_delivery_badge: {
+    id: 'sec_product_delivery_badge',
+    category: 'product',
+    name_ar: 'مربع معلومات التوصيل السريع',
+    name_en: 'Fast Delivery Feature Badge',
+    visible: true,
+    enabled: true,
+    label_ar: 'توصيل سريع لكافة المحافظات',
+    label_en: 'Nationwide Fast Delivery',
+    description_ar: 'مربع إبراز ميزة التوصيل مع حق الفحص والمعاينة عند الاستلام',
+    description_en: 'Highlights 3-5 days delivery with inspection guarantee',
+  },
+  sec_product_craft_badge: {
+    id: 'sec_product_craft_badge',
+    category: 'product',
+    name_ar: 'مربع معلومات التفصيل الإيطالي',
+    name_en: 'Tailoring Craftsmanship Badge',
+    visible: true,
+    enabled: true,
+    label_ar: 'تفصيل فاخر وقصة إيطالية',
+    label_en: 'Luxury Italian Tailoring',
+    description_ar: 'مربع إبراز الحرفية اليدوية وأصالة المظهر',
+    description_en: 'Highlights artisanal craftsmanship and tailoring quality',
+  },
+  btn_product_carousel_nav: {
+    id: 'btn_product_carousel_nav',
+    category: 'product',
+    name_ar: 'أسهم تقليب صور المعرض',
+    name_en: 'Gallery Carousel Navigation Arrows',
+    visible: true,
+    enabled: true,
+    label_ar: 'أسهم التنقل',
+    label_en: 'Nav Arrows',
+    description_ar: 'الأسهم الدائرية لتقليب صور المنتج السابقة والتالية',
+    description_en: 'Circular arrows for paginating product images',
+  },
+
+  // 6. Footer & Floating Controls
+  btn_floating_back_to_top: {
+    id: 'btn_floating_back_to_top',
+    category: 'footer',
+    name_ar: 'زر العودة للأعلى العائم',
+    name_en: 'Floating Back to Top Button',
+    visible: true,
+    enabled: true,
+    label_ar: 'العودة للأعلى',
+    label_en: 'Back to Top',
+    description_ar: 'الزر الدائري العائم في زاوية الشاشة للرجوع لبداية الصفحة',
+    description_en: 'Floating round button that smoothly scrolls up to top',
+  },
+  sec_newsletter_subscription: {
+    id: 'sec_newsletter_subscription',
+    category: 'footer',
+    name_ar: 'سكشن النشرة البريدية ونادي VIP',
+    name_en: 'Newsletter VIP Club Section',
+    visible: true,
+    enabled: true,
+    label_ar: 'النشرة البريدية',
+    label_en: 'VIP Newsletter Club',
+    description_ar: 'صندوق الاشتراك البريدي للحصول على كوبونات الخصم الحصرية',
+    description_en: 'The interactive subscription box for VIP club discounts',
+  },
+  footer_social_links: {
+    id: 'footer_social_links',
+    category: 'footer',
+    name_ar: 'أزرار حسابات التواصل في التذييل',
+    name_en: 'Footer Social Links Row',
+    visible: true,
+    enabled: true,
+    label_ar: 'حسابات التواصل',
+    label_en: 'Social Accounts',
+    description_ar: 'شريط كبسولات روابط التواصل الاجتماعي الموثقة في أسفل الموقع',
+    description_en: 'Official social media capsules in footer bottom',
+  },
+  footer_copyright_brand: {
+    id: 'footer_copyright_brand',
+    category: 'footer',
+    name_ar: 'حقوق النشر وتوقيع الدار',
+    name_en: 'Footer Copyright & Brand Mark',
+    visible: true,
+    enabled: true,
+    label_ar: 'ڤانت · كتالوج الأزياء الحصري © 2026',
+    label_en: 'VANT · Capsule Lookbook © 2026',
+    description_ar: 'نص التوثيق وحقوق الملكية الفكرية في نهاية الصفحة',
+    description_en: 'Legal brand attribution and copyright signature at bottom',
+  },
+
+  // 7. Global Action Parameters
+  cfg_whatsapp_phone: {
+    id: 'cfg_whatsapp_phone',
+    category: 'global',
+    name_ar: 'رقم واتساب المبيعات والطلبات',
+    name_en: 'Sales WhatsApp Phone Number',
+    visible: true,
+    enabled: true,
+    label_ar: 'رقم الواتساب الرسمي',
+    label_en: 'Official WhatsApp Phone',
+    actionValue: '',
+    description_ar: 'رقم الواتساب المستهدف عند نقر أزرار الطلب (مثال: +9647XXXXXXXXX)',
+    description_en: 'Target WhatsApp international phone number',
+  },
+  cfg_bespoke_phone: {
+    id: 'cfg_bespoke_phone',
+    category: 'global',
+    name_ar: 'رقم واتساب التفصيل الخاص (الكونسيرج)',
+    name_en: 'Bespoke Concierge WhatsApp Phone',
+    visible: true,
+    enabled: true,
+    label_ar: 'رقم كونسيرج التفصيل',
+    label_en: 'Bespoke Concierge Phone',
+    actionValue: '',
+    description_ar: 'رقم هاتف قسم الخياطة والتفصيل الخاص',
+    description_en: 'Direct phone number for Made-to-Measure concierge',
   },
 };
 
@@ -606,6 +790,7 @@ export interface SiteControlsContextType {
   addMasterSize: (item: Omit<MasterSizeItem, 'id'> & { id?: string }) => void;
   deleteMasterSize: (id: string) => void;
   toggleMasterSize: (id: string) => void;
+  reorderMasterSizes: (reordered: MasterSizeItem[]) => void;
   resetMasterSizesToDefault: () => void;
 
   // Admin Auth & State
@@ -703,12 +888,12 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
       const mediaUrls = mediaList.map((m: any) => m.media_url?.trim()).filter(Boolean);
       const enhancement = enhancements[String(p.id)] || {};
 
-      // Prioritize database media_url from Supabase product_media, then enhancement, then fallback
+      // Prioritize database media_url from Supabase product_media, then enhancement, then p.image_url
       const primaryImage =
         mediaUrls[0] ||
         enhancement.image_url ||
         p.image_url ||
-        'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1200&q=85';
+        '';
 
       let availability: ProductAvailability = 'in_stock';
       const rawStatus = (p.status || '').toUpperCase().trim();
@@ -718,35 +903,37 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
 
       const isOffer = Boolean(enhancement.is_offer || p.is_exclusive_drop);
       const numPrice = Number(p.price) || 0;
-      const originalPrice = enhancement.original_price || (isOffer ? Math.round(numPrice * 1.25) : undefined);
+      const originalPrice = enhancement.original_price || (isOffer && numPrice > 0 ? Math.round(numPrice * 1.25) : undefined);
 
       const allImages =
         mediaUrls.length > 0
           ? mediaUrls
           : enhancement.images && enhancement.images.length > 0
           ? enhancement.images
-          : [primaryImage];
+          : primaryImage
+          ? [primaryImage]
+          : [];
 
       return {
         id: p.id,
-        title: p.title || 'Untitled Piece',
-        title_ar: enhancement.title_ar || p.title_ar || p.title || 'قطعة حصرية',
+        title: p.title || '',
+        title_ar: enhancement.title_ar || p.title_ar || p.title || '',
         price: numPrice,
         original_price: originalPrice,
         is_offer: isOffer,
         offer_badge_ar: enhancement.offer_badge_ar || (isOffer ? 'عرض خاص' : undefined),
         offer_badge_en: enhancement.offer_badge_en || (isOffer ? 'Special Offer' : undefined),
         currency: 'IQD',
-        category: p.category || 'Tailoring',
-        category_ar: enhancement.category_ar || p.category_ar || (p.category === 'T-Shirts' ? 'تيشيرتات' : p.category),
+        category: p.category || '',
+        category_ar: enhancement.category_ar || p.category_ar || (p.category === 'T-Shirts' ? 'تيشيرتات' : p.category) || '',
         image_url: primaryImage,
         images: allImages,
-        sizes: Array.isArray(p.sizes) && p.sizes.length > 0 ? p.sizes : ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+        sizes: Array.isArray(p.sizes) ? p.sizes : [],
         description: p.description || '',
-        description_ar: p.description_ar || p.description,
+        description_ar: p.description_ar || p.description || '',
         material: p.material || '',
         fit_details: p.fit_details || '',
-        colors: Array.isArray(p.colors) && p.colors.length > 0 ? p.colors : (enhancement.colors || []),
+        colors: Array.isArray(p.colors) ? p.colors : (enhancement.colors || []),
         variants: p.variants || enhancement.variants || [],
         sku: p.sku || enhancement.sku,
         tags: enhancement.tags || (Array.isArray(p.tags) ? p.tags : []),
@@ -772,6 +959,9 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
         .select('*, product_media(*)', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(0, PAGE_SIZE - 1);
+
+      console.log("Supabase Fetch Result:", data);
+      console.log("Supabase Fetch Error:", sbError);
 
       if (sbError) {
         console.error('Supabase query error in SiteControls:', sbError.message);
@@ -1280,6 +1470,21 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
         enhancements: getStoredEnhancements(),
       });
       return next;
+    });
+  };
+
+  const reorderMasterSizes = (reordered: MasterSizeItem[]) => {
+    setMasterSizes(reordered);
+    try {
+      localStorage.setItem(SIZES_STORAGE_KEY, JSON.stringify(reordered));
+    } catch {}
+    saveSiteConfigToSupabase({
+      currency,
+      controls,
+      trendItems,
+      socialLinks,
+      sizeGuideRows: reordered,
+      enhancements: getStoredEnhancements(),
     });
   };
 
@@ -2030,6 +2235,7 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
         addMasterSize,
         deleteMasterSize,
         toggleMasterSize,
+        reorderMasterSizes,
         resetMasterSizesToDefault,
         isAdminOpen,
         setIsAdminOpen,

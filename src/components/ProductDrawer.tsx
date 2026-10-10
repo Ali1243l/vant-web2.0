@@ -67,6 +67,9 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
   const bespokeControl = getControl('btn_product_bespoke');
   const whatsappPhoneControl = getControl('cfg_whatsapp_phone');
   const bespokePhoneControl = getControl('cfg_bespoke_phone');
+  const deliveryBadgeControl = getControl('sec_product_delivery_badge');
+  const craftBadgeControl = getControl('sec_product_craft_badge');
+  const carouselNavControl = getControl('btn_product_carousel_nav');
 
   // Carousel pointer drag state hoisted to top
   const [carouselDragOffset, setCarouselDragOffset] = useState(0);
@@ -181,11 +184,15 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
           variantInfo.variants[0];
 
     if (targetVariant && Array.isArray(targetVariant.images) && targetVariant.images.length > 0) {
-      return targetVariant.images;
+      const filtered = targetVariant.images.map((s) => s?.trim()).filter(Boolean) as string[];
+      if (filtered.length > 0) return filtered;
     }
 
-    if (product.image_url) return [product.image_url];
-    if (Array.isArray(product.images) && product.images.length > 0) return [product.images[0]];
+    if (product.image_url?.trim()) return [product.image_url.trim()];
+    if (Array.isArray(product.images) && product.images.length > 0) {
+      const filtered = product.images.map((s) => s?.trim()).filter(Boolean) as string[];
+      if (filtered.length > 0) return filtered;
+    }
     return [];
   }, [product, effectiveColorIdx, variantInfo, defaultVariantIdx]);
 
@@ -499,17 +506,9 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
   };
 
   const renderedSizes = useMemo(() => {
-    const activeMaster = masterSizes.filter((s) => s.enabled).map((s) => s.size);
-    const prodSizes = (activeVariant?.sizes || product?.sizes || []).map((s) => s);
-    if (prodSizes.length > 0) {
-      const list = [...activeMaster];
-      for (const ps of prodSizes) {
-        if (!list.includes(ps)) list.push(ps);
-      }
-      return list;
-    }
-    return activeMaster.length > 0 ? activeMaster : ALL_SIZES;
-  }, [activeVariant?.sizes, product?.sizes, masterSizes]);
+    const prodSizes = (activeVariant?.sizes || product?.sizes || []).filter(Boolean);
+    return prodSizes;
+  }, [activeVariant?.sizes, product?.sizes]);
 
   // Mobile & Modal Handlers
   const dragY = useMotionValue(0);
@@ -838,73 +837,84 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(0,74,215,0.06),transparent_70%)] dark:bg-[radial-gradient(circle_at_50%_40%,rgba(59,130,246,0.1),transparent_70%)] pointer-events-none" />
 
                     {/* Continuous Hardware-Accelerated Sliding Track */}
-                    <div
-                      dir="ltr"
-                      className="flex h-full w-full will-change-transform [direction:ltr]"
-                      style={{
-                        transform: `translate3d(calc(-${activeImageIndex * 100}% + ${carouselDragOffset}px), 0, 0)`,
-                        transition: isSwipingCarousel ? 'none' : 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
-                      }}
-                    >
-                      {images.map((imgSrc, idx) => {
-                        const isImageLoaded = loadedImages.has(imgSrc);
+                    {images.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center p-8 h-full w-full min-h-[300px] text-[#15171c]/40 dark:text-white/40">
+                        <svg className="w-16 h-16 stroke-[1.2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                        </svg>
+                        <span className="mt-3 text-xs tracking-widest uppercase font-medium">VANT · ڤانت</span>
+                      </div>
+                    ) : (
+                      <div
+                        dir="ltr"
+                        className="flex h-full w-full will-change-transform [direction:ltr]"
+                        style={{
+                          transform: `translate3d(calc(-${activeImageIndex * 100}% + ${carouselDragOffset}px), 0, 0)`,
+                          transition: isSwipingCarousel ? 'none' : 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+                        }}
+                      >
+                        {images.map((imgSrc, idx) => {
+                          const isImageLoaded = loadedImages.has(imgSrc);
 
-                        return (
-                          <div
-                            key={idx}
-                            ref={(el) => {
-                              slideItemRefs.current[idx] = el;
-                            }}
-                            data-slide-index={idx}
-                            dir="ltr"
-                            className="relative flex h-full w-full shrink-0 items-center justify-center p-3 sm:p-5 select-none [direction:ltr]"
-                          >
-                            {/* High-fidelity shimmer skeleton placeholder while image is fetching */}
-                            {!isImageLoaded && (
-                              <div className="absolute inset-3 sm:inset-5 rounded-2xl bg-neutral-200/80 dark:bg-neutral-800/60 overflow-hidden flex items-center justify-center pointer-events-none border border-black/5 dark:border-white/10">
-                                <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/50 dark:via-white/12 to-transparent pointer-events-none" />
-                                <div className="opacity-20 dark:opacity-10 pointer-events-none">
-                                  <svg className="w-12 h-12 stroke-[1.2] text-neutral-400 dark:text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                                  </svg>
+                          return (
+                            <div
+                              key={idx}
+                              ref={(el) => {
+                                slideItemRefs.current[idx] = el;
+                              }}
+                              data-slide-index={idx}
+                              dir="ltr"
+                              className="relative flex h-full w-full shrink-0 items-center justify-center p-3 sm:p-5 select-none [direction:ltr]"
+                            >
+                              {/* High-fidelity shimmer skeleton placeholder while image is fetching */}
+                              {!isImageLoaded && (
+                                <div className="absolute inset-3 sm:inset-5 rounded-2xl bg-neutral-200/80 dark:bg-neutral-800/60 overflow-hidden flex items-center justify-center pointer-events-none border border-black/5 dark:border-white/10">
+                                  <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/50 dark:via-white/12 to-transparent pointer-events-none" />
+                                  <div className="opacity-20 dark:opacity-10 pointer-events-none">
+                                    <svg className="w-12 h-12 stroke-[1.2] text-neutral-400 dark:text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                                    </svg>
+                                  </div>
                                 </div>
-                              </div>
-                            )}
+                              )}
 
-                            <img
-                              src={imgSrc || product?.image_url}
-                              alt={`${displayTitle} - ${idx + 1}`}
-                              decoding="async"
-                              loading={idx === 0 || idx === activeImageIndex ? 'eager' : 'lazy'}
-                              referrerPolicy="no-referrer"
-                              draggable={false}
-                              className={`max-h-full max-w-full w-auto h-auto object-contain drop-shadow-md select-none pointer-events-none transition-opacity duration-250 ${
-                                isImageLoaded ? 'opacity-100' : 'opacity-0'
-                              }`}
-                              onError={(e) => {
-                                const target = e.currentTarget;
-                                if (product?.image_url && target.src !== product.image_url) {
-                                  target.src = product.image_url;
-                                }
-                              }}
-                              onLoad={(e) => {
-                                if (imgSrc) {
-                                  setLoadedImages((prev) => new Set(prev).add(imgSrc));
-                                  const target = e.currentTarget;
-                                  if (target.naturalWidth && target.naturalHeight) {
-                                    const r = target.naturalWidth / target.naturalHeight;
-                                    setImageRatios((prev) => (prev[imgSrc] === r ? prev : { ...prev, [imgSrc]: r }));
-                                  }
-                                }
-                              }}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
+                              {(imgSrc || product?.image_url)?.trim() ? (
+                                <img
+                                  src={(imgSrc || product?.image_url)!.trim()}
+                                  alt={`${displayTitle} - ${idx + 1}`}
+                                  decoding="async"
+                                  loading={idx === 0 || idx === activeImageIndex ? 'eager' : 'lazy'}
+                                  referrerPolicy="no-referrer"
+                                  draggable={false}
+                                  className={`max-h-full max-w-full w-auto h-auto object-contain drop-shadow-md select-none pointer-events-none transition-opacity duration-250 ${
+                                    isImageLoaded ? 'opacity-100' : 'opacity-0'
+                                  }`}
+                                  onError={(e) => {
+                                    const target = e.currentTarget;
+                                    if (product?.image_url?.trim() && target.src !== product.image_url.trim()) {
+                                      target.src = product.image_url.trim();
+                                    }
+                                  }}
+                                  onLoad={(e) => {
+                                    if (imgSrc) {
+                                      setLoadedImages((prev) => new Set(prev).add(imgSrc));
+                                      const target = e.currentTarget;
+                                      if (target.naturalWidth && target.naturalHeight) {
+                                        const r = target.naturalWidth / target.naturalHeight;
+                                        setImageRatios((prev) => (prev[imgSrc] === r ? prev : { ...prev, [imgSrc]: r }));
+                                      }
+                                    }
+                                  }}
+                                />
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
 
                     {/* Carousel Navigation Arrows (Responsive on Desktop, Tablet & Mobile) */}
-                    {images.length > 1 && (
+                    {carouselNavControl.visible && images.length > 1 && (
                       <>
                         <button
                           type="button"
@@ -990,62 +1000,66 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                   </div>
 
                   {/* Stable Luxury Animated Thumbnail Navigation Strip with Auto-Centering (Matched LTR Direction) - Hidden on Mobile */}
-                  <div
-                    ref={thumbnailContainerRef}
-                    dir="ltr"
-                    className="mt-3 sm:mt-4 hidden md:flex items-center justify-center overflow-x-auto py-1 px-2 no-scrollbar scroll-smooth [direction:ltr] w-full min-h-[64px] sm:min-h-[72px] md:min-h-[76px] shrink-0"
-                  >
-                    <div className="flex items-center justify-center gap-2 sm:gap-2.5 mx-auto min-w-fit">
-                      {images.map((img, idx) => {
-                        const isActive = idx === activeImageIndex;
-                        return (
-                          <button
-                            key={idx}
-                            ref={(el) => {
-                              thumbnailItemRefs.current[idx] = el;
-                            }}
-                            dir="ltr"
-                            type="button"
-                            onPointerDown={(e) => e.stopPropagation()}
-                            onClick={() => {
-                              setSlideDirection(idx > activeImageIndex ? 1 : -1);
-                              setActiveImageIndex(idx);
-                            }}
-                            onMouseEnter={() => {
-                              if (idx !== activeImageIndex) {
+                  {images.length > 1 && (
+                    <div
+                      ref={thumbnailContainerRef}
+                      dir="ltr"
+                      className="mt-3 sm:mt-4 hidden md:flex items-center justify-center overflow-x-auto py-1 px-2 no-scrollbar scroll-smooth [direction:ltr] w-full min-h-[64px] sm:min-h-[72px] md:min-h-[76px] shrink-0"
+                    >
+                      <div className="flex items-center justify-center gap-2 sm:gap-2.5 mx-auto min-w-fit">
+                        {images.map((img, idx) => {
+                          const isActive = idx === activeImageIndex;
+                          return (
+                            <button
+                              key={idx}
+                              ref={(el) => {
+                                thumbnailItemRefs.current[idx] = el;
+                              }}
+                              dir="ltr"
+                              type="button"
+                              onPointerDown={(e) => e.stopPropagation()}
+                              onClick={() => {
                                 setSlideDirection(idx > activeImageIndex ? 1 : -1);
                                 setActiveImageIndex(idx);
-                              }
-                            }}
-                            className={`group relative h-13 w-13 sm:h-15 sm:w-15 md:h-16 md:w-16 shrink-0 overflow-hidden rounded-2xl transition-all duration-200 active:scale-95 cursor-pointer [direction:ltr] ${
-                              isActive
-                                ? 'ring-2 ring-[#004ad7] dark:ring-[#3b82f6] ring-offset-2 ring-offset-[#f8f9fa] dark:ring-offset-[#16191f] shadow-md scale-105'
-                                : 'opacity-60 hover:opacity-100 hover:scale-100 border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5'
-                            }`}
-                            aria-label={`View image ${idx + 1}`}
-                          >
-                            <img
-                              src={img}
-                              alt=""
-                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
-                            />
+                              }}
+                              onMouseEnter={() => {
+                                if (idx !== activeImageIndex) {
+                                  setSlideDirection(idx > activeImageIndex ? 1 : -1);
+                                  setActiveImageIndex(idx);
+                                }
+                              }}
+                              className={`group relative h-13 w-13 sm:h-15 sm:w-15 md:h-16 md:w-16 shrink-0 overflow-hidden rounded-2xl transition-all duration-200 active:scale-95 cursor-pointer [direction:ltr] ${
+                                isActive
+                                  ? 'ring-2 ring-[#004ad7] dark:ring-[#3b82f6] ring-offset-2 ring-offset-[#f8f9fa] dark:ring-offset-[#16191f] shadow-md scale-105'
+                                  : 'opacity-60 hover:opacity-100 hover:scale-100 border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5'
+                              }`}
+                              aria-label={`View image ${idx + 1}`}
+                            >
+                              {img?.trim() ? (
+                                <img
+                                  src={img.trim()}
+                                  alt=""
+                                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                />
+                              ) : null}
 
-                            {/* Thumbnail Index Pill */}
-                            <span className="absolute bottom-1 right-1 z-10 rounded-md bg-black/65 px-1 py-0.2 text-[8.5px] font-mono font-bold text-white backdrop-blur-xs">
-                              {idx + 1}
-                            </span>
+                              {/* Thumbnail Index Pill */}
+                              <span className="absolute bottom-1 right-1 z-10 rounded-md bg-black/65 px-1 py-0.2 text-[8.5px] font-mono font-bold text-white backdrop-blur-xs">
+                                {idx + 1}
+                              </span>
 
-                            {isActive && (
-                              <motion.div
-                                layoutId="active-thumb-glow"
-                                className="absolute inset-0 bg-[#004ad7]/15 dark:bg-[#3b82f6]/20 ring-1 ring-inset ring-white/30"
-                              />
-                            )}
-                          </button>
-                        );
-                      })}
+                              {isActive && (
+                                <motion.div
+                                  layoutId="active-thumb-glow"
+                                  className="absolute inset-0 bg-[#004ad7]/15 dark:bg-[#3b82f6]/20 ring-1 ring-inset ring-white/30"
+                                />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* DETAILS SECTION: Spacious, Architectural & Uncluttered Luxury Layout (50/50 Balanced on Desktop) */}
@@ -1110,8 +1124,8 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                       )}
                     </div>
 
-                    {/* 4. Compact Garment Colors Selector (Pure Colors, No Shirt Thumbnails, No Technical Codes) */}
-                    {variantInfo && variantInfo.variants.length > 0 && (
+                    {/* 4. Compact Garment Colors Selector (Only shown if product has real colors) */}
+                    {variantInfo && (variantInfo.hasMultipleColors || (Array.isArray(product?.colors) && product.colors.length > 0)) && (
                       <div className="space-y-2.5 pt-0.5">
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <div className="flex items-center gap-2">
@@ -1227,8 +1241,9 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                       </div>
                     )}
 
-                    {/* 5. Clean Sizing & Fit Section */}
-                    <div className="space-y-3">
+                    {/* 5. Clean Sizing & Fit Section (Only shown if product has sizes in database) */}
+                    {renderedSizes.length > 0 && (
+                      <div className="space-y-3">
                       {/* Sizing Header Row: Title + Guide Trigger */}
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-2">
@@ -1510,6 +1525,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                         )}
                       </AnimatePresence>
                     </div>
+                    )}
 
                     {/* 6. PRIMARY CONVERSION ACTION: WhatsApp Order Button (Desktop / Inline view) */}
                     {whatsappControl.visible && (
@@ -1598,31 +1614,37 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                     )}
 
                     {/* 7. Cohesive Micro Highlights Grid (Delivery & Craftsmanship) */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 text-xs md:text-sm pb-2">
-                      <div className="flex items-start gap-2.5 md:gap-3 rounded-xl md:rounded-2xl border border-black/6 dark:border-white/8 bg-black/[0.02] dark:bg-white/[0.03] p-2.5 md:p-3.5">
-                        <Truck className="h-4 w-4 md:h-5 md:w-5 shrink-0 text-[#004ad7] dark:text-[#3b82f6] mt-0.5" />
-                        <div>
-                          <span className="font-bold text-[11px] md:text-xs text-[#15171c] dark:text-white block">
-                            {lang === 'ar' ? 'توصيل سريع لكافة المحافظات' : 'Nationwide Fast Delivery'}
-                          </span>
-                          <span className="text-[10px] md:text-[11px] text-[#6b7280] dark:text-[#9ca3af] leading-normal block mt-0.5">
-                            {lang === 'ar' ? 'خلال 3 - 5 أيام مع حق الفحص والمعاينة عند الاستلام' : 'Within 3 - 5 days with inspection upon arrival'}
-                          </span>
-                        </div>
-                      </div>
+                    {(deliveryBadgeControl.visible || craftBadgeControl.visible) && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 text-xs md:text-sm pb-2">
+                        {deliveryBadgeControl.visible && (
+                          <div className="flex items-start gap-2.5 md:gap-3 rounded-xl md:rounded-2xl border border-black/6 dark:border-white/8 bg-black/[0.02] dark:bg-white/[0.03] p-2.5 md:p-3.5">
+                            <Truck className="h-4 w-4 md:h-5 md:w-5 shrink-0 text-[#004ad7] dark:text-[#3b82f6] mt-0.5" />
+                            <div>
+                              <span className="font-bold text-[11px] md:text-xs text-[#15171c] dark:text-white block">
+                                {lang === 'ar' ? deliveryBadgeControl.label_ar : deliveryBadgeControl.label_en}
+                              </span>
+                              <span className="text-[10px] md:text-[11px] text-[#6b7280] dark:text-[#9ca3af] leading-normal block mt-0.5">
+                                {lang === 'ar' ? 'خلال 3 - 5 أيام مع حق الفحص والمعاينة عند الاستلام' : 'Within 3 - 5 days with inspection upon arrival'}
+                              </span>
+                            </div>
+                          </div>
+                        )}
 
-                      <div className="flex items-start gap-2.5 md:gap-3 rounded-xl md:rounded-2xl border border-black/6 dark:border-white/8 bg-black/[0.02] dark:bg-white/[0.03] p-2.5 md:p-3.5">
-                        <Sparkles className="h-4 w-4 md:h-5 md:w-5 shrink-0 text-[#004ad7] dark:text-[#3b82f6] mt-0.5" />
-                        <div>
-                          <span className="font-bold text-[11px] md:text-xs text-[#15171c] dark:text-white block">
-                            {lang === 'ar' ? 'تفصيل فاخر وقصة إيطالية' : 'Luxury Italian Tailoring'}
-                          </span>
-                          <span className="text-[10px] md:text-[11px] text-[#6b7280] dark:text-[#9ca3af] leading-normal block mt-0.5">
-                            {lang === 'ar' ? 'حرفية يدوية بإتقان مع ضمان أصالة المظهر' : 'Handcrafted precision & authentic lookbook drop'}
-                          </span>
-                        </div>
+                        {craftBadgeControl.visible && (
+                          <div className="flex items-start gap-2.5 md:gap-3 rounded-xl md:rounded-2xl border border-black/6 dark:border-white/8 bg-black/[0.02] dark:bg-white/[0.03] p-2.5 md:p-3.5">
+                            <Sparkles className="h-4 w-4 md:h-5 md:w-5 shrink-0 text-[#004ad7] dark:text-[#3b82f6] mt-0.5" />
+                            <div>
+                              <span className="font-bold text-[11px] md:text-xs text-[#15171c] dark:text-white block">
+                                {lang === 'ar' ? craftBadgeControl.label_ar : craftBadgeControl.label_en}
+                              </span>
+                              <span className="text-[10px] md:text-[11px] text-[#6b7280] dark:text-[#9ca3af] leading-normal block mt-0.5">
+                                {lang === 'ar' ? 'حرفية يدوية بإتقان مع ضمان أصالة المظهر' : 'Handcrafted precision & authentic lookbook drop'}
+                              </span>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>

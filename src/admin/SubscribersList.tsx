@@ -64,69 +64,7 @@ interface SentCampaignRecord {
   campaignData: EmailCampaignData;
 }
 
-const initialSentHistory: SentCampaignRecord[] = [
-  {
-    id: 'camp-101',
-    name: 'حملة ترحيب المشتركين الجدد',
-    subject: '🎉 مرحباً بك في عائلتنا! خصم 20% بانتظارك على أول طلب',
-    templateType: 'welcome',
-    sentDate: '2026-10-06 14:30',
-    recipientsCount: 48,
-    openRate: 58.4,
-    clickRate: 24.1,
-    status: 'delivered',
-    channel: 'resend',
-    campaignData: {
-      ...defaultCampaignData,
-      subject: '🎉 مرحباً بك في عائلتنا! خصم 20% بانتظارك على أول طلب',
-      headline: 'هدية ترحيبية خاصة بمناسبة انضمامك',
-    },
-  },
-  {
-    id: 'camp-102',
-    name: 'تخفيضات العيد والجمعة الذهبية',
-    subject: '⚡ عروض الـ 24 ساعة العاجلة - خصومات تصل إلى 40% في بغداد',
-    templateType: 'flash_sale',
-    sentDate: '2026-10-04 18:00',
-    recipientsCount: 142,
-    openRate: 64.2,
-    clickRate: 31.8,
-    status: 'delivered',
-    channel: 'resend',
-    campaignData: {
-      ...defaultCampaignData,
-      templateType: 'flash_sale',
-      subject: '⚡ عروض الـ 24 ساعة العاجلة - خصومات تصل إلى 30% على كبسولة الشتاء',
-      headline: 'فرصة حصرية: تخفيضات الأتيليه الاستثنائية',
-      bodyText: 'ساعات معدودة تفصلنا عن انتهاء عروض الموسم الخاصة على معاطف الكشمير المنغولي والبدلات الإيطالية والكنزات الصوفية الراقية.',
-      discountCode: 'CAPSULE30',
-      discountPercent: 'خصم 30% فوري',
-      heroImage: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=800&auto=format&fit=crop&q=80',
-    },
-  },
-  {
-    id: 'camp-103',
-    name: 'إطلاق تشكيلة البدل والسترات الملكية',
-    subject: '✨ وصول كبسولة الأزياء الرسمية وصوف الميرينو الإيطالي الفاخر',
-    templateType: 'launch',
-    sentDate: '2026-09-28 11:15',
-    recipientsCount: 115,
-    openRate: 51.0,
-    clickRate: 19.5,
-    status: 'delivered',
-    channel: 'simulation',
-    campaignData: {
-      ...defaultCampaignData,
-      templateType: 'launch',
-      subject: '✨ وصول كبسولة الأزياء الرسمية وصوف الميرينو الإيطالي الفاخر',
-      headline: 'الهندسة المعمارية تلتقي بالأناقة الهادئة: تشكيلة 2026',
-      bodyText: 'اكتشف الدقة الحرفية الاستثنائية مع خيوط صوف الميرينو سوبر 160s وتفصيل الأكتاف المنحوتة يدوياً في معاملنا الإيطالية.',
-      discountCode: 'ROYAL15',
-      discountPercent: 'خصم 15% للإطلاق',
-      heroImage: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&auto=format&fit=crop&q=80',
-    },
-  },
-];
+const initialSentHistory: SentCampaignRecord[] = [];
 
 const templatePresets: Record<
   EmailCampaignData['templateType'],
@@ -637,8 +575,8 @@ export const SubscribersList: React.FC = () => {
       templateType: campaignData.templateType,
       sentDate: new Date().toISOString().replace('T', ' ').slice(0, 16),
       recipientsCount: currentAudienceList.length,
-      openRate: Math.round((45 + Math.random() * 25) * 10) / 10,
-      clickRate: Math.round((15 + Math.random() * 18) * 10) / 10,
+      openRate: 0,
+      clickRate: 0,
       status: 'delivered',
       channel,
       campaignData: { ...campaignData },
@@ -1495,7 +1433,14 @@ export const SubscribersList: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
-                  {sentHistory.map((item) => {
+                  {sentHistory.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center text-slate-500 text-xs">
+                        {isAr ? 'لم يتم إرسال أي حملات بريدية بعد. أنشئ حملتك الأولى من تبويب استوديو الرسائل!' : 'No campaigns sent yet. Create your first campaign from the Email Studio tab!'}
+                      </td>
+                    </tr>
+                  ) : (
+                    sentHistory.map((item) => {
                     const preset = templatePresets[item.templateType] || templatePresets.welcome;
                     return (
                       <tr key={item.id} className="hover:bg-slate-800/40 transition-colors">
@@ -1583,7 +1528,7 @@ export const SubscribersList: React.FC = () => {
                         </td>
                       </tr>
                     );
-                  })}
+                  }))}
                 </tbody>
               </table>
             </div>

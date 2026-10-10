@@ -392,9 +392,11 @@ export function resolveProductColorVariants(
     });
   }
 
-  // 3. If no colors are found, default to Black (or single default color)
+  const hasRealColors = candidateColorMap.size > 0;
+
+  // 3. Only if no colors and no explicit variants exist, use single transparent baseline without forcing fake color swatches
   if (candidateColorMap.size === 0) {
-    registerCandidate('Black');
+    registerCandidate('Standard');
   }
 
   // 4. Build variant objects
@@ -432,20 +434,11 @@ export function resolveProductColorVariants(
       matchedImages = unassignedImages.length > 0 ? unassignedImages : images;
     }
 
-    // Determine variant-specific sizes or pricing if configured
-    let variantPrice = product.price;
-    let variantOriginalPrice = product.original_price;
-    let variantSizes = Array.isArray(product.sizes) && product.sizes.length > 0 ? [...product.sizes] : ['S', 'M', 'L', 'XL'];
-    let variantAvailability: ProductAvailability = product.availability || 'in_stock';
-
-    // Algorithmic nuance: some colors might have slight size variation or price difference
-    const isSpecialShade = palette.colorNameEn === 'Olive Green' || palette.colorNameEn === 'Dusty Rose Pink';
-    if (isSpecialShade && product.category === 'T-Shirts' && product.price >= 20000) {
-      // E.g. special dyes or limited washes may have distinctive size allocations
-      if (palette.colorNameEn === 'Olive Green') {
-        variantSizes = ['S', 'M', 'L'];
-      }
-    }
+    // Determine variant-specific sizes or pricing strictly from database
+    const variantPrice = Number(product.price) || 0;
+    const variantOriginalPrice = product.original_price ? Number(product.original_price) : undefined;
+    const variantSizes = Array.isArray(product.sizes) ? [...product.sizes] : [];
+    const variantAvailability: ProductAvailability = product.availability || 'in_stock';
 
     rawVariants.push({
       colorNameEn: palette.colorNameEn,
@@ -559,7 +552,7 @@ export function resolveProductColorVariants(
     modelCode,
     baselineVariant,
     variants,
-    hasMultipleColors: variants.length > 1,
-    colorsList: variants.map((v) => v.colorNameAr),
+    hasMultipleColors: hasRealColors && variants.length > 1,
+    colorsList: hasRealColors ? variants.map((v) => v.colorNameAr) : [],
   };
 }

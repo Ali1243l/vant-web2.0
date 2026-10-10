@@ -1,4 +1,5 @@
 import { useState, useEffect, createContext, useContext, useCallback, useMemo } from 'react';
+import { supabase } from '../lib/supabase';
 import { useSiteControls } from '../context/SiteControlsContext';
 import type { Product as StoreProduct, ProductAvailability } from '../types';
 import { getStoredSubscribers, addSubscriber as addStoredSubscriber, removeSubscriber as removeStoredSubscriber, syncSubscribersFromCloud, saveSubscribers } from '../lib/newsletter';
@@ -182,39 +183,39 @@ export interface SiteSettings {
 }
 
 export const defaultSiteSettings: SiteSettings = {
-  storeName: 'دار الرافدين للأزياء والتصميم الرفيع',
-  storeNameEn: 'Dar Al-Rafidain Haute Couture & Luxury Goods',
+  storeName: 'دار ڤانت (Maison VANT)',
+  storeNameEn: 'Maison VANT | Editorial Haute Streetwear',
   currency: 'IQD',
   emailAlerts: true,
   smsAlerts: false,
   pin: '1234',
 
   maintenanceMode: false,
-  maintenanceMessageAr: 'نقوم حالياً بتجهيز وإطلاق المجموعة الحصرية الجديدة. سنعود لاستقبال طلباتكم الفاخرة قريباً جداً.',
-  maintenanceMessageEn: 'We are currently curating and preparing our new exclusive bespoke collection. We will reopen shortly for orders.',
+  maintenanceMessageAr: 'نقوم حالياً بتجهيز وإطلاق المجموعة الحصرية الجديدة. سنعود لاستقبال طلباتكم قريباً جداً.',
+  maintenanceMessageEn: 'We are currently curating and preparing our new exclusive collection. We will reopen shortly for orders.',
   maintenanceEstimatedBack: 'خلال ساعتين (2 Hours)',
 
   splashMotif: 'hanger',
-  splashTextAr: 'دار الرافدين للأزياء • أصالة الحرفة العراقية',
-  splashTextEn: 'Dar Al-Rafidain • Iraqi Haute Couture & Craftsmanship',
+  splashTextAr: 'دار ڤانت للأزياء • أصل التشكيلة والتريندات',
+  splashTextEn: 'Maison VANT • Editorial Streetwear Catalogue',
   splashDurationMs: 2500,
 
-  heroBannerBg: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1600&auto=format&fit=crop&q=80',
-  heroHeadlineAr: 'أناقة لا تتكرر • إرث الخياطة الرفيعة',
-  heroHeadlineEn: 'Timeless Elegance • The Legacy of Bespoke Tailoring',
-  heroSubtitleAr: 'اكتشف أرقى أقمشة الصوف الكشميري الإيطالي والحرير الطبيعي بتفصيل يدوي دقيق يحاكي طموحك.',
-  heroSubtitleEn: 'Discover exquisite Italian cashmere and pure mulberry silk hand-tailored to royal perfection.',
-  heroBadgeAr: 'الموسم الجديد 2026 • متوفر الآن',
-  heroBadgeEn: 'New Season 2026 • Exclusive Release',
-  heroCtaTextAr: 'استكشف التشكيلة الملكية',
-  heroCtaTextEn: 'Explore Royal Collection',
+  heroBannerBg: '',
+  heroHeadlineAr: 'أصل التشكيلة والتريندات الحصرية',
+  heroHeadlineEn: 'Curated Exclusive Collection & Trends',
+  heroSubtitleAr: 'استكشف التشكيلة الحصرية من دار ڤانت مباشرة من قاعدة البيانات.',
+  heroSubtitleEn: 'Explore curated haute streetwear pieces directly from our database.',
+  heroBadgeAr: 'التشكيلة الحصرية • 2026',
+  heroBadgeEn: 'Exclusive Archive • 2026',
+  heroCtaTextAr: 'تصفح كافة القطع',
+  heroCtaTextEn: 'Browse All Pieces',
   heroCtaLink: '#products',
 
-  whatsappOrdersNumber: '+9647701234567',
-  whatsappOrdersName: 'قسم إدارة واستلام الطلبات الفورية',
-  whatsappConciergeNumber: '+9647809876543',
-  whatsappConciergeName: 'كونسيرج التفصيل الخاص والخياطة الراقية (Bespoke)',
-  whatsappDefaultMsg: 'مرحباً، أود الاستفسار عن تفصيل قطعة خاصة من دار ڤانت.',
+  whatsappOrdersNumber: '',
+  whatsappOrdersName: 'خدمة العملاء والطلبات',
+  whatsappConciergeNumber: '',
+  whatsappConciergeName: 'كونسيرج الاستفسارات',
+  whatsappDefaultMsg: 'مرحباً، أود الاستفسار عن قطعة من دار ڤانت.',
 };
 
 interface AdminContextType {
@@ -275,658 +276,11 @@ interface AdminContextType {
   updateSiteSettings: (settings: Partial<SiteSettings>) => Promise<{ success: boolean; syncedWithCloud: boolean }>;
 }
 
-const defaultProducts: Product[] = [
-  {
-    id: 'prod-tshirt',
-    name: 'تيشيرت بيما قطن ملكي مطرز (إصدار فاخر)',
-    nameEn: 'Royal Embroidered Pima Cotton Tee',
-    sku: 'TEE-7701',
-    category: 'ملابس وأزياء',
-    price: 45000,
-    salePrice: 39000,
-    stock: 42,
-    status: 'active',
-    imageUrl: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600&q=80',
-    images: [
-      'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600&q=80',
-      'https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=600&q=80',
-      'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=600&q=80',
-    ],
-    sizes: ['S', 'M', 'L', 'XL', 'XXL'],
-    descriptionAr: 'تيشيرت مصمم من خيوط قطن البيما البيروفي فائق النعومة، بقَصّة عصرية وخياطة مزدوجة مع تطريز ناعم لشعار الدار على الصدر.',
-    descriptionEn: 'Ultra-luxurious Peruvian Pima cotton tailored t-shirt featuring bespoke dual-stitch hem and signature subtle chest embroidery.',
-    materialDetails: '100% قطن بيما طويل التيلة، مقاوم للانكماش والبهتان بعد الغسيل المتكرر',
-    availabilityStatus: 'in_stock',
-    isOnOffer: true,
-    salesCount: 184,
-    rating: 4.9,
-    createdAt: '2026-03-05',
-    hasVariants: true,
-    variants: [
-      {
-        id: 'var-tee-black',
-        colorNameAr: 'أسود ملكي',
-        colorNameEn: 'Royal Black',
-        colorHex: '#0f172a',
-        price: 45000,
-        salePrice: 39000,
-        stock: 18,
-        sizes: ['S', 'M', 'L', 'XL', 'XXL'],
-        images: [
-          'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600&q=80',
-          'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=600&q=80',
-        ],
-      },
-      {
-        id: 'var-tee-white',
-        colorNameAr: 'أبيض ناصع لؤلؤي',
-        colorNameEn: 'Pearl White',
-        colorHex: '#f8fafc',
-        price: 45000,
-        salePrice: 39000,
-        stock: 14,
-        sizes: ['M', 'L', 'XL'],
-        images: [
-          'https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=600&q=80',
-        ],
-      },
-      {
-        id: 'var-tee-emerald',
-        colorNameAr: 'أخضر زمردي إمبريالي',
-        colorNameEn: 'Imperial Emerald',
-        colorHex: '#064e3b',
-        price: 48000,
-        salePrice: 42000,
-        stock: 10,
-        sizes: ['M', 'L', 'XL'],
-        images: [
-          'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=600&q=80',
-        ],
-      },
-    ],
-  },
-  {
-    id: 'prod-cashmere-coat',
-    name: 'معطف كشمير خام بدون بطانة 650gsm',
-    nameEn: 'Raw Edge Cashmere Overcoat 650gsm',
-    sku: 'VANT-COAT-01',
-    category: 'المعاطف والسترات',
-    price: 320000,
-    salePrice: 285000,
-    stock: 16,
-    status: 'active',
-    imageUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=600&q=80',
-    images: [
-      'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=600&q=80',
-    ],
-    sizes: ['48', '50', '52', '54'],
-    descriptionAr: 'معطف من الكشمير المنغولي الطبيعي فائق النقاء، مزدوج الوجه مع خياطة حواف يدوية متقنة.',
-    descriptionEn: 'Pure unlined double-face Mongolian cashmere coat with artisanal hand-finished edges.',
-    materialDetails: '100% كشمير منغولي طبيعي 650 GSM',
-    availabilityStatus: 'in_stock',
-    isOnOffer: true,
-    salesCount: 78,
-    rating: 5.0,
-    createdAt: '2026-03-01',
-  },
-  {
-    id: 'prod-suit-tailoring',
-    name: 'بدلة رسمية بهيكل هندسي منحوت صوف ميرينو',
-    nameEn: 'Sculptural Tailored Merino Wool Suit',
-    sku: 'VANT-SUIT-02',
-    category: 'الأزياء الرسمية',
-    price: 450000,
-    stock: 12,
-    status: 'active',
-    imageUrl: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=600&q=80',
-    images: [
-      'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?auto=format&fit=crop&w=600&q=80',
-    ],
-    sizes: ['48', '50', '52', '54', 'Bespoke Custom'],
-    descriptionAr: 'بدلة بتفصيل استثنائي مع أكتاف منحوتة وياقة حرة من صوف الميرينو الإيطالي سوبر 160.',
-    descriptionEn: 'Sculptural dropped closure tailored suit crafted from Super 160s Italian virgin wool.',
-    materialDetails: '100% صوف ميرينو بكر إيطالي Super 160s',
-    availabilityStatus: 'in_stock',
-    isOnOffer: false,
-    salesCount: 64,
-    rating: 4.9,
-    createdAt: '2026-02-20',
-  },
-  {
-    id: 'prod-knitwear-rib',
-    name: 'كنزة تريكو سميكة مضلعة عيار 7 صوف نقي',
-    nameEn: 'Heavy Rib Sculptural Knitwear 7-Gauge',
-    sku: 'VANT-KNIT-03',
-    category: 'التريكو والصوف',
-    price: 185000,
-    stock: 22,
-    status: 'active',
-    imageUrl: 'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?auto=format&fit=crop&w=600&q=80',
-    images: [
-      'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?auto=format&fit=crop&w=600&q=80',
-    ],
-    sizes: ['S', 'M', 'L', 'XL'],
-    descriptionAr: 'كنزة تريكو صوفية مضلعة عيار 7 بقَصّة معمارية وحجم متوازن يمنح دفئاً فائقاً وملمساً ناعماً.',
-    descriptionEn: '7-gauge sculptural heavy rib knitwear in unbleached natural merino wool.',
-    materialDetails: '100% صوف ميرينو سميك عيار 7',
-    availabilityStatus: 'in_stock',
-    isOnOffer: false,
-    salesCount: 112,
-    rating: 4.8,
-    createdAt: '2026-02-15',
-  },
-  {
-    id: 'prod-leather-boot',
-    name: 'حذاء جلدي بمقدمة مربعة ونعل كلاسيكي مكدس',
-    nameEn: 'Bevelled Square-Toe Stacked Leather Boots',
-    sku: 'VANT-BOOT-04',
-    category: 'الأحذية',
-    price: 265000,
-    salePrice: 225000,
-    stock: 9,
-    status: 'lowStock',
-    imageUrl: 'https://images.unsplash.com/photo-1582588678413-dbf45f4823e9?auto=format&fit=crop&w=600&q=80',
-    images: [
-      'https://images.unsplash.com/photo-1582588678413-dbf45f4823e9?auto=format&fit=crop&w=600&q=80',
-    ],
-    sizes: ['41', '42', '43', '44', '45'],
-    descriptionAr: 'حذاء كلاسيكي من جلد العجل الفرنسي المشمع يدوياً بنعل جلدي مكدس ومقدمة مربعة مشطوفة.',
-    descriptionEn: 'Hand-waxed French box calf leather boots with stacked leather soles and bevelled square toes.',
-    materialDetails: 'جلد عجل فرنسي فاخر ونعل طبيعي مكدس',
-    availabilityStatus: 'limited',
-    isOnOffer: true,
-    salesCount: 45,
-    rating: 4.9,
-    createdAt: '2026-02-10',
-  },
-  {
-    id: 'prod-leather-acc',
-    name: 'حقيبة وثائق جلدية معمارية بقطع البلاديوم',
-    nameEn: 'Monolithic Leather Document Folio & Palladium',
-    sku: 'VANT-ACC-05',
-    category: 'الإكسسوارات',
-    price: 195000,
-    stock: 14,
-    status: 'active',
-    imageUrl: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=600&q=80',
-    images: [
-      'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=600&q=80',
-    ],
-    sizes: ['One Size'],
-    descriptionAr: 'حقيبة يد جلدية صلبة من جلد العجل الفرنسي المعالج مع إبزيم معدني مطلي بالبلاديوم النقي.',
-    descriptionEn: 'Structured architectural folio in French box calf leather with palladium hardware.',
-    materialDetails: 'جلد عجل فرنسي Box Calf وقطع بلاديوم أصلية',
-    availabilityStatus: 'in_stock',
-    isOnOffer: false,
-    salesCount: 58,
-    rating: 4.8,
-    createdAt: '2026-01-25',
-  },
-];
-
-const defaultOffers: Offer[] = [
-  {
-    id: 'off-1',
-    title: 'خصم أسبوع التشكيلة الشتوية 20%',
-    titleEn: 'Winter Capsule Collection 20% Off',
-    code: 'VANT-WINTER-20',
-    discountType: 'percentage',
-    discountValue: 20,
-    minSpend: 100000,
-    status: 'active',
-    usedCount: 142,
-    maxUses: 500,
-    startDate: '2026-01-01',
-    endDate: '2026-12-31',
-  },
-  {
-    id: 'off-2',
-    title: 'قسيمة الشحن السريع المجاني VIP',
-    titleEn: 'Complimentary VIP Express Delivery',
-    code: 'FREESHIP',
-    discountType: 'fixed',
-    discountValue: 10000,
-    minSpend: 75000,
-    status: 'active',
-    usedCount: 388,
-    startDate: '2026-01-01',
-    endDate: '2026-12-31',
-  },
-  {
-    id: 'off-3',
-    title: 'خصم ترحيبي للأعضاء الجدد 15%',
-    titleEn: 'Welcome Member Privilege 15% Off',
-    code: 'VANT-WELCOME-15',
-    discountType: 'percentage',
-    discountValue: 15,
-    minSpend: 50000,
-    status: 'active',
-    usedCount: 264,
-    maxUses: 1000,
-    startDate: '2026-01-01',
-    endDate: '2026-12-31',
-  },
-  {
-    id: 'off-4',
-    title: 'قسيمة أتيليه التفصيل الخاص (Bespoke)',
-    titleEn: 'Private Bespoke Tailoring Voucher',
-    code: 'VIP-BESPOKE',
-    discountType: 'percentage',
-    discountValue: 25,
-    minSpend: 250000,
-    status: 'active',
-    usedCount: 84,
-    maxUses: 200,
-    startDate: '2026-01-01',
-    endDate: '2026-12-31',
-  },
-];
-
-const defaultSubscribers: Subscriber[] = [
-  {
-    id: 'sub-1',
-    name: 'الشيخ عبد الله السعدون',
-    email: 'a.alsaadoun@royal.iq',
-    phone: '+964 770 123 9988',
-    status: 'active',
-    totalOrders: 6,
-    totalSpent: 2450000,
-    joinedDate: '2025-11-12',
-    lastOrderDate: '2026-04-08',
-    tags: ['عميل VIP', 'خياطة خاصة'],
-  },
-  {
-    id: 'sub-2',
-    name: 'م. ليلى الشمري',
-    email: 'layla.sh@architect.iq',
-    phone: '+964 772 998 8776',
-    status: 'active',
-    totalOrders: 4,
-    totalSpent: 980000,
-    joinedDate: '2026-01-05',
-    lastOrderDate: '2026-04-06',
-    tags: ['عميل VIP', 'أزياء فاخرة'],
-  },
-  {
-    id: 'sub-3',
-    name: 'عمر البصري',
-    email: 'omar.basri@techiq.com',
-    phone: '+964 771 234 5678',
-    status: 'active',
-    totalOrders: 8,
-    totalSpent: 1650000,
-    joinedDate: '2025-08-19',
-    lastOrderDate: '2026-04-07',
-    tags: ['عميل دائم', 'معاطف وكشمير'],
-  },
-  {
-    id: 'sub-4',
-    name: 'زيد طارق العاني',
-    email: 'zaid.t@example.com',
-    phone: '+964 780 112 2334',
-    status: 'active',
-    totalOrders: 3,
-    totalSpent: 435000,
-    joinedDate: '2026-02-14',
-    lastOrderDate: '2026-04-04',
-    tags: ['مشترك جديد'],
-  },
-];
-
-const defaultNotifications: NotificationItem[] = [
-  {
-    id: 'notif-1',
-    title: 'طلب تفصيل كونسيرج جديد #ORD-8821',
-    message: 'طلب الشيخ عبد الله السعدون لمعطف الكشمير قيد المتابعة في الأتيليه',
-    time: 'منذ 5 دقائق',
-    read: false,
-    type: 'order',
-  },
-  {
-    id: 'notif-2',
-    title: 'تنبيه مخزون منخفض: حذاء جلدي مشمع',
-    message: 'تبقى قطعتان فقط من المقاس 43 في المستودع الرئيسي',
-    time: 'منذ ساعتين',
-    read: false,
-    type: 'stock',
-  },
-  {
-    id: 'notif-3',
-    title: 'تم استخدام كود الخصم VANT-WINTER-20',
-    message: 'سجل الكود 14 عملية استخدام ناجحة اليوم في المتجر',
-    time: 'منذ 4 ساعات',
-    read: true,
-    type: 'system',
-  },
-];
-
-const defaultOrders: Order[] = [
-  {
-    id: 'ORD-8821',
-    customerName: 'الشيخ عبد الله السعدون',
-    customerPhone: '+9647701239988',
-    customerEmail: 'a.alsaadoun@royal.iq',
-    shippingAddress: 'بغداد، حي المنصور - شارع الأميرات، مجمع الفلل الخاصة رقم 14',
-    status: 'pending_payment',
-    orderDate: '2026-04-08 11:30',
-    type: 'bespoke',
-    isVip: true,
-    totalPrice: 485000,
-    paymentMethod: 'تحويل كونسيرج خاص (VIP Wire Transfer)',
-    trackingNumber: 'IQ-VIP-8821',
-    items: [
-      {
-        productId: 'prod-cashmere-coat',
-        name: 'معطف كشمير إيطالي مزدوج الوجه تفصيل خاص',
-        nameEn: 'Bespoke Double-Face Cashmere Overcoat',
-        imageUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=600&q=80',
-        price: 320000,
-        quantity: 1,
-        selectedSize: 'Bespoke Custom',
-        fabricOption: 'صوف كشمير إيطالي نقي 100% (كحلي ملكي)',
-      },
-      {
-        productId: 'prod-suit-tailoring',
-        name: 'بدلة رسمية صوف ميرينو سوبر 160 قص كلاسيكي',
-        nameEn: 'Super 160s Merino Wool Tailored Suit',
-        imageUrl: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=600&q=80',
-        price: 165000,
-        quantity: 1,
-        selectedSize: '52',
-        fabricOption: 'صوف ميرينو إيطالي بكر Super 160s أسود فحمي',
-      },
-    ],
-    bespokeDetails: {
-      urgency: 'royal_vip',
-      atelierMaster: 'الأستاذ جواد البغدادي (كبير خياطي الأتيليه)',
-      fittingDate: '2026-04-12 16:00',
-      clientMeasurements: {
-        chest: '112 cm',
-        waist: '98 cm',
-        shoulder: '48.5 cm',
-        sleeveLength: '64 cm',
-        jacketLength: '146 cm',
-        collar: '43 cm',
-        height: '183 cm',
-        posture: 'مستقيم مع ميلان خفيف للكتف الأيمن (Athletic Royal)',
-      },
-      artisanNotes: 'طلب تطريز الحروف الأولى (A.S) بخيوط حريرية غير مرئية عند حافة الأكمام الداخلية. تجهيز بروفة القياس الأولى خلال 48 ساعة.',
-      fabricSelection: 'Loro Piana Cashmere - Navy Blue #4401',
-    },
-    timeline: [
-      {
-        status: 'pending_payment',
-        title: 'استلام طلب التفصيل الخاص VIP',
-        titleEn: 'VIP Bespoke Order Initiated',
-        timestamp: '2026-04-08 11:30',
-        note: 'تم تسجيل القياسات المخصصة عبر مستشار الكونسيرج وبانتظار تأكيد الإيداع المالي.',
-      },
-    ],
-  },
-  {
-    id: 'ORD-8819',
-    customerName: 'د. سرمد النعيمي',
-    customerPhone: '+9647805541234',
-    customerEmail: 'dr.sarmad@hospital.iq',
-    shippingAddress: 'بغداد، الجادرية - قرب جامعة بغداد، برج النخيل 7B',
-    status: 'processing',
-    orderDate: '2026-04-07 14:15',
-    type: 'bespoke',
-    isVip: true,
-    totalPrice: 380000,
-    paymentMethod: 'بطاقة ماستركارد مصرف الرافدين الرقمي',
-    trackingNumber: 'IQ-BESPOKE-8819',
-    items: [
-      {
-        productId: 'prod-suit-tailoring',
-        name: 'بدلة تاكسيدو ملكية صوف سوبر 160s مع ياقة ساتان',
-        nameEn: 'Black Tie Royal Tuxedo Super 160s Wool',
-        imageUrl: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=600&q=80',
-        price: 380000,
-        quantity: 1,
-        selectedSize: 'Bespoke Slim Fit',
-        fabricOption: 'صوف إيطالي إكسترا فاين من دار Loro Piana',
-      },
-    ],
-    bespokeDetails: {
-      urgency: 'high_priority',
-      atelierMaster: 'المعلم كريكور هاكوبيان (مشرف بدلات السهرة)',
-      fittingDate: '2026-04-10 18:30',
-      clientMeasurements: {
-        chest: '104 cm',
-        waist: '86 cm',
-        shoulder: '46 cm',
-        sleeveLength: '62.5 cm',
-        jacketLength: '76 cm',
-        collar: '41 cm',
-        height: '178 cm',
-        posture: 'قوام رياضي معتدل - صدر عريض',
-      },
-      artisanNotes: 'البدلة مخصصة لحفل تكريم رسمي. تم الانتهاء من قص الباترون والبدء بالخياطة اليدوية لبطانة الحرير.',
-      fabricSelection: 'Midnight Black Super 160s Wool',
-    },
-    timeline: [
-      {
-        status: 'pending_payment',
-        title: 'اعتماد الطلب ودفع الرسوم',
-        titleEn: 'Order Payment Verified',
-        timestamp: '2026-04-07 14:15',
-      },
-      {
-        status: 'processing',
-        title: 'قص القماش وبدء الخياطة في الأتيليه',
-        titleEn: 'Pattern Drafting & Tailoring in Atelier',
-        timestamp: '2026-04-07 16:40',
-        note: 'تم نقل القماش لقسم القص اليدوي وتحديد جلسة البروفة.',
-      },
-    ],
-  },
-  {
-    id: 'ORD-8815',
-    customerName: 'عمر البصري',
-    customerPhone: '+9647712345678',
-    customerEmail: 'omar.basri@techiq.com',
-    shippingAddress: 'البصرة، حي العشار - شارع الاستقلال، مجمع النخبة الطبي',
-    status: 'processing',
-    orderDate: '2026-04-07 10:20',
-    type: 'ready_to_wear',
-    isVip: false,
-    totalPrice: 230000,
-    paymentMethod: 'الدفع عند الاستلام (COD)',
-    items: [
-      {
-        productId: 'prod-knitwear-rib',
-        name: 'كنزة تريكو سميكة مضلعة عيار 7 صوف نقي',
-        nameEn: 'Heavy Rib Sculptural Knitwear 7-Gauge',
-        imageUrl: 'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?auto=format&fit=crop&w=600&q=80',
-        price: 185000,
-        quantity: 1,
-        selectedSize: 'L',
-      },
-      {
-        productId: 'prod-tshirt',
-        name: 'تيشيرت بيما قطن ملكي مطرز',
-        nameEn: 'Royal Embroidered Pima Cotton Tee',
-        imageUrl: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600&q=80',
-        price: 45000,
-        quantity: 1,
-        selectedSize: 'L',
-      },
-    ],
-    timeline: [
-      {
-        status: 'pending_payment',
-        title: 'استلام الطلب وتأكيد الهاتف',
-        titleEn: 'Order Placed & Confirmed',
-        timestamp: '2026-04-07 10:20',
-      },
-      {
-        status: 'processing',
-        title: 'تجهيز الشحنة والتغليف الفاخر',
-        titleEn: 'Packaging & Warehouse Inspection',
-        timestamp: '2026-04-07 12:00',
-        note: 'فحص جودة الصوف وتغليف القطع بصندوق الهدايا الحصري لدار ڤانت.',
-      },
-    ],
-  },
-  {
-    id: 'ORD-8810',
-    customerName: 'م. ليلى الشمري',
-    customerPhone: '+9647729988776',
-    customerEmail: 'layla.sh@architect.iq',
-    shippingAddress: 'أربيل، دريم سيتي - فيلا رقم 208',
-    status: 'shipped',
-    orderDate: '2026-04-06 18:00',
-    type: 'bespoke',
-    isVip: true,
-    totalPrice: 320000,
-    paymentMethod: 'ZainCash زين كاش المحفظة الذكية',
-    trackingNumber: 'IQ-EXPRESS-9921',
-    items: [
-      {
-        productId: 'prod-cashmere-coat',
-        name: 'معطف كشمير خام بدون بطانة 650gsm',
-        nameEn: 'Raw Edge Cashmere Overcoat 650gsm',
-        imageUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=600&q=80',
-        price: 320000,
-        quantity: 1,
-        selectedSize: '50',
-      },
-    ],
-    bespokeDetails: {
-      urgency: 'high_priority',
-      atelierMaster: 'السيدة هناء البدر (مصممة قسم الهوت كوتور)',
-      fittingDate: 'تمت البروفة بنجاح',
-      clientMeasurements: {
-        chest: '96 cm',
-        waist: '74 cm',
-        shoulder: '40 cm',
-        sleeveLength: '60 cm',
-        jacketLength: '142 cm',
-        height: '170 cm',
-        posture: 'قوام رشيق معتدل',
-      },
-      artisanNotes: 'تغليف الهدايا الملكي مع بطاقة تهنئة خاصة وعطر المسك الطبيعي للأقمشة.',
-      fabricSelection: 'Double-Face 100% Mongolian Cashmere Raw Edge',
-    },
-    timeline: [
-      {
-        status: 'pending_payment',
-        title: 'استلام الطلب وتأكيد الدفع',
-        titleEn: 'Order Payment Confirmed',
-        timestamp: '2026-04-06 18:00',
-      },
-      {
-        status: 'processing',
-        title: 'اكتمال الفحص وتجهيز التغليف الأرشيفي',
-        titleEn: 'Tailoring & Quality Clearance',
-        timestamp: '2026-04-07 14:00',
-      },
-      {
-        status: 'shipped',
-        title: 'تسليم الشحنة لشركة التوصيل السريع VIP',
-        titleEn: 'Handed to VIP Express Courier',
-        timestamp: '2026-04-08 09:30',
-        note: 'رقم التتبع IQ-EXPRESS-9921 متوقع الوصول خلال 24 ساعة.',
-      },
-    ],
-  },
-  {
-    id: 'ORD-8798',
-    customerName: 'حيدر الجبوري',
-    customerPhone: '+9647824445566',
-    customerEmail: 'haider.j@example.com',
-    shippingAddress: 'بغداد، المنصور - شارع 14 رمضان، عمارة الأمل ط3',
-    status: 'delivered',
-    orderDate: '2026-04-05 13:40',
-    type: 'ready_to_wear',
-    isVip: false,
-    totalPrice: 265000,
-    paymentMethod: 'Qi Card كي كارد الائتماني',
-    trackingNumber: 'IQ-DELIV-4100',
-    items: [
-      {
-        productId: 'prod-leather-boot',
-        name: 'حذاء جلدي بمقدمة مربعة ونعل كلاسيكي مكدس',
-        nameEn: 'Bevelled Square-Toe Stacked Leather Boots',
-        imageUrl: 'https://images.unsplash.com/photo-1582588678413-dbf45f4823e9?auto=format&fit=crop&w=600&q=80',
-        price: 265000,
-        quantity: 1,
-        selectedSize: '43',
-      },
-    ],
-    timeline: [
-      {
-        status: 'pending_payment',
-        title: 'دفع ناجح وتجهيز الطلب',
-        titleEn: 'Paid & Processing',
-        timestamp: '2026-04-05 13:40',
-      },
-      {
-        status: 'processing',
-        title: 'تجهيز الشحنة في المستودع',
-        titleEn: 'Dispatched from Hub',
-        timestamp: '2026-04-05 15:00',
-      },
-      {
-        status: 'shipped',
-        title: 'خروج الشحنة مع مندوب التوصيل',
-        titleEn: 'Out for Delivery',
-        timestamp: '2026-04-06 10:00',
-      },
-      {
-        status: 'delivered',
-        title: 'تم الاستلام بنجاح وتوقيع العميل',
-        titleEn: 'Delivered & Signed',
-        timestamp: '2026-04-06 14:15',
-        note: 'تم التقييم بـ 5 نجوم من قبل العميل.',
-      },
-    ],
-  },
-  {
-    id: 'ORD-8772',
-    customerName: 'زيد طارق العاني',
-    customerPhone: '+9647801122334',
-    customerEmail: 'zaid.t@example.com',
-    shippingAddress: 'بغداد، الكرادة - ساحة كهرمانة، بناية الشرق',
-    status: 'cancelled',
-    orderDate: '2026-04-04 09:10',
-    type: 'ready_to_wear',
-    isVip: false,
-    totalPrice: 195000,
-    paymentMethod: 'الدفع عند الاستلام (COD)',
-    items: [
-      {
-        productId: 'prod-leather-acc',
-        name: 'حقيبة وثائق جلدية معمارية بقطع البلاديوم',
-        nameEn: 'Monolithic Leather Document Folio & Palladium',
-        imageUrl: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=600&q=80',
-        price: 195000,
-        quantity: 1,
-        selectedSize: 'One Size',
-      },
-    ],
-    timeline: [
-      {
-        status: 'pending_payment',
-        title: 'تسجيل الطلب',
-        titleEn: 'Order Created',
-        timestamp: '2026-04-04 09:10',
-      },
-      {
-        status: 'cancelled',
-        title: 'إلغاء الطلب بناءً على رغبة العميل',
-        titleEn: 'Order Cancelled by Customer Request',
-        timestamp: '2026-04-04 11:30',
-        note: 'اختار العميل استبدال الطلب بقطعة أخرى لاحقاً.',
-      },
-    ],
-  },
-];
-
-
+const defaultProducts: Product[] = [];
+const defaultOffers: Offer[] = [];
+const defaultSubscribers: Subscriber[] = [];
+const defaultNotifications: NotificationItem[] = [];
+const defaultOrders: Order[] = [];
 
 const AdminContext = createContext<AdminContextType | null>(null);
 
@@ -1010,20 +364,43 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       isOnOffer: !!sp.is_offer,
       offerCampaign: sp.offer_badge_ar || 'عرض حصري',
       offerBadgeText: sp.offer_badge_ar || (sp.is_offer ? 'خصم خاص' : undefined),
-      salesCount: 12,
+      salesCount: 0,
       rating: 5.0,
       createdAt: sp.created_at ? sp.created_at.split('T')[0] : '2026-03-01',
       hasVariants: false,
     };
   }, []);
 
-  // Sync products with SiteControlsContext
+  // Orders Management System (OMS) state connected directly to Supabase
+  const [orders, setOrders] = useState<Order[]>([]);
+
+  // Sync products with SiteControlsContext and calculate real salesCount strictly from Supabase orders
   const products: Product[] = useMemo(() => {
+    let baseProds: Product[] = [];
     if (siteControls.products && siteControls.products.length > 0) {
-      return siteControls.products.map(mapStoreProductToAdminProduct);
+      baseProds = siteControls.products.map(mapStoreProductToAdminProduct);
+    } else {
+      baseProds = defaultProducts;
     }
-    return defaultProducts;
-  }, [siteControls.products, mapStoreProductToAdminProduct]);
+
+    const salesMap = new Map<string, number>();
+    (orders || []).filter((o) => o.status !== 'cancelled').forEach((order) => {
+      if (Array.isArray(order.items)) {
+        order.items.forEach((item: any) => {
+          const pId = String(item.productId || item.id || item.product_id || '');
+          const qty = Number(item.quantity || item.qty || 1);
+          if (pId) {
+            salesMap.set(pId, (salesMap.get(pId) || 0) + qty);
+          }
+        });
+      }
+    });
+
+    return baseProds.map((p) => ({
+      ...p,
+      salesCount: salesMap.get(String(p.id)) || 0,
+    }));
+  }, [siteControls.products, mapStoreProductToAdminProduct, orders]);
 
   // Derive product metrics helper
   const deriveProductMetricsFromVariants = (prod: Partial<Product>): Partial<Product> => {
@@ -1223,16 +600,16 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [subscribers, setSubscribers] = useState<Subscriber[]>(() => {
     const raw = getStoredSubscribers();
     if (raw && raw.length > 0) {
-      return raw.map((s, idx) => ({
+      return raw.map((s) => ({
         id: s.id,
         name: s.email.split('@')[0],
         email: s.email,
-        phone: '+964780' + Math.floor(1000000 + idx * 234567),
+        phone: s.notes || '',
         status: s.status,
-        totalOrders: 1,
-        totalSpent: 45000,
-        joinedDate: s.subscribed_at ? s.subscribed_at.split('T')[0] : '2026-03-01',
-        tags: s.tags || ['VIP'],
+        totalOrders: 0,
+        totalSpent: 0,
+        joinedDate: s.subscribed_at ? s.subscribed_at.split('T')[0] : new Date().toISOString().split('T')[0],
+        tags: s.tags || [],
       }));
     }
     return defaultSubscribers;
@@ -1241,18 +618,18 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Sync real subscribers from Supabase database on mount
   useEffect(() => {
     syncSubscribersFromCloud().then((cloudList) => {
-      if (cloudList && Array.isArray(cloudList) && cloudList.length > 0) {
+      if (cloudList && Array.isArray(cloudList)) {
         setSubscribers(
-          cloudList.map((s, idx) => ({
+          cloudList.map((s) => ({
             id: s.id,
             name: s.email.split('@')[0],
             email: s.email,
-            phone: '+964780' + Math.floor(1000000 + idx * 234567),
+            phone: s.notes || '',
             status: s.status,
-            totalOrders: 1,
-            totalSpent: 45000,
-            joinedDate: s.subscribed_at ? s.subscribed_at.split('T')[0] : '2026-03-01',
-            tags: s.tags || ['VIP'],
+            totalOrders: 0,
+            totalSpent: 0,
+            joinedDate: s.subscribed_at ? s.subscribed_at.split('T')[0] : new Date().toISOString().split('T')[0],
+            tags: s.tags || [],
           }))
         );
       }
@@ -1279,23 +656,77 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setSubscribers((prev) => prev.filter((s) => s.id !== id));
   }, [subscribers]);
 
-  // Orders Management System (OMS) connected directly to Supabase Cloud Storage
-  const [orders, setOrders] = useState<Order[]>(() => {
-    try {
-      const saved = localStorage.getItem('vant_orders_v1');
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return defaultOrders;
-  });
-
   // Load orders from Supabase on mount
   useEffect(() => {
-    fetchOrdersFromSupabase().then((remoteOrders) => {
-      if (remoteOrders && Array.isArray(remoteOrders) && remoteOrders.length > 0) {
-        setOrders(remoteOrders);
-        try { localStorage.setItem('vant_orders_v1', JSON.stringify(remoteOrders)); } catch {}
+    async function loadOrders() {
+      let data: any = null;
+      let error: any = null;
+
+      if (supabase) {
+        try {
+          const res = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+          data = res.data;
+          error = res.error;
+          console.log("Supabase Fetch Result:", data);
+          console.log("Supabase Fetch Error:", error);
+        } catch (err) {
+          error = err;
+          console.log("Supabase Fetch Result:", null);
+          console.log("Supabase Fetch Error:", err);
+        }
       }
-    }).catch(() => {});
+
+      if (!error && data && Array.isArray(data)) {
+        const mappedOrders: Order[] = data.map((d: any) => {
+          const parsedItems = Array.isArray(d.items)
+            ? d.items
+            : typeof d.items === 'string'
+            ? (() => { try { return JSON.parse(d.items); } catch { return []; } })()
+            : [];
+
+          const parsedTimeline = Array.isArray(d.timeline)
+            ? d.timeline
+            : typeof d.timeline === 'string'
+            ? (() => { try { return JSON.parse(d.timeline); } catch { return []; } })()
+            : [];
+
+          return {
+            id: String(d.id || d.order_id || d.code || 'ORD-' + Math.floor(1000 + Math.random() * 9000)),
+            customerName: d.customer_name || d.customerName || d.name || 'عميل كونسيرج',
+            customerPhone: d.customer_phone || d.customerPhone || d.phone || '',
+            customerEmail: d.customer_email || d.customerEmail || d.email || '',
+            shippingAddress: d.shipping_address || d.shippingAddress || d.address || '',
+            items: parsedItems,
+            totalPrice: Number(d.total_price || d.totalPrice || d.total || d.amount || 0),
+            status: d.status || 'pending_payment',
+            orderDate: d.created_at || d.order_date || d.orderDate || new Date().toISOString(),
+            type: d.type || 'ready_to_wear',
+            isVip: Boolean(d.is_vip || d.isVip),
+            bespokeDetails: d.bespoke_details || d.bespokeDetails,
+            timeline: parsedTimeline,
+            paymentMethod: d.payment_method || d.paymentMethod || 'cash_on_delivery',
+            trackingNumber: d.tracking_number || d.trackingNumber,
+          };
+        });
+        setOrders(mappedOrders);
+        try { localStorage.setItem('vant_orders_v1', JSON.stringify(mappedOrders)); } catch {}
+        return;
+      }
+
+      // Fallback: fetch orders stored in Supabase cloud storage if table does not exist
+      if (!data) {
+        const remoteOrders = await fetchOrdersFromSupabase();
+        if (remoteOrders && Array.isArray(remoteOrders)) {
+          setOrders(remoteOrders);
+          try { localStorage.setItem('vant_orders_v1', JSON.stringify(remoteOrders)); } catch {}
+          return;
+        }
+      }
+
+      setOrders([]);
+    }
+
+    loadOrders();
   }, []);
 
   const updateOrderStatus = useCallback((id: string, newStatus: OrderStatus, note?: string) => {

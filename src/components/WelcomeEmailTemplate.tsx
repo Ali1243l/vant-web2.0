@@ -163,14 +163,16 @@ export default function WelcomeEmailTemplate({
 
           {/* 3. HERO IMAGE BANNER (Mobile-Safe direct image) */}
           <div className="p-5 sm:p-6 space-y-4">
-            <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-[#121722] shadow-md group">
-              <img
-                src={resolvedHeroImage}
-                alt="VANT Luxury Haute Streetwear & Architecture Archive"
-                style={{ display: 'block', maxWidth: '100%', height: 'auto', border: 'none' }}
-                className="w-full object-cover"
-              />
-            </div>
+            {resolvedHeroImage?.trim() ? (
+              <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-[#121722] shadow-md group">
+                <img
+                  src={resolvedHeroImage.trim()}
+                  alt="VANT Luxury Haute Streetwear & Architecture Archive"
+                  style={{ display: 'block', maxWidth: '100%', height: 'auto', border: 'none' }}
+                  className="w-full object-cover"
+                />
+              </div>
+            ) : null}
 
             {/* 4. HEADLINE & MESSAGE CARD */}
             <div className="bg-[#121724] border border-white/12 p-5 rounded-2xl space-y-2.5">

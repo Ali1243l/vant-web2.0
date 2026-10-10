@@ -24,8 +24,10 @@ const ALL = 'All';
 
 const CATEGORY_TRANSLATIONS: Record<string, { en: string; ar: string }> = {
   All: { en: 'All', ar: 'الكل' },
-  Tailoring: { en: 'Tailoring', ar: 'الأزياء الرسمية' },
+  'T-Shirts': { en: 'T-Shirts', ar: 'تيشيرتات' },
+  'ملابس وأزياء': { en: 'Apparel & Fashion', ar: 'ملابس وأزياء' },
   Outerwear: { en: 'Outerwear', ar: 'المعاطف والسترات' },
+  Tailoring: { en: 'Tailoring', ar: 'الأزياء الرسمية' },
   Knitwear: { en: 'Knitwear', ar: 'التريكو والصوف' },
   Footwear: { en: 'Footwear', ar: 'الأحذية' },
   Accessories: { en: 'Accessories', ar: 'الإكسسوارات' },
@@ -42,7 +44,9 @@ function MainApp() {
     setIsPreviewMaintenance,
     isAdminUnlocked,
     unlockAdmin,
+    getControl,
   } = useSiteControls();
+  const newsletterControl = getControl('sec_newsletter_subscription');
   const {
     products,
     loading,
@@ -248,10 +252,14 @@ function MainApp() {
   const getCategoryLabel = useCallback(
     (c: string) => {
       const trans = CATEGORY_TRANSLATIONS[c];
-      if (!trans) return c;
-      return lang === 'ar' ? trans.ar : trans.en;
+      if (trans) return lang === 'ar' ? trans.ar : trans.en;
+      if (lang === 'ar') {
+        const prodMatch = products.find((p) => p.category === c && p.category_ar);
+        if (prodMatch?.category_ar) return prodMatch.category_ar;
+      }
+      return c;
     },
-    [lang]
+    [lang, products]
   );
 
   const offersCount = useMemo(() => products.filter((p) => p.is_offer).length, [products]);
@@ -665,7 +673,7 @@ function MainApp() {
       </main>
 
       {/* Elegant Newsletter Subscription Section (Only shown in full collection mode) */}
-      {!isWishlistOnly && <NewsletterSection lang={lang} />}
+      {!isWishlistOnly && newsletterControl.visible && <NewsletterSection lang={lang} />}
 
       {/* Editorial footer with Instagram, Pinterest, and TikTok social links + secret triple-tap trigger */}
       <Footer

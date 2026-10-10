@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Menu,
   Bell,
   Search,
   Lock,
@@ -19,9 +18,6 @@ import {
   Users,
   X,
   ExternalLink,
-  ShieldAlert,
-  Database,
-  RefreshCw,
 } from 'lucide-react';
 import { useAdminBridge, AdminView } from './useAdminBridge';
 import { Button } from './ui';
@@ -40,7 +36,6 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   const {
     activeView,
     setActiveView,
-    toggleDrawer,
     lock,
     lang,
     toggleLang,
@@ -167,21 +162,9 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
         </div>
       )}
 
-      {/* Left section: Drawer toggle & Breadcrumb */}
+      {/* Left section: Title */}
       <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-        <button
-          onClick={toggleDrawer}
-          className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-          aria-label="Toggle navigation menu"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
-
         <div className="flex items-center gap-2 min-w-0">
-          <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400">
-            <span>{isAr ? 'الإدارة' : 'Admin'}</span>
-            <span>/</span>
-          </div>
           <h1 className="text-sm sm:text-base font-bold text-white truncate">
             {isAr ? viewTitles[activeView]?.ar : viewTitles[activeView]?.en}
           </h1>
@@ -258,7 +241,11 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
                           onClick={() => handleSelectSearchResult('products')}
                           className="w-full text-start flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-800 text-xs text-slate-200 cursor-pointer"
                         >
-                          <img src={p.imageUrl} alt="" className="w-6 h-6 rounded object-cover bg-slate-800" />
+                          {p.imageUrl?.trim() ? (
+                            <img src={p.imageUrl} alt="" className="w-6 h-6 rounded object-cover bg-slate-800" />
+                          ) : (
+                            <div className="w-6 h-6 rounded bg-slate-800 flex items-center justify-center text-[10px] text-slate-500">•</div>
+                          )}
                           <span className="truncate flex-1">{isAr ? p.name : p.nameEn || p.name}</span>
                           <span className="text-[11px] text-slate-400 font-mono">{p.sku}</span>
                         </button>
@@ -384,59 +371,6 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           )}
         </div>
 
-        {/* 3.4. Real Database Connection & Instant Cloud Sync Button */}
-        <button
-          onClick={async () => {
-            setIsSyncing(true);
-            try {
-              await syncAllToSupabaseCloud();
-              await refreshProducts();
-            } finally {
-              setTimeout(() => setIsSyncing(false), 600);
-            }
-          }}
-          disabled={isSyncing}
-          className={`px-2.5 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-            isLiveDatabase
-              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/60'
-              : 'bg-indigo-950/40 border-indigo-500/40 text-indigo-300 hover:bg-indigo-900/60'
-          }`}
-          title={
-            isAr
-              ? 'قاعدة البيانات متصلة بـ Supabase Live. انقر لإجراء مزامنة فورية شاملة مع السحابة.'
-              : 'Connected to Supabase Live Database. Click for instant cloud synchronization.'
-          }
-        >
-          <Database className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="hidden lg:inline">
-            {isAr ? 'قاعدة البيانات: متصلة' : 'DB: Supabase Live'}
-          </span>
-          <RefreshCw className={`w-3 h-3 text-slate-400 ${isSyncing ? 'animate-spin text-emerald-400' : ''}`} />
-        </button>
-
-        {/* 3.5. Quick Maintenance Mode One-Click Toggle */}
-        <button
-          onClick={() => updateSiteSettings({ maintenanceMode: !siteSettings.maintenanceMode })}
-          className={`px-2.5 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-            siteSettings.maintenanceMode
-              ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 ring-1 ring-amber-500/30 animate-pulse'
-              : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:text-white hover:bg-slate-800'
-          }`}
-          title={
-            siteSettings.maintenanceMode
-              ? isAr ? 'وضع الصيانة مفعّل (المتجر مغلق أمام الزوار) - انقر لفتحه' : 'Maintenance ON (Store Offline) - Click to Open'
-              : isAr ? 'المتجر متاح ومباشر للزبائن - انقر لتفعيل وضع الصيانة' : 'Store Live - Click to Enable Maintenance'
-          }
-        >
-          <ShieldAlert className={`w-4 h-4 ${siteSettings.maintenanceMode ? 'text-amber-400' : 'text-slate-400'}`} />
-          <span className="hidden sm:inline">
-            {siteSettings.maintenanceMode
-              ? (isAr ? 'وضع الصيانة: مفعّل' : 'Maintenance: ON')
-              : (isAr ? 'وضع الصيانة: معطل' : 'Maintenance: OFF')}
-          </span>
-          <span className={`w-2 h-2 rounded-full ${siteSettings.maintenanceMode ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}`} />
-        </button>
-
         {/* 4. Language Switcher (عربي / EN) */}
         <button
           onClick={toggleLang}
@@ -456,65 +390,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           <Lock className="w-4.5 h-4.5 text-slate-400 hover:text-amber-400 transition-colors" />
         </button>
 
-        {/* 6. User Profile Pill with Dropdown */}
-        <div ref={userMenuRef} className="relative">
-          <button
-            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            className="flex items-center gap-2 p-1.5 sm:ps-1.5 sm:pe-3 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
-          >
-            <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-500 to-violet-500 flex items-center justify-center text-white text-xs font-bold ring-2 ring-indigo-500/30">
-              F
-            </div>
-            <div className="hidden lg:flex flex-col text-start">
-              <span className="text-xs font-semibold text-slate-200 leading-tight">
-                {isAr ? 'فيصل المطيري' : 'Faisal Al-Mutairi'}
-              </span>
-              <span className="text-[10px] text-slate-400 leading-tight">
-                {isAr ? 'المدير العام' : 'Super Admin'}
-              </span>
-            </div>
-            <ChevronDown className="w-3 h-3 text-slate-400 hidden sm:block" />
-          </button>
-
-          {isUserMenuOpen && (
-            <div className="absolute end-0 top-full mt-2 w-56 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-1.5 z-40 animate-in fade-in duration-150">
-              <div className="p-2.5 border-b border-slate-800 mb-1">
-                <div className="text-xs font-bold text-white">{isAr ? 'فيصل المطيري' : 'Faisal Al-Mutairi'}</div>
-                <div className="text-[11px] text-slate-400 font-mono">admin@alrafidain.store</div>
-                <div className="text-[10px] text-indigo-400 mt-1 font-semibold">{currentStore}</div>
-              </div>
-              <button
-                onClick={() => {
-                  setIsUserMenuOpen(false);
-                  setActiveView('settings');
-                }}
-                className="w-full text-start px-2.5 py-2 text-xs rounded-lg text-slate-300 hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
-              >
-                <Store className="w-3.5 h-3.5 text-indigo-400" />
-                <span>{isAr ? 'إعدادات المتجر' : 'Store Settings'}</span>
-              </button>
-              <button
-                onClick={() => {
-                  setIsUserMenuOpen(false);
-                  lock();
-                }}
-                className="w-full text-start px-2.5 py-2 text-xs rounded-lg text-amber-400 hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
-              >
-                <Lock className="w-3.5 h-3.5" />
-                <span>{isAr ? 'قفل الجلسة فورياً' : 'Lock Session'}</span>
-              </button>
-              <button
-                onClick={handleLogout}
-                className="w-full text-start px-2.5 py-2 text-xs rounded-lg text-rose-400 hover:bg-slate-800 flex items-center gap-2 cursor-pointer border-t border-slate-800/80 mt-1"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>{isAr ? 'تسجيل الخروج الآمن' : 'Safe Log Out'}</span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* 7. Exit / Return to Boutique Button */}
+        {/* 6. Exit / Return to Boutique Button */}
         {onCloseAdmin && (
           <button
             onClick={onCloseAdmin}

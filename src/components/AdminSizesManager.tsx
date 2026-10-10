@@ -13,10 +13,26 @@ import {
   Save,
   X,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  ArrowUpDown,
 } from 'lucide-react';
 import { useSiteControls } from '../context/SiteControlsContext';
 import type { MasterSizeItem } from '../data/sizeGuide';
+
+const SIZES_STANDARD_RANK: Record<string, number> = {
+  'XS': 1,
+  'S': 2,
+  'M': 3,
+  'L': 4,
+  'XL': 5,
+  'XXL': 6,
+  '2XL': 6,
+  '3XL': 7,
+  '4XL': 8,
+  '5XL': 9,
+  '6XL': 10,
+  'OVERSIZED': 11,
+};
 
 interface Props {
   isAr?: boolean;
@@ -29,6 +45,7 @@ export default function AdminSizesManager({ isAr = true }: Props) {
     addMasterSize,
     deleteMasterSize,
     toggleMasterSize,
+    reorderMasterSizes,
     resetMasterSizesToDefault,
   } = useSiteControls();
 
@@ -39,15 +56,11 @@ export default function AdminSizesManager({ isAr = true }: Props) {
   const [showLivePreview, setShowLivePreview] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // New Size Initial State
+  // New Size Initial State (Strictly Height & Weight only)
   const [newSize, setNewSize] = useState<Omit<MasterSizeItem, 'id'>>({
     size: '',
     height: '',
     weight: '',
-    chest: '',
-    waist: '',
-    shoulder: '',
-    length: '',
     note_ar: '',
     note_en: '',
     minHeight: 160,
@@ -60,6 +73,26 @@ export default function AdminSizesManager({ isAr = true }: Props) {
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const handleAutoSortSizes = () => {
+    const sorted = [...masterSizes].sort((a, b) => {
+      const rankA = SIZES_STANDARD_RANK[a.size.trim().toUpperCase()] ?? (100 + (a.minHeight || 0));
+      const rankB = SIZES_STANDARD_RANK[b.size.trim().toUpperCase()] ?? (100 + (b.minHeight || 0));
+      if (rankA !== rankB) return rankA - rankB;
+      return (a.minWeight || 0) - (b.minWeight || 0);
+    });
+    reorderMasterSizes(sorted);
+    showToast(isAr ? 'تم ترتيب قائمة المقاسات تصاعدياً بالاعتماد الكامل على الطول والوزن' : 'Sizes auto-sorted by height and weight');
+  };
+
+  const handleMoveSize = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= masterSizes.length) return;
+    const reordered = [...masterSizes];
+    const [removed] = reordered.splice(index, 1);
+    reordered.splice(targetIndex, 0, removed);
+    reorderMasterSizes(reordered);
   };
 
   const handleStartEdit = (sizeItem: MasterSizeItem) => {
@@ -93,10 +126,10 @@ export default function AdminSizesManager({ isAr = true }: Props) {
     addMasterSize({
       ...newSize,
       size: newSize.size.trim().toUpperCase(),
-      height: newSize.height || '175 - 185 سم',
-      weight: newSize.weight || '80 - 95 كغم',
-      note_ar: newSize.note_ar || 'قصة متناسقة ومريحة',
-      note_en: newSize.note_en || 'Tailored relaxed cut',
+      height: newSize.height || `${newSize.minHeight || 175} - ${newSize.maxHeight || 185} سم`,
+      weight: newSize.weight || `${newSize.minWeight || 80} - ${newSize.maxWeight || 95} كغم`,
+      note_ar: newSize.note_ar || 'قصة متناسقة ومريحة مناسبة للطول والوزن',
+      note_en: newSize.note_en || 'Tailored relaxed cut for height and weight',
     });
 
     setIsAddModalOpen(false);
@@ -104,10 +137,6 @@ export default function AdminSizesManager({ isAr = true }: Props) {
       size: '',
       height: '',
       weight: '',
-      chest: '',
-      waist: '',
-      shoulder: '',
-      length: '',
       note_ar: '',
       note_en: '',
       minHeight: 160,
@@ -209,18 +238,30 @@ export default function AdminSizesManager({ isAr = true }: Props) {
           />
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowLivePreview(!showLivePreview)}
-          className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
-            showLivePreview
-              ? 'border-[#3b82f6]/40 bg-[#004ad7]/15 text-[#60a5fa]'
-              : 'border-white/10 bg-white/[0.03] text-white/60 hover:text-white'
-          }`}
-        >
-          <Eye className="h-3.5 w-3.5" />
-          <span>{isAr ? (showLivePreview ? 'إخفاء معاينة الزبون' : 'عرض معاينة الزبون') : 'Toggle Customer Preview'}</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={handleAutoSortSizes}
+            className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/80 hover:text-white transition-all cursor-pointer shadow-xs active:scale-95"
+            title={isAr ? 'ترتيب المقاسات تصاعدياً بالاعتماد الكامل على الطول والوزن' : 'Auto-sort sizes by height & weight'}
+          >
+            <ArrowUpDown className="h-3.5 w-3.5 text-[#3b82f6]" />
+            <span>{isAr ? 'ترتيب حسب الطول والوزن' : 'Sort by Height & Weight'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowLivePreview(!showLivePreview)}
+            className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+              showLivePreview
+                ? 'border-[#3b82f6]/40 bg-[#004ad7]/15 text-[#60a5fa]'
+                : 'border-white/10 bg-white/[0.03] text-white/60 hover:text-white'
+            }`}
+          >
+            <Eye className="h-3.5 w-3.5" />
+            <span>{isAr ? (showLivePreview ? 'إخفاء معاينة الزبون' : 'عرض معاينة الزبون') : 'Toggle Customer Preview'}</span>
+          </button>
+        </div>
       </div>
 
       {/* LIVE CUSTOMER SIZING TABLE PREVIEW (Architectural Lookbook Style) */}
@@ -284,6 +325,7 @@ export default function AdminSizesManager({ isAr = true }: Props) {
       <div className="space-y-3.5">
         {filteredSizes.map((item) => {
           const isEditing = editingId === item.id;
+          const originalIndex = masterSizes.findIndex((s) => s.id === item.id);
 
           return (
             <div
@@ -297,7 +339,32 @@ export default function AdminSizesManager({ isAr = true }: Props) {
               {!isEditing ? (
                 /* READ-ONLY CARD ROW */
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3.5 min-w-[120px]">
+                  <div className="flex items-center gap-2.5 min-w-[150px]">
+                    {/* Reorder Arrows */}
+                    <div className="flex flex-col items-center gap-0.5 shrink-0 bg-black/30 p-1 rounded-xl border border-white/5">
+                      <button
+                        type="button"
+                        onClick={() => handleMoveSize(originalIndex, 'up')}
+                        disabled={originalIndex <= 0}
+                        className="p-0.5 rounded hover:bg-white/15 text-white/40 hover:text-white disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer disabled:cursor-not-allowed transition-colors"
+                        title={isAr ? 'تقديم المقاس للأعلى' : 'Move Up'}
+                      >
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      </button>
+                      <span className="text-[9.5px] font-mono text-[#60a5fa] font-bold leading-none select-none">
+                        #{originalIndex + 1}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleMoveSize(originalIndex, 'down')}
+                        disabled={originalIndex < 0 || originalIndex >= masterSizes.length - 1}
+                        className="p-0.5 rounded hover:bg-white/15 text-white/40 hover:text-white disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer disabled:cursor-not-allowed transition-colors"
+                        title={isAr ? 'تأخير المقاس للأسفل' : 'Move Down'}
+                      >
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#004ad7] to-[#3b82f6] text-white font-extrabold text-sm shadow-md">
                       {item.size}
                     </div>
@@ -601,6 +668,59 @@ export default function AdminSizesManager({ isAr = true }: Props) {
                   placeholder="قصة رحبة جداً للأطوال والأوزان العالية"
                   className="h-10 w-full rounded-xl border border-white/15 bg-black/50 px-3 text-xs text-white outline-none focus:border-[#3b82f6]"
                 />
+              </div>
+
+              {/* Min / Max Height and Weight Bounds for Calculator */}
+              <div className="p-3 rounded-2xl bg-black/40 border border-white/10 space-y-2">
+                <span className="text-[11px] font-semibold text-[#3b82f6] block">
+                  {isAr ? 'حدود حاسبة القياس الذكية (الطول والوزن):' : 'Smart Fit Calculator Bounds:'}
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div>
+                    <label className="text-[10px] text-white/50 block mb-1">
+                      {isAr ? 'أدنى طول (سم)' : 'Min Height (cm)'}
+                    </label>
+                    <input
+                      type="number"
+                      value={newSize.minHeight ?? 160}
+                      onChange={(e) => setNewSize({ ...newSize, minHeight: parseInt(e.target.value, 10) || 150 })}
+                      className="h-8 w-full rounded-lg border border-white/15 bg-black/50 px-2 text-xs text-white outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-white/50 block mb-1">
+                      {isAr ? 'أعلى طول (سم)' : 'Max Height (cm)'}
+                    </label>
+                    <input
+                      type="number"
+                      value={newSize.maxHeight ?? 185}
+                      onChange={(e) => setNewSize({ ...newSize, maxHeight: parseInt(e.target.value, 10) || 190 })}
+                      className="h-8 w-full rounded-lg border border-white/15 bg-black/50 px-2 text-xs text-white outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-white/50 block mb-1">
+                      {isAr ? 'أدنى وزن (كغم)' : 'Min Weight (kg)'}
+                    </label>
+                    <input
+                      type="number"
+                      value={newSize.minWeight ?? 50}
+                      onChange={(e) => setNewSize({ ...newSize, minWeight: parseInt(e.target.value, 10) || 40 })}
+                      className="h-8 w-full rounded-lg border border-white/15 bg-black/50 px-2 text-xs text-white outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-white/50 block mb-1">
+                      {isAr ? 'أعلى وزن (كغم)' : 'Max Weight (kg)'}
+                    </label>
+                    <input
+                      type="number"
+                      value={newSize.maxWeight ?? 80}
+                      onChange={(e) => setNewSize({ ...newSize, maxWeight: parseInt(e.target.value, 10) || 90 })}
+                      className="h-8 w-full rounded-lg border border-white/15 bg-black/50 px-2 text-xs text-white outline-none"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/10">

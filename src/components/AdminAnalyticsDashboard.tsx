@@ -2149,13 +2149,15 @@ export default function AdminAnalyticsDashboard({
                   >
                     <div>
                       {/* Image Thumbnail & Top Badges */}
-                      <div className="relative aspect-[4/3] w-full rounded-2xl overflow-hidden bg-black/40 border border-white/10">
-                        <img
-                          src={prod.image_url}
-                          alt={prod.title}
-                          className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
-                          loading="lazy"
-                        />
+                      <div className="relative aspect-[4/3] w-full rounded-2xl overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center">
+                        {prod.image_url?.trim() ? (
+                          <img
+                            src={prod.image_url}
+                            alt={prod.title}
+                            className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                            loading="lazy"
+                          />
+                        ) : null}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
 
                         {/* Top Badges */}

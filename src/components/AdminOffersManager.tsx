@@ -695,12 +695,16 @@ export default function AdminOffersManager({ isAr, onNavigateToStoreOffers }: Pr
                 >
                   {/* Left: Product Thumbnail + Title + Current Status */}
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="relative h-14 w-14 rounded-xl overflow-hidden border border-white/10 bg-black/40 shrink-0">
-                      <img
-                        src={p.image_url}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
+                    <div className="relative h-14 w-14 rounded-xl overflow-hidden border border-white/10 bg-black/40 shrink-0 flex items-center justify-center">
+                      {p.image_url?.trim() ? (
+                        <img
+                          src={p.image_url}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <Tag className="w-5 h-5 text-white/30" />
+                      )}
                       {p.is_offer && (
                         <span className="absolute top-1 ltr:left-1 rtl:right-1 h-2 w-2 rounded-full bg-[#3b82f6] shadow-sm shadow-[#3b82f6]" />
                       )}

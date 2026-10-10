@@ -22,6 +22,7 @@ import {
   Layers,
   ArrowRight,
   User,
+  Package,
 } from 'lucide-react';
 import { Sheet } from './Sheet';
 import { StatusBadge } from './ui';
@@ -649,11 +650,17 @@ export const OrderDetailsSheet: React.FC<OrderDetailsSheetProps> = ({
                 key={idx}
                 className="flex items-center gap-3.5 bg-slate-950/60 border border-slate-800/80 p-3 rounded-xl hover:border-slate-700 transition-colors"
               >
-                <img
-                  src={item.imageUrl}
-                  alt={item.name}
-                  className="w-16 h-16 rounded-lg object-cover bg-slate-800 shrink-0 border border-slate-800"
-                />
+                {item.imageUrl?.trim() ? (
+                  <img
+                    src={item.imageUrl}
+                    alt={item.name}
+                    className="w-16 h-16 rounded-lg object-cover bg-slate-800 shrink-0 border border-slate-800"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-lg bg-slate-800 shrink-0 border border-slate-800 flex items-center justify-center text-slate-500">
+                    <Package className="w-6 h-6" />
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <h5 className="text-xs font-bold text-white truncate">{isAr ? item.name : item.nameEn}</h5>
                   <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-slate-400">

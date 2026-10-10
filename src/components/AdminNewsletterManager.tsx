@@ -1015,11 +1015,13 @@ export default function AdminNewsletterManager({
                               : 'border-black/10 dark:border-white/10 hover:border-black/25 dark:hover:border-white/25'
                           }`}
                         >
-                          <img
-                            src={p.url}
-                            alt={p.nameEn}
-                            className="h-full w-full object-cover group-hover:scale-105 transition-transform"
-                          />
+                          {p.url?.trim() ? (
+                            <img
+                              src={p.url}
+                              alt={p.nameEn}
+                              className="h-full w-full object-cover group-hover:scale-105 transition-transform"
+                            />
+                          ) : null}
                           <div className="absolute inset-0 bg-black/40 flex items-end p-1.5">
                             <span className="text-[9px] text-white truncate font-bold">
                               {isAr ? p.nameAr : p.nameEn}

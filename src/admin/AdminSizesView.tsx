@@ -28,8 +28,8 @@ export const AdminSizesView: React.FC = () => {
               </div>
               <p className="text-xs text-slate-400 mt-1">
                 {isAr
-                  ? 'إدارة وتخصيص جداول المقاسات الدقيقة للصدر، الخصر، الطول، والكتف المعروضة للزبائن داخل المتجر.'
-                  : 'Configure and calibrate chest, waist, length, and shoulder fit charts for all apparel pieces.'}
+                  ? 'إدارة وتخصيص جداول المقاسات الدقيقة المعتمدة حصرياً على الطول والوزن المقترح للزبائن داخل المتجر وحاسبة القياس الذكية.'
+                  : 'Configure and calibrate fit charts based exclusively on recommended height and weight for all apparel pieces.'}
               </p>
             </div>
           </div>
