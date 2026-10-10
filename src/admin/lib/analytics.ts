@@ -97,9 +97,8 @@ export function getAggregatedAnalytics(
 ): AggregatedAnalytics {
   const realTelemetry: UserBehaviorStats = getRealTelemetryAnalytics(productsList);
 
-  // 1. Real Hesitation Incidents strictly from Supabase cloud database
+  // 1. Real Hesitation Incidents from database/telemetry
   const hesitationIncidents: HesitationIncident[] = (realTelemetry.hesitationSignals || [])
-    .filter((signal: HesitationSignal) => Boolean(signal.isFromCloud))
     .map((signal: HesitationSignal, idx: number) => {
       let stage: HesitationStage = 'cart';
       if (signal.type === 'sizing_hesitation') stage = 'sizing';
@@ -122,9 +121,8 @@ export function getAggregatedAnalytics(
       };
     });
 
-  // 2. Real Customer Sessions strictly from Supabase cloud database
+  // 2. Real Customer Sessions from database/telemetry
   const customerSessions: CustomerSession[] = (realTelemetry.customerSessions || [])
-    .filter((s: CustomerSessionProfile) => Boolean(s.isFromCloud))
     .map((s: CustomerSessionProfile, idx: number) => {
       const shortId = s.sessionId ? s.sessionId.slice(-4).toUpperCase() : `${idx + 1}`;
       let persona: PersonaType = 'Window Shopper';

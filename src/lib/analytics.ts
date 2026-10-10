@@ -888,7 +888,7 @@ export function getAggregatedAnalytics(productsList: any[] = []): UserBehaviorSt
           recoveryWhatsAppMessage: `أهلاً بكِ في دار VANT! دعينا نساعدكِ في استكشاف أحدث قطع التشكيلة الفاخرة المناسبة لذوقكِ واحتياجكِ.`,
           timestamp: lastSeen,
         };
-      } else if (durationSeconds >= 25 && viewedMap.size >= 1) {
+      } else if (durationSeconds >= 25) {
         hesitationReason = 'إطالة النظر في تفاصيل قطعة محددة دون اتخاذ إجراء';
         hesitationSignal = {
           id: `hes_${sId}_contemplation`,
@@ -1332,6 +1332,8 @@ export function getAggregatedAnalytics(productsList: any[] = []): UserBehaviorSt
   });
 
   const lastEventTime = events.length > 0 ? events[0].timestamp : null;
+
+  console.log("=== FINAL RADAR SIGNALS ===", hesitationSignals);
 
   return {
     totalPageViews,
