@@ -21,7 +21,8 @@ export interface AnalyticsEvent {
     | 'image_slide'
     | 'size_guide_open'
     | 'coupon_copied'
-    | 'engagement_heartbeat';
+    | 'engagement_heartbeat'
+    | 'system_error';
   timestamp: number;
   device: 'mobile' | 'desktop' | 'tablet';
   sessionId: string;
@@ -171,6 +172,8 @@ export interface UserBehaviorStats {
   totalWishlistAdds: number;
   totalWhatsAppClicks: number;
   uniqueVisitors: number;
+  uniquePersistentVisitors: number;
+  totalVisits: number;
   activeOnlineNow: number;
   avgSessionSeconds: number;
   conversionRate: number; // percentage
@@ -398,6 +401,67 @@ export function trackEvent(
   }
 }
 
+// Track system runtime errors & unhandled promise rejections directly to Supabase logs
+export function trackSystemError(errorMessage: string, errorStack?: string) {
+  try {
+    const eventId = 'err_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+    const deviceType = detectDevice();
+    const { visitorId, sessionId, visitCount } = manageVisitorSession();
+    const nowTimestamp = Date.now();
+
+    const errorData = {
+      errorMessage: String(errorMessage || 'Unknown Error'),
+      errorStack: errorStack || '',
+      visitorId,
+      visitCount,
+      url: typeof window !== 'undefined' ? window.location.href : '',
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+      timestamp: new Date(nowTimestamp).toISOString(),
+    };
+
+    const newEvent: AnalyticsEvent = {
+      id: eventId,
+      type: 'system_error',
+      timestamp: nowTimestamp,
+      device: deviceType,
+      sessionId,
+      data: errorData,
+    };
+
+    const events = getStoredEvents();
+    const updated = [newEvent, ...events].slice(0, 2000);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    } catch {}
+
+    if (typeof window !== 'undefined') {
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('vant_analytics_updated', { detail: newEvent }));
+      }, 0);
+    }
+
+    if (supabase) {
+      (async () => {
+        try {
+          await supabase.from('logs').insert({
+            event_type: 'system_error',
+            device: deviceType,
+            session_id: sessionId,
+            visitor_id: visitorId,
+            visit_count: visitCount,
+            data: errorData,
+            created_at: new Date(nowTimestamp).toISOString(),
+          });
+        } catch {
+          // Silent catch
+        }
+      })();
+    }
+  } catch (e) {
+    console.warn('System error telemetry recording failed', e);
+  }
+}
+
 // Debounced background sync to Supabase Storage
 let syncTimer: any = null;
 function scheduleSupabaseSync(events: AnalyticsEvent[]) {
@@ -479,7 +543,9 @@ function extractSessionGovernorate(sEvents: AnalyticsEvent[]): string {
 
 // Compute 100% Real Aggregated Business Intelligence & Customer Session Journey
 export function getAggregatedAnalytics(productsList: any[] = []): UserBehaviorStats {
-  const events = getStoredEvents();
+  const rawEvents = getStoredEvents();
+  // Filter out dev simulation events
+  const events = rawEvents.filter((e) => !e.data?.isSimulation && !e.data?.isDev);
 
   const totalPageViews = events.filter((e) => e.type === 'page_view').length;
   const productViewEvents = events.filter((e) => e.type === 'product_view');
@@ -844,7 +910,22 @@ export function getAggregatedAnalytics(productsList: any[] = []): UserBehaviorSt
   // Sort customer sessions: Most active & recent first
   customerSessions.sort((a, b) => b.lastSeen - a.lastSeen);
 
-  const uniqueVisitors = customerSessions.length;
+  // 1. STRICT UNIQUE VISITORS (Count distinct visitorId across all non-simulation events)
+  const uniqueVisitorSet = new Set(
+    events
+      .map((e) => e.data?.visitorId || e.sessionId)
+      .filter((id) => Boolean(id) && id !== 'pvid_anon' && id !== 'v_server' && id !== 'sess_anon')
+  );
+  const uniqueVisitors = uniqueVisitorSet.size > 0 ? uniqueVisitorSet.size : customerSessions.length;
+  const uniquePersistentVisitors = uniqueVisitors;
+
+  // 2. STRICT TOTAL VISITS / SESSIONS (Count distinct sessionId across all non-simulation events)
+  const uniqueSessionSet = new Set(
+    events
+      .map((e) => e.sessionId || e.data?.sessionId)
+      .filter((sId) => Boolean(sId) && sId !== 'sess_anon' && sId !== 'v_server')
+  );
+  const totalVisits = Math.max(uniqueSessionSet.size, customerSessions.length);
 
   // Active online now (sessions in the last 15 minutes)
   const fifteenMinutesAgo = Date.now() - 15 * 60 * 1000;
@@ -1201,6 +1282,8 @@ export function getAggregatedAnalytics(productsList: any[] = []): UserBehaviorSt
     totalWishlistAdds,
     totalWhatsAppClicks,
     uniqueVisitors,
+    uniquePersistentVisitors,
+    totalVisits,
     activeOnlineNow,
     avgSessionSeconds,
     conversionRate,

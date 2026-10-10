@@ -6,10 +6,15 @@
 
 import {
   getAggregatedAnalytics as getRealTelemetryAnalytics,
+  syncFromSupabaseCloud,
+  trackSystemError,
+  getStoredEvents,
   type UserBehaviorStats,
   type CustomerSessionProfile,
   type HesitationSignal,
 } from '../../lib/analytics';
+
+export { syncFromSupabaseCloud, trackSystemError, getStoredEvents };
 
 export type HesitationStage = 'sizing' | 'checkout' | 'cart';
 export type PersonaType = 'VIP' | 'Deal Hunter' | 'Window Shopper' | 'Hesitant Buyer';
@@ -70,7 +75,12 @@ export interface AggregatedAnalytics {
     conversionRate: number;
     hesitationCount: number;
     unmetSearchLossIQD: number;
+    uniqueVisitors?: number;
+    uniquePersistentVisitors?: number;
+    totalVisits?: number;
   };
+  totalVisits?: number;
+  uniquePersistentVisitors?: number;
   hesitationIncidents: HesitationIncident[];
   customerSessions: CustomerSession[];
   sizeDemandMatrix: SizeDemandItem[];
@@ -224,7 +234,12 @@ export function getAggregatedAnalytics(
       conversionRate,
       hesitationCount: hesitationIncidents.length,
       unmetSearchLossIQD: 0,
+      uniqueVisitors: realTelemetry.uniqueVisitors,
+      uniquePersistentVisitors: realTelemetry.uniquePersistentVisitors,
+      totalVisits: realTelemetry.totalVisits,
     },
+    totalVisits: realTelemetry.totalVisits,
+    uniquePersistentVisitors: realTelemetry.uniquePersistentVisitors,
     hesitationIncidents,
     customerSessions,
     sizeDemandMatrix,
