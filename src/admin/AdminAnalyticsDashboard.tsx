@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   TrendingUp,
   TrendingDown,
@@ -68,6 +68,19 @@ export const AdminAnalyticsDashboard: React.FC = () => {
   const [searchFilter, setSearchFilter] = useState('');
 
   const isAr = lang === 'ar';
+
+  // Live Reactive Telemetry Listener: Re-evaluate getAggregatedAnalytics whenever new events or heartbeats arrive
+  useEffect(() => {
+    const handleAnalyticsUpdate = () => {
+      setRefreshSeed((prev) => prev + 1);
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('vant_analytics_updated', handleAnalyticsUpdate);
+      return () => {
+        window.removeEventListener('vant_analytics_updated', handleAnalyticsUpdate);
+      };
+    }
+  }, []);
 
   // Fetch real aggregated analytics from live products and orders
   const analyticsData = useMemo(

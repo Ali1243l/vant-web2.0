@@ -275,7 +275,7 @@ export function manageVisitorSession(): { visitorId: string; sessionId: string; 
 
   try {
     const now = Date.now();
-    let sessionId = sessionStorage.getItem(SESSION_ID_KEY);
+    let sessionId = localStorage.getItem(SESSION_ID_KEY);
     const lastActivityRaw = localStorage.getItem(LAST_ACTIVITY_KEY);
     const lastActivity = lastActivityRaw ? parseInt(lastActivityRaw, 10) : 0;
     const isExpired = !lastActivity || (now - lastActivity > SESSION_TIMEOUT_MS);
@@ -284,7 +284,7 @@ export function manageVisitorSession(): { visitorId: string; sessionId: string; 
 
     if (!sessionId || isExpired) {
       sessionId = 'sess_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 8);
-      sessionStorage.setItem(SESSION_ID_KEY, sessionId);
+      localStorage.setItem(SESSION_ID_KEY, sessionId);
 
       visitCount += 1;
       localStorage.setItem(VISIT_COUNT_KEY, String(visitCount));
