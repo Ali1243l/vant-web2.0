@@ -227,6 +227,10 @@ export interface UserBehaviorStats {
 
 const STORAGE_KEY = 'vant_real_analytics_events_v3';
 const SESSION_ID_KEY = 'vant_visitor_session_id_v3';
+const PERSISTENT_VISITOR_ID_KEY = 'vant_persistent_visitor_id';
+const VISIT_COUNT_KEY = 'vant_visit_count';
+const LAST_ACTIVITY_KEY = 'vant_last_activity_timestamp';
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const TELEMETRY_FILE = 'telemetry/events_stream.json';
 
 // Detect real client device type
@@ -240,18 +244,76 @@ export function detectDevice(): 'mobile' | 'desktop' | 'tablet' {
   return 'desktop';
 }
 
+// Generate or retrieve persistent visitor UUID across browser restarts
+export function getPersistentVisitorId(): string {
+  try {
+    if (typeof window === 'undefined') return 'pvid_server';
+    let pid = localStorage.getItem(PERSISTENT_VISITOR_ID_KEY);
+    if (!pid) {
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        pid = 'pvid_' + crypto.randomUUID();
+      } else {
+        pid = 'pvid_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 10);
+      }
+      localStorage.setItem(PERSISTENT_VISITOR_ID_KEY, pid);
+    }
+    return pid;
+  } catch {
+    return 'pvid_anon';
+  }
+}
+
+// Manage session lifecycle & track lifetime visit count across 30-min inactivity windows
+export function manageVisitorSession(): { visitorId: string; sessionId: string; visitCount: number } {
+  const visitorId = getPersistentVisitorId();
+  if (typeof window === 'undefined') {
+    return { visitorId, sessionId: 'v_server', visitCount: 1 };
+  }
+
+  try {
+    const now = Date.now();
+    let sessionId = sessionStorage.getItem(SESSION_ID_KEY);
+    const lastActivityRaw = localStorage.getItem(LAST_ACTIVITY_KEY);
+    const lastActivity = lastActivityRaw ? parseInt(lastActivityRaw, 10) : 0;
+    const isExpired = !lastActivity || (now - lastActivity > SESSION_TIMEOUT_MS);
+
+    let visitCount = parseInt(localStorage.getItem(VISIT_COUNT_KEY) || '0', 10);
+
+    if (!sessionId || isExpired) {
+      sessionId = 'sess_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 8);
+      sessionStorage.setItem(SESSION_ID_KEY, sessionId);
+
+      visitCount += 1;
+      localStorage.setItem(VISIT_COUNT_KEY, String(visitCount));
+    }
+
+    localStorage.setItem(LAST_ACTIVITY_KEY, String(now));
+
+    return { visitorId, sessionId, visitCount: visitCount || 1 };
+  } catch {
+    return { visitorId, sessionId: 'sess_anon', visitCount: 1 };
+  }
+}
+
 // Get or initialize persistent visitor session ID
 export function getVisitorSessionId(): string {
   try {
     if (typeof window === 'undefined') return 'v_server';
-    let id = sessionStorage.getItem(SESSION_ID_KEY);
-    if (!id) {
-      id = 'sess_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 8);
-      sessionStorage.setItem(SESSION_ID_KEY, id);
-    }
-    return id;
+    const { sessionId } = manageVisitorSession();
+    return sessionId;
   } catch {
     return 'sess_anon';
+  }
+}
+
+// Get current visitor's total lifetime visit count
+export function getVisitCount(): number {
+  try {
+    if (typeof window === 'undefined') return 1;
+    const { visitCount } = manageVisitorSession();
+    return visitCount;
+  } catch {
+    return 1;
   }
 }
 
@@ -279,20 +341,24 @@ export function trackEvent(
     const events = getStoredEvents();
     const eventId = 'ev_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
     const deviceType = detectDevice();
-    const sessId = getVisitorSessionId();
+    const { visitorId, sessionId, visitCount } = manageVisitorSession();
     const nowTimestamp = Date.now();
+
+    const eventData = {
+      ...data,
+      visitorId,
+      visitCount,
+      url: typeof window !== 'undefined' ? window.location.pathname : '',
+      lang: typeof document !== 'undefined' ? document.documentElement.lang || 'ar' : 'ar',
+    };
 
     const newEvent: AnalyticsEvent = {
       id: eventId,
       type,
       timestamp: nowTimestamp,
       device: deviceType,
-      sessionId: sessId,
-      data: {
-        ...data,
-        url: typeof window !== 'undefined' ? window.location.pathname : '',
-        lang: typeof document !== 'undefined' ? document.documentElement.lang || 'ar' : 'ar',
-      },
+      sessionId,
+      data: eventData,
     };
 
     // Store up to 2,000 real events in ring buffer locally
@@ -306,15 +372,17 @@ export function trackEvent(
       }, 0);
     }
 
-    // 1. Direct real-time write to Supabase `logs` table
+    // 1. Direct real-time write to Supabase `logs` table with persistent visitorId & lifetime visitCount
     if (supabase) {
       (async () => {
         try {
           await supabase.from('logs').insert({
             event_type: type,
             device: deviceType,
-            session_id: sessId,
-            data: newEvent.data,
+            session_id: sessionId,
+            visitor_id: visitorId,
+            visit_count: visitCount,
+            data: eventData,
             created_at: new Date(nowTimestamp).toISOString(),
           });
         } catch {
@@ -580,11 +648,12 @@ export function getAggregatedAnalytics(productsList: any[] = []): UserBehaviorSt
     leadScore += Math.min(25, viewedMap.size * 8); // عمق تصفح القطع
     leadScore += Math.min(25, wishlistSet.size * 15); // إضافة للمفضلة
     leadScore += Math.min(30, sizesSet.size * 18); // تحديد المقاسات
-    leadScore += Math.min(10, imageSlideCount * 3); // تقليب معرض الصور
+    leadScore += Math.min(25, imageSlideCount * 5); // تقليب معرض الصور
     if (fitCalculatorUsed || sizeGuideOpened) leadScore += 10; // اهتمام بالقياس
     if (orders.length > 0) leadScore = 100; // تحويل فعلي للطلب
     if (durationSeconds >= 60) leadScore += 5;
     if (durationSeconds >= 180) leadScore += 10;
+    if (durationSeconds < 5 && orders.length === 0) { leadScore = 0; }
     leadScore = Math.min(100, Math.max(0, leadScore));
 
     // Basic legacy tier
@@ -649,7 +718,7 @@ export function getAggregatedAnalytics(productsList: any[] = []): UserBehaviorSt
     // -------------------------------------------------------------
     const hasIntentSignals = sizesSet.size > 0 || wishlistSet.size > 0;
     const hasNotOrdered = orders.length === 0;
-    const hasDwellTime = durationSeconds >= 25 || viewedMap.size >= 2;
+    const hasDwellTime = durationSeconds >= 30 || viewedMap.size >= 2;
     const isHesitantBuyer = hasIntentSignals && hasNotOrdered && hasDwellTime;
 
     let hesitationReason = '';
@@ -698,7 +767,7 @@ export function getAggregatedAnalytics(productsList: any[] = []): UserBehaviorSt
           suggestedPromoCode: 'FIT-CARE',
           timestamp: lastSeen,
         };
-      } else if (durationSeconds >= 25 && (wishlistSet.size > 0 || viewedMap.size >= 2)) {
+      } else if (durationSeconds >= 30 && (wishlistSet.size > 0 || viewedMap.size >= 2)) {
         hesitationReason = 'أضاف قطعاً للمفضلة وتصفح طويلاً دون طلب';
         hesitationSignal = {
           id: `hes_${sId}_price`,
@@ -1629,91 +1698,4 @@ export function clearStoredAnalytics() {
   } catch {}
 }
 
-// Interactive Simulation Engine for live algorithm testing & database verification
-export async function simulateCustomerJourney(
-  scenario: 'hesitation' | 'vip_order' | 'zero_search',
-  sampleProduct?: any
-): Promise<number> {
-  const simSessionId = 'sess_sim_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
-  const now = Date.now();
-  const title = sampleProduct?.title_ar || sampleProduct?.title || 'طقم كلاسيك من الحرير الإيطالي المطرز';
-  const pid = sampleProduct?.id || 'prod_sim_1';
-  const price = typeof sampleProduct?.price === 'number' ? sampleProduct.price : 125000;
-  const size = (Array.isArray(sampleProduct?.sizes) && sampleProduct.sizes[0]) || 'M';
 
-  const eventsToCreate: Array<{ type: AnalyticsEvent['type']; data: any; delayOffset: number }> = [];
-
-  if (scenario === 'hesitation') {
-    // Customer browses, inspects piece, checks sizing, selects size, but stalls before ordering
-    eventsToCreate.push(
-      { type: 'page_view', data: { page: 'catalog' }, delayOffset: 55000 },
-      { type: 'category_filter', data: { category: sampleProduct?.category || 'Evening' }, delayOffset: 45000 },
-      { type: 'product_view', data: { productId: pid, productTitle: title, price }, delayOffset: 35000 },
-      { type: 'image_slide', data: { productId: pid, title }, delayOffset: 25000 },
-      { type: 'fit_calculator', data: { productId: pid, recommendedSize: size }, delayOffset: 15000 },
-      { type: 'size_select', data: { productId: pid, productTitle: title, size }, delayOffset: 8000 }
-    );
-  } else if (scenario === 'vip_order') {
-    // High-value VIP buyer inspects piece, saves to wishlist, selects size, and completes WhatsApp order
-    eventsToCreate.push(
-      { type: 'page_view', data: { page: 'catalog' }, delayOffset: 95000 },
-      { type: 'product_view', data: { productId: pid, productTitle: title, price }, delayOffset: 70000 },
-      { type: 'wishlist_toggle', data: { productId: pid, productTitle: title, isAdded: true }, delayOffset: 50000 },
-      { type: 'size_select', data: { productId: pid, productTitle: title, size }, delayOffset: 25000 },
-      {
-        type: 'whatsapp_order',
-        data: { productId: pid, productTitle: title, size, price, governorate: 'بغداد' },
-        delayOffset: 2000,
-      }
-    );
-  } else if (scenario === 'zero_search') {
-    // Zero results search for unmet demand
-    const unmetList = ['فستان حرير مخملي كشميري', 'بشت صوف أسود ملكي', 'طقم كتان مطرز فاخر'];
-    const q = unmetList[Math.floor(Math.random() * unmetList.length)];
-    eventsToCreate.push(
-      { type: 'page_view', data: { page: 'catalog' }, delayOffset: 20000 },
-      { type: 'search_query', data: { query: q }, delayOffset: 5000 }
-    );
-  }
-
-  const existing = getStoredEvents();
-  const generated: AnalyticsEvent[] = eventsToCreate.map((ev, idx) => ({
-    id: `ev_sim_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 6)}`,
-    type: ev.type,
-    timestamp: now - ev.delayOffset,
-    device: 'mobile',
-    sessionId: simSessionId,
-    data: {
-      ...ev.data,
-      governorate: ev.data?.governorate || 'بغداد (محاكاة حية)',
-      isSimulation: true,
-    },
-  }));
-
-  const updated = [...generated, ...existing].slice(0, 2000);
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    if (typeof window !== 'undefined') {
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('vant_analytics_updated'));
-      }, 0);
-    }
-  } catch {}
-
-  // Also write to Supabase if connected
-  if (supabase) {
-    try {
-      for (const gev of generated) {
-        await supabase.from('logs').insert({
-          event_type: gev.type,
-          device: gev.device,
-          session_id: gev.sessionId,
-          data: gev.data,
-          created_at: new Date(gev.timestamp).toISOString(),
-        });
-      }
-    } catch {}
-  }
-
-  return generated.length;
-}

@@ -978,7 +978,19 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                     </div>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-center min-w-[110px]">
-                    <div className="text-2xl font-bold font-mono text-emerald-400">84%</div>
+                    <div className="text-2xl font-bold font-mono text-emerald-400">
+                      {(() => {
+                        if (analyticsData.hesitationIncidents.length > 0) {
+                          const sum = analyticsData.hesitationIncidents.reduce((acc, inc) => acc + (inc.intentScore || 0), 0);
+                          return Math.round(sum / analyticsData.hesitationIncidents.length);
+                        }
+                        if (analyticsData.customerSessions.length > 0) {
+                          const sum = analyticsData.customerSessions.reduce((acc, sess) => acc + (sess.purchaseProbability || sess.rfmScore || 0), 0);
+                          return Math.round(sum / analyticsData.customerSessions.length);
+                        }
+                        return 0;
+                      })()}%
+                    </div>
                     <div className="text-[10px] text-slate-400">
                       {isAr ? 'متوسط نية الشراء' : 'Avg Intent Score'}
                     </div>

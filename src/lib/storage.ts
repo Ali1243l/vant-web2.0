@@ -419,6 +419,23 @@ export async function fetchSiteConfigFromSupabase(): Promise<CloudSiteConfig | n
 export async function saveOrdersToSupabase(orders: any[]): Promise<boolean> {
   if (!supabase) return false;
   try {
+    if (Array.isArray(orders) && orders.length > 0) {
+      const dbRows = orders.map((ord) => ({
+        id: String(ord.id),
+        customer_name: ord.customerName || ord.customer_name || 'عميل كونسيرج',
+        customer_phone: ord.customerPhone || ord.customer_phone || '',
+        customer_email: ord.customerEmail || ord.customer_email || '',
+        shipping_address: ord.shippingAddress || ord.shipping_address || '',
+        items: Array.isArray(ord.items) ? ord.items : [],
+        total_price: Number(ord.totalPrice || ord.total_price || 0),
+        status: ord.status || 'pending_payment',
+        type: ord.type || 'ready_to_wear',
+        timeline: Array.isArray(ord.timeline) ? ord.timeline : [],
+        created_at: ord.orderDate || ord.created_at || new Date().toISOString(),
+      }));
+      await supabase.from('orders').upsert(dbRows, { onConflict: 'id' });
+    }
+
     const payload = JSON.stringify(orders, null, 2);
     const blob = new Blob([payload], { type: 'application/json' });
     const { error } = await supabase.storage.from('product-images').upload('config/orders.json', blob, {
@@ -437,11 +454,41 @@ export async function saveOrdersToSupabase(orders: any[]): Promise<boolean> {
 }
 
 /**
- * Loads latest orders from Supabase Storage
+ * Loads latest orders from Supabase SQL table `orders` with fallback to Supabase Storage
  */
 export async function fetchOrdersFromSupabase(): Promise<any[] | null> {
   if (!supabase) return null;
   try {
+    const { data: dbData, error: dbErr } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!dbErr && Array.isArray(dbData) && dbData.length > 0) {
+      return dbData.map((d: any) => ({
+        id: String(d.id || 'ORD-' + Math.floor(1000 + Math.random() * 9000)),
+        customerName: d.customer_name || d.customerName || 'عميل كونسيرج',
+        customerPhone: d.customer_phone || d.customerPhone || '',
+        customerEmail: d.customer_email || d.customerEmail || '',
+        shippingAddress: d.shipping_address || d.shippingAddress || '',
+        items: Array.isArray(d.items)
+          ? d.items
+          : typeof d.items === 'string'
+          ? (() => { try { return JSON.parse(d.items); } catch { return []; } })()
+          : [],
+        totalPrice: Number(d.total_price || d.totalPrice || 0),
+        status: d.status || 'pending_payment',
+        orderDate: d.created_at || d.orderDate || new Date().toISOString(),
+        type: d.type || 'ready_to_wear',
+        timeline: Array.isArray(d.timeline)
+          ? d.timeline
+          : typeof d.timeline === 'string'
+          ? (() => { try { return JSON.parse(d.timeline); } catch { return []; } })()
+          : [],
+      }));
+    }
+
+    // Fallback to storage file if database table returns empty or error
     const { data: pubData } = supabase.storage.from('product-images').getPublicUrl('config/orders.json');
     if (pubData?.publicUrl) {
       const response = await fetch(`${pubData.publicUrl}?t=${Date.now()}`, { cache: 'no-store' });
@@ -459,11 +506,26 @@ export async function fetchOrdersFromSupabase(): Promise<any[] | null> {
 }
 
 /**
- * Persists promotional offers directly into Supabase Storage under config/offers.json
+ * Persists promotional offers directly into Supabase SQL table `offers` and cloud storage backup
  */
 export async function saveOffersToSupabase(offers: any[]): Promise<boolean> {
   if (!supabase) return false;
   try {
+    if (Array.isArray(offers) && offers.length > 0) {
+      const dbRows = offers.map((off) => ({
+        id: String(off.id),
+        title: off.title || '',
+        title_en: off.titleEn || off.title_en || '',
+        code: off.code || '',
+        discount_type: off.discountType || off.discount_type || 'percentage',
+        discount_value: Number(off.discountValue || off.discount_value || 0),
+        status: off.status || 'active',
+        start_date: off.startDate || off.start_date || new Date().toISOString(),
+        end_date: off.endDate || off.end_date || new Date().toISOString(),
+      }));
+      await supabase.from('offers').upsert(dbRows, { onConflict: 'id' });
+    }
+
     const payload = JSON.stringify(offers, null, 2);
     const blob = new Blob([payload], { type: 'application/json' });
     const { error } = await supabase.storage.from('product-images').upload('config/offers.json', blob, {
@@ -482,11 +544,31 @@ export async function saveOffersToSupabase(offers: any[]): Promise<boolean> {
 }
 
 /**
- * Loads latest promotional offers from Supabase Storage
+ * Loads latest promotional offers from Supabase SQL table `offers` with fallback to Supabase Storage
  */
 export async function fetchOffersFromSupabase(): Promise<any[] | null> {
   if (!supabase) return null;
   try {
+    const { data: dbData, error: dbErr } = await supabase
+      .from('offers')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!dbErr && Array.isArray(dbData) && dbData.length > 0) {
+      return dbData.map((d: any) => ({
+        id: String(d.id),
+        title: d.title || '',
+        titleEn: d.title_en || d.titleEn || '',
+        code: d.code || '',
+        discountType: d.discount_type || d.discountType || 'percentage',
+        discountValue: Number(d.discount_value || d.discountValue || 0),
+        status: d.status || 'active',
+        startDate: d.start_date || d.startDate || new Date().toISOString(),
+        endDate: d.end_date || d.endDate || new Date().toISOString(),
+        usedCount: Number(d.used_count || d.usedCount || 0),
+      }));
+    }
+
     const { data: pubData } = supabase.storage.from('product-images').getPublicUrl('config/offers.json');
     if (pubData?.publicUrl) {
       const response = await fetch(`${pubData.publicUrl}?t=${Date.now()}`, { cache: 'no-store' });

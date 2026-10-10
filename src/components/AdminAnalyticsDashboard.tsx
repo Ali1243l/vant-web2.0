@@ -67,7 +67,6 @@ import {
   downloadAnalyticsHTMLReport,
   downloadAnalyticsMarkdown,
   clearStoredAnalytics,
-  simulateCustomerJourney,
   syncFromSupabaseCloud,
 } from '../lib/analytics';
 import type { Product } from '../types';
@@ -163,21 +162,12 @@ export default function AdminAnalyticsDashboard({
   };
 
   // Handle Algorithm Simulation Test
-  const handleRunSimulation = async (scenario: 'hesitation' | 'vip_order' | 'zero_search') => {
+  const handleRunSimulation = async (_scenario: 'hesitation' | 'vip_order' | 'zero_search') => {
     setIsSimulating(true);
     try {
-      const sample = products.length > 0 ? products[Math.floor(Math.random() * products.length)] : undefined;
-      await simulateCustomerJourney(scenario, sample);
       if (onRefresh) {
         await onRefresh();
       }
-      const label = scenario === 'hesitation'
-        ? (isAr ? 'تمت محاكاة حيرة المقاس ورصد إشارة التردد بنجاح!' : 'Simulated sizing hesitation!')
-        : scenario === 'vip_order'
-        ? (isAr ? 'تمت محاكاة مسار عميل VIP وإتمام طلب واتساب بنجاح!' : 'Simulated VIP order journey!')
-        : (isAr ? 'تمت محاكاة بحث غير متوفر ورصد الطلب المفقود بنجاح!' : 'Simulated unmet search query!');
-      setSimSuccessMsg(label);
-      setTimeout(() => setSimSuccessMsg(null), 4000);
     } catch (err) {
       console.error(err);
     } finally {
