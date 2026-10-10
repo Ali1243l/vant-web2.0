@@ -206,6 +206,25 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     }
   }, [product?.id]);
 
+  // Heartbeat Telemetry: Fire 'engagement_heartbeat' every 10 seconds while the product drawer is open & tab is visible
+  useEffect(() => {
+    if (!product) return;
+
+    const intervalId = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+
+      const pTitle = product.title_ar || product.title || 'القطعة المصممة';
+      trackEvent('engagement_heartbeat', {
+        productId: product.id,
+        productTitle: pTitle,
+      });
+    }, 10000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [product?.id, product?.title, product?.title_ar]);
+
   // Reset gallery position and preload image when active color variant changes
   useEffect(() => {
     if (product) {

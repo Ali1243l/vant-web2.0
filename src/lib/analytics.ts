@@ -679,6 +679,10 @@ export function getAggregatedAnalytics(productsList: any[] = []): UserBehaviorSt
           label = 'نسخ كود الخصم الترويجي';
           details = `كوبون: ${ev.data?.code || ''}`;
           break;
+        case 'engagement_heartbeat':
+          label = 'نبض التفاعل والمعاينة النشطة';
+          details = `معاينة مستمرة لـ ${ev.data?.productTitle || ''}`;
+          break;
         case 'whatsapp_order': {
           const pId = String(ev.data?.productId || '0');
           const pTitle = ev.data?.productTitle || `قطعة #${pId}`;
