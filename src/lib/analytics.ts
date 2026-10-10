@@ -888,6 +888,23 @@ export function getAggregatedAnalytics(productsList: any[] = []): UserBehaviorSt
           recoveryWhatsAppMessage: `أهلاً بكِ في دار VANT! دعينا نساعدكِ في استكشاف أحدث قطع التشكيلة الفاخرة المناسبة لذوقكِ واحتياجكِ.`,
           timestamp: lastSeen,
         };
+      } else if (durationSeconds >= 25 && viewedMap.size >= 1) {
+        hesitationReason = 'إطالة النظر في تفاصيل قطعة محددة دون اتخاذ إجراء';
+        hesitationSignal = {
+          id: `hes_${sId}_contemplation`,
+          sessionId: sId,
+          type: 'price_hesitation',
+          title: 'تأمل وإطالة النظر في القطعة',
+          details: `توقف عند قطعة (${targetProductTitle}) لمدة ${durationSeconds} ثانية دون اختيار مقاس أو طلب.`,
+          targetProductId: lastTargetedProduct?.id,
+          targetProductTitle,
+          dwellSeconds: durationSeconds,
+          hesitationScore: 60,
+          urgency: 'high',
+          suggestedAction: 'تقديم المساعدة في تفاصيل القطعة أو عرض خيارات مشابهة',
+          recoveryWhatsAppMessage: `مرحباً بكِ في دار VANT ✨ لاحظنا إعجابكِ بقطعة (${targetProductTitle}). هل تحتاجين مساعدة في معرفة تفاصيل الخامة أو المقاسات المتوفرة؟ خبيراتنا في خدمتكِ.`,
+          timestamp: lastSeen,
+        };
       }
     }
 
@@ -1339,16 +1356,41 @@ export function getAggregatedAnalytics(productsList: any[] = []): UserBehaviorSt
   };
 }
 
-// Reset telemetry data
-export function resetAnalyticsData() {
+// Reset & purge all telemetry data locally and from Supabase logs table
+export async function resetAnalyticsData(): Promise<boolean> {
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(SESSION_ID_KEY);
+      localStorage.removeItem(PERSISTENT_VISITOR_ID_KEY);
+      localStorage.removeItem(VISIT_COUNT_KEY);
+      localStorage.removeItem(LAST_ACTIVITY_KEY);
+      try {
+        sessionStorage.clear();
+      } catch {}
+    }
+
+    if (supabase) {
+      try {
+        await supabase.from('logs').delete().gt('created_at', '1970-01-01T00:00:00Z');
+        await supabase.from('logs').delete().neq('event_type', 'non_existent_type_xyz');
+        await supabase.from('logs').delete().filter('id', 'not.is', null);
+      } catch (e) {
+        console.warn('Supabase logs purge failed', e);
+      }
+    }
+
     if (typeof window !== 'undefined') {
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('vant_analytics_updated', { detail: null }));
       }, 0);
     }
-  } catch {}
+    return true;
+  } catch (err) {
+    console.warn('Reset analytics failed', err);
+    return false;
+  }
 }
 
 /**

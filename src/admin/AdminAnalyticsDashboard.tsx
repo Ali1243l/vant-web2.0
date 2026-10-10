@@ -24,6 +24,7 @@ import {
   ArrowUpRight,
   ShieldAlert,
   Eye,
+  RotateCcw,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAdminBridge } from './useAdminBridge';
@@ -34,6 +35,7 @@ import {
   syncFromSupabaseCloud,
   trackSystemError,
   getStoredEvents,
+  resetAnalyticsData,
   HesitationIncident,
   CustomerSession,
   SizeDemandItem,
@@ -45,10 +47,16 @@ type AnalyticsTab = 'overview' | 'hesitation' | 'personas' | 'demand-sizing' | '
 export const AdminAnalyticsDashboard: React.FC = () => {
   const { lang, products, offers, subscribers, orders = [], setActiveView } = useAdminBridge();
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview');
-  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | 'year'>('30d');
+  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | 'year' | 'custom'>('30d');
+  const [customStartDate, setCustomStartDate] = useState<string>('');
+  const [customEndDate, setCustomEndDate] = useState<string>('');
+  const [showCustomDateModal, setShowCustomDateModal] = useState<boolean>(false);
   const [hoveredDataIndex, setHoveredDataIndex] = useState<number | null>(null);
   const [refreshSeed, setRefreshSeed] = useState<number>(0);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [isResetting, setIsResetting] = useState<boolean>(false);
+  const [showResetModal, setShowResetModal] = useState<boolean>(false);
+  const [resetSuccess, setResetSuccess] = useState<boolean>(false);
   const [chartMetric, setChartMetric] = useState<'both' | 'sales' | 'orders'>('both');
   const [selectedBarData, setSelectedBarData] = useState<{
     labelAr: string;
@@ -273,8 +281,46 @@ export const AdminAnalyticsDashboard: React.FC = () => {
         prevOrders: prevYear.count,
         prevAov: prevYear.aov,
       },
+      'custom': (() => {
+        const customMinTime = customStartDate ? new Date(customStartDate).getTime() : now - 14 * DAY_MS;
+        const customMaxTime = customEndDate ? new Date(customEndDate + 'T23:59:59').getTime() : now;
+        const matchedCustom = validOrders.filter((o) => {
+          const t = parseOrderTime(o);
+          return t >= customMinTime && t <= customMaxTime;
+        });
+        const customRevenue = matchedCustom.reduce((acc, o) => acc + (Number(o.totalPrice) || 0), 0);
+        const customCount = matchedCustom.length;
+        const customAov = customCount > 0 ? Math.round(customRevenue / customCount) : 0;
+        const rangeLabelAr = customStartDate && customEndDate ? `${customStartDate} إلى ${customEndDate}` : (isAr ? 'فترة مخصصة' : 'Custom Range');
+        const rangeLabelEn = customStartDate && customEndDate ? `${customStartDate} to ${customEndDate}` : 'Custom Range';
+
+        return {
+          titleAr: `تحليل الفترة المخصصة (${rangeLabelAr})`,
+          titleEn: `Custom Period Analysis (${rangeLabelEn})`,
+          subAr: 'تتبع ومقارنة المبيعات والطلبات ضمن المدة المحددة من قبلك',
+          subEn: 'Custom date range sales telemetry from real database',
+          peakAr: customRevenue > 0 ? `إجمالي الفترة: ${customRevenue.toLocaleString()} IQD` : (isAr ? '0 مبيعات في هذه الفترة' : '0 sales in custom period'),
+          peakEn: customRevenue > 0 ? `Total Range: ${customRevenue.toLocaleString()} IQD` : '0 sales in custom period',
+          growth: '+0%',
+          growthVal: 0,
+          points: [
+            {
+              labelAr: rangeLabelAr,
+              labelEn: rangeLabelEn,
+              sales: customRevenue,
+              orders: customCount,
+            },
+          ],
+          totalRevenue: customRevenue,
+          totalOrders: customCount,
+          aov: customAov,
+          prevRevenue: 0,
+          prevOrders: 0,
+          prevAov: 0,
+        };
+      })(),
     };
-  }, [orders, isAr]);
+  }, [orders, isAr, customStartDate, customEndDate]);
 
   const currentDataset = datasets[timeRange];
   const chartData = currentDataset.points;
@@ -290,6 +336,27 @@ export const AdminAnalyticsDashboard: React.FC = () => {
     } finally {
       setRefreshSeed((prev) => prev + 1);
       setIsRefreshing(false);
+    }
+  };
+
+  const handleResetData = () => {
+    setShowResetModal(true);
+  };
+
+  const confirmResetData = async () => {
+    setIsResetting(true);
+    try {
+      await resetAnalyticsData();
+      setRefreshSeed((prev) => prev + 1);
+      setResetSuccess(true);
+      setTimeout(() => {
+        setResetSuccess(false);
+        setShowResetModal(false);
+      }, 1200);
+    } catch (err) {
+      console.warn('Reset failed', err);
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -511,24 +578,30 @@ export const AdminAnalyticsDashboard: React.FC = () => {
           </p>
         </div>
 
-        {/* Top Header Actions (Ordered logically: Time Range Filter -> Live Refresh) */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        {/* Top Header Actions (Organized & Spaced Logically) */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
           {/* Time range segmented tabs for overview */}
           {activeTab === 'overview' && (
-            <div className="flex items-center gap-1 p-1 bg-slate-900/90 border border-slate-800 rounded-xl shadow-inner">
+            <div className="flex items-center gap-0.5 p-1 bg-slate-900/90 border border-slate-800 rounded-xl shadow-inner">
               {[
-                { id: '7d', labelAr: '7 أيام', labelEn: '7D' },
-                { id: '30d', labelAr: '30 يوماً', labelEn: '30D' },
-                { id: '90d', labelAr: '90 يوماً', labelEn: '90D' },
-                { id: 'year', labelAr: 'سنة كاملة', labelEn: 'Year' },
+                { id: '7d', labelAr: '7D', labelEn: '7D' },
+                { id: '30d', labelAr: '30D', labelEn: '30D' },
+                { id: '90d', labelAr: '90D', labelEn: '90D' },
+                { id: 'year', labelAr: 'سنة', labelEn: 'Year' },
+                { id: 'custom', labelAr: 'مخصص 📅', labelEn: 'Custom 📅' },
               ].map((t) => (
                 <button
                   key={t.id}
-                  onClick={() => setTimeRange(t.id as any)}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                  onClick={() => {
+                    setTimeRange(t.id as any);
+                    if (t.id === 'custom') {
+                      setShowCustomDateModal(true);
+                    }
+                  }}
+                  className={`px-2.5 py-1 text-xs font-mono font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                     timeRange === t.id
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                      ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/40 font-bold'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
                   }`}
                 >
                   {isAr ? t.labelAr : t.labelEn}
@@ -537,22 +610,33 @@ export const AdminAnalyticsDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Live Refresh Trigger */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            isLoading={isRefreshing}
-            leftIcon={<RefreshCw className={`w-3.5 h-3.5 text-indigo-400 ${isRefreshing ? 'animate-spin' : ''}`} />}
-            className="border-slate-800 bg-slate-900/60 hover:bg-slate-800"
-          >
-            {isRefreshing ? (isAr ? 'جاري التحديث...' : 'Updating...') : isAr ? 'تحديث البيانات الحية' : 'Refresh Telemetry'}
-          </Button>
+          {/* Action Buttons Group */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-xs font-medium text-slate-200 transition-all cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-indigo-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span>{isRefreshing ? (isAr ? 'جاري التحديث...' : 'Updating...') : isAr ? 'تحديث' : 'Refresh'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleResetData}
+              disabled={isResetting}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-xs font-medium text-rose-300 transition-all cursor-pointer disabled:opacity-50"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
+              <span>{isResetting ? (isAr ? 'جاري التصفير...' : 'Resetting...') : isAr ? 'تصفير العداد' : 'Purge Data'}</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Sub-Navigation Tabs Bar with Framer Motion Layout Glow */}
-      <div className="p-1.5 rounded-2xl bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 flex items-center gap-2 overflow-x-auto shadow-lg shadow-black/20">
+      {/* Sub-Navigation Tabs Bar with Smooth Horizontal Touch Scrolling */}
+      <div className="p-1.5 rounded-2xl bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 flex items-center gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent shadow-lg shadow-black/20 w-full min-w-0 flex-nowrap touch-pan-x">
         {tabsConfig.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -561,7 +645,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as AnalyticsTab)}
-              className={`relative px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors flex items-center gap-2.5 shrink-0 select-none cursor-pointer ${
+              className={`relative px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors flex items-center gap-2.5 shrink-0 whitespace-nowrap select-none cursor-pointer ${
                 isActive ? 'text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
               }`}
             >
@@ -1770,6 +1854,138 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                 {isAr ? 'إغلاق النافذة' : 'Close'}
               </Button>
             </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Custom Date Range Selection Modal */}
+      {showCustomDateModal && (
+        <Modal
+          isOpen={showCustomDateModal}
+          onClose={() => setShowCustomDateModal(false)}
+          title={isAr ? 'تحديد فترة زمنية مخصصة' : 'Set Custom Date Range'}
+          description={isAr ? 'اختر تاريخ البداية والنهاية لتصفية المبيعات والبيانات الحية' : 'Select start and end dates to filter live sales telemetry'}
+          maxWidth="md"
+        >
+          <div className="space-y-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-slate-400 text-xs mb-1.5 font-medium">
+                  {isAr ? 'من تاريخ (تاريخ البداية)' : 'From Date (Start)'}
+                </label>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs font-mono focus:border-indigo-500 outline-none cursor-pointer"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-400 text-xs mb-1.5 font-medium">
+                  {isAr ? 'إلى تاريخ (تاريخ النهاية)' : 'To Date (End)'}
+                </label>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs font-mono focus:border-indigo-500 outline-none cursor-pointer"
+                />
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-indigo-300 text-xs flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-indigo-400 shrink-0" />
+              <span>
+                {isAr
+                  ? `الفترة المحددة: ${customStartDate || 'غير محدد'} إلى ${customEndDate || 'اليوم'}`
+                  : `Selected Range: ${customStartDate || 'All time'} to ${customEndDate || 'Today'}`}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setCustomStartDate('');
+                  setCustomEndDate('');
+                }}
+              >
+                {isAr ? 'إعادة ضبط' : 'Reset'}
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setTimeRange('custom');
+                  setShowCustomDateModal(false);
+                }}
+              >
+                {isAr ? 'تطبيق الفلتر' : 'Apply Filter'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Purge & Reset Confirmation Modal */}
+      {showResetModal && (
+        <Modal
+          isOpen={showResetModal}
+          onClose={() => setShowResetModal(false)}
+          title={isAr ? 'تصفير قاعدة بيانات سجلات التتبع بالكامل' : 'Purge All Telemetry Logs'}
+          description={
+            isAr
+              ? 'تصفير وإعادة تعيين جميع عدادات الزيارات وسجلات الأخطاء والأحداث إلى صفر.'
+              : 'Permanently purge all visitor logs and telemetry from Supabase and client storage.'
+          }
+          maxWidth="md"
+        >
+          <div className="space-y-4 text-xs">
+            {resetSuccess ? (
+              <div className="p-6 text-center space-y-2 bg-emerald-950/40 border border-emerald-500/30 rounded-xl">
+                <div className="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/30">
+                  <Check className="w-5 h-5" />
+                </div>
+                <h5 className="font-bold text-white text-sm">
+                  {isAr ? 'تم تصفير الداتابيس والسجلات بنجاح 100%!' : 'Database Logs Purged 100% Successfully!'}
+                </h5>
+                <p className="text-slate-400 text-xs">
+                  {isAr ? 'تم مسح كافة سجلات الزوار والأحداث وإرجاع العدادات كلياً إلى 0.' : 'All telemetry events cleared. Visit counters reset to zero.'}
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 leading-relaxed flex items-start gap-3">
+                  <RotateCcw className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                  <div>
+                    <h5 className="font-bold text-white mb-1">
+                      {isAr ? 'هل أنت تأكد من البدء باختبار جديد وتصفير العداد؟' : 'Are you sure you want to purge all telemetry logs?'}
+                    </h5>
+                    <p className="text-slate-400">
+                      {isAr
+                        ? 'سيتم حذف كافة سجلات الزيارات والجلسات المسجلة كلياً من جدول logs في Supabase والذاكرة المحلية، وتصفير جميع العدادات إلى 0 لبدء اختبار حي جديد.'
+                        : 'This action will permanently delete all session logs from Supabase and local storage, resetting all metrics back to 0.'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+                  <Button variant="outline" size="sm" onClick={() => setShowResetModal(false)} disabled={isResetting}>
+                    {isAr ? 'إلغاء' : 'Cancel'}
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={confirmResetData}
+                    isLoading={isResetting}
+                    className="bg-rose-600 hover:bg-rose-500 text-white font-bold"
+                  >
+                    {isAr ? 'تأكيد التصفير 100%' : 'Confirm Purge 100%'}
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </Modal>
       )}

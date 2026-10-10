@@ -9,12 +9,13 @@ import {
   syncFromSupabaseCloud,
   trackSystemError,
   getStoredEvents,
+  resetAnalyticsData,
   type UserBehaviorStats,
   type CustomerSessionProfile,
   type HesitationSignal,
 } from '../../lib/analytics';
 
-export { syncFromSupabaseCloud, trackSystemError, getStoredEvents };
+export { syncFromSupabaseCloud, trackSystemError, getStoredEvents, resetAnalyticsData };
 
 export type HesitationStage = 'sizing' | 'checkout' | 'cart';
 export type PersonaType = 'VIP' | 'Deal Hunter' | 'Window Shopper' | 'Hesitant Buyer';
