@@ -913,6 +913,14 @@ export function getAggregatedAnalytics(productsList: any[] = []): UserBehaviorSt
       hesitationSignal.isFromCloud = isFromCloud;
     }
 
+    console.log("=== RADAR DIAGNOSTIC ===");
+    console.log("Session ID:", sId);
+    console.log("Duration (Seconds):", durationSeconds);
+    console.log("Viewed Map Size:", viewedMap.size);
+    console.log("Orders Length:", orders.length);
+    console.log("Hesitation Signal Generated?", !!hesitationSignal);
+    console.log("========================");
+
     customerSessions.push({
       sessionId: sId,
       device,

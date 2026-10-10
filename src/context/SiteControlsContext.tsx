@@ -1548,27 +1548,30 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
       if (sbError) {
         console.warn('Supabase site_settings query notice:', sbError.message);
       } else if (data) {
+        const rawSettings = typeof data.settings === 'object' && data.settings !== null ? data.settings : data;
         const merged: SiteSettings = {
           ...DEFAULT_SITE_SETTINGS,
           ...data,
-          maintenance_mode: Boolean(data.maintenance_mode),
-          loading_text_en: data.loading_text_en || DEFAULT_SITE_SETTINGS.loading_text_en,
-          loading_text_ar: data.loading_text_ar || DEFAULT_SITE_SETTINGS.loading_text_ar,
-          maintenance_message: data.maintenance_message || DEFAULT_SITE_SETTINGS.maintenance_message,
-          maintenance_message_ar: data.maintenance_message_ar || DEFAULT_SITE_SETTINGS.maintenance_message_ar,
-          splash_motif: data.splash_motif || DEFAULT_SITE_SETTINGS.splash_motif || 'tshirt_print',
-          welcome_title_ar: data.welcome_title_ar || DEFAULT_SITE_SETTINGS.welcome_title_ar,
-          welcome_title_en: data.welcome_title_en || DEFAULT_SITE_SETTINGS.welcome_title_en,
-          welcome_message_ar: data.welcome_message_ar || DEFAULT_SITE_SETTINGS.welcome_message_ar,
-          welcome_message_en: data.welcome_message_en || DEFAULT_SITE_SETTINGS.welcome_message_en,
-          welcome_coupon_code: data.welcome_coupon_code || DEFAULT_SITE_SETTINGS.welcome_coupon_code,
-          welcome_discount_percent: data.welcome_discount_percent ?? DEFAULT_SITE_SETTINGS.welcome_discount_percent,
-          welcome_modal_enabled: data.welcome_modal_enabled !== undefined ? Boolean(data.welcome_modal_enabled) : DEFAULT_SITE_SETTINGS.welcome_modal_enabled,
-          welcome_auto_dispatch: data.welcome_auto_dispatch !== undefined ? Boolean(data.welcome_auto_dispatch) : DEFAULT_SITE_SETTINGS.welcome_auto_dispatch,
-          offers_banner_title_ar: data.offers_banner_title_ar || DEFAULT_SITE_SETTINGS.offers_banner_title_ar,
-          offers_banner_title_en: data.offers_banner_title_en || DEFAULT_SITE_SETTINGS.offers_banner_title_en,
-          offers_promo_code: data.offers_promo_code || DEFAULT_SITE_SETTINGS.offers_promo_code,
-          offers_default_discount: data.offers_default_discount ?? DEFAULT_SITE_SETTINGS.offers_default_discount,
+          ...rawSettings,
+          id: data.id || DEFAULT_SITE_SETTINGS.id,
+          maintenance_mode: Boolean(rawSettings.maintenance_mode ?? data.maintenance_mode),
+          loading_text_en: rawSettings.loading_text_en || data.loading_text_en || DEFAULT_SITE_SETTINGS.loading_text_en,
+          loading_text_ar: rawSettings.loading_text_ar || data.loading_text_ar || DEFAULT_SITE_SETTINGS.loading_text_ar,
+          maintenance_message: rawSettings.maintenance_message || data.maintenance_message || DEFAULT_SITE_SETTINGS.maintenance_message,
+          maintenance_message_ar: rawSettings.maintenance_message_ar || data.maintenance_message_ar || DEFAULT_SITE_SETTINGS.maintenance_message_ar,
+          splash_motif: rawSettings.splash_motif || data.splash_motif || DEFAULT_SITE_SETTINGS.splash_motif || 'tshirt_print',
+          welcome_title_ar: rawSettings.welcome_title_ar || data.welcome_title_ar || DEFAULT_SITE_SETTINGS.welcome_title_ar,
+          welcome_title_en: rawSettings.welcome_title_en || data.welcome_title_en || DEFAULT_SITE_SETTINGS.welcome_title_en,
+          welcome_message_ar: rawSettings.welcome_message_ar || data.welcome_message_ar || DEFAULT_SITE_SETTINGS.welcome_message_ar,
+          welcome_message_en: rawSettings.welcome_message_en || data.welcome_message_en || DEFAULT_SITE_SETTINGS.welcome_message_en,
+          welcome_coupon_code: rawSettings.welcome_coupon_code || data.welcome_coupon_code || DEFAULT_SITE_SETTINGS.welcome_coupon_code,
+          welcome_discount_percent: rawSettings.welcome_discount_percent ?? data.welcome_discount_percent ?? DEFAULT_SITE_SETTINGS.welcome_discount_percent,
+          welcome_modal_enabled: rawSettings.welcome_modal_enabled !== undefined ? Boolean(rawSettings.welcome_modal_enabled) : (data.welcome_modal_enabled !== undefined ? Boolean(data.welcome_modal_enabled) : DEFAULT_SITE_SETTINGS.welcome_modal_enabled),
+          welcome_auto_dispatch: rawSettings.welcome_auto_dispatch !== undefined ? Boolean(rawSettings.welcome_auto_dispatch) : (data.welcome_auto_dispatch !== undefined ? Boolean(data.welcome_auto_dispatch) : DEFAULT_SITE_SETTINGS.welcome_auto_dispatch),
+          offers_banner_title_ar: rawSettings.offers_banner_title_ar || data.offers_banner_title_ar || DEFAULT_SITE_SETTINGS.offers_banner_title_ar,
+          offers_banner_title_en: rawSettings.offers_banner_title_en || data.offers_banner_title_en || DEFAULT_SITE_SETTINGS.offers_banner_title_en,
+          offers_promo_code: rawSettings.offers_promo_code || data.offers_promo_code || DEFAULT_SITE_SETTINGS.offers_promo_code,
+          offers_default_discount: rawSettings.offers_default_discount ?? data.offers_default_discount ?? DEFAULT_SITE_SETTINGS.offers_default_discount,
         };
         setSiteSettings(merged);
         try {
@@ -1593,6 +1596,8 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
       if (supabase) {
         try {
           const payload = {
+            id: next.id || 1,
+            settings: next,
             maintenance_mode: next.maintenance_mode,
             loading_text_en: next.loading_text_en,
             loading_text_ar: next.loading_text_ar,
@@ -1610,17 +1615,13 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
             updated_at: new Date().toISOString(),
           };
 
-          if (next.id) {
-            await supabase.from('site_settings').update(payload).eq('id', next.id);
-          } else {
-            const { data } = await supabase
-              .from('site_settings')
-              .upsert(payload)
-              .select()
-              .maybeSingle();
-            if (data?.id) {
-              setSiteSettings((prev) => ({ ...prev, id: data.id }));
-            }
+          const { data } = await supabase
+            .from('site_settings')
+            .upsert(payload, { onConflict: 'id' })
+            .select()
+            .maybeSingle();
+          if (data?.id) {
+            setSiteSettings((prev) => ({ ...prev, id: data.id }));
           }
 
           // Also save in site_config json file in Supabase storage for 100% permanent sync
