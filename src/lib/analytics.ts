@@ -679,10 +679,28 @@ export function getAggregatedAnalytics(productsList: any[] = []): UserBehaviorSt
           label = 'نسخ كود الخصم الترويجي';
           details = `كوبون: ${ev.data?.code || ''}`;
           break;
-        case 'engagement_heartbeat':
+        case 'engagement_heartbeat': {
+          const pId = String(ev.data?.productId || '0');
+          if (pId !== '0') {
+            const pTitle = ev.data?.productTitle || `قطعة #${pId}`;
+            const curr = viewedMap.get(pId) || { title: pTitle, count: 1, lastTime: ev.timestamp };
+            curr.lastTime = ev.timestamp;
+            viewedMap.set(pId, curr);
+
+            const matchedProd = productsList.find((p) => String(p.id) === pId);
+            if (matchedProd && typeof matchedProd.price === 'number') {
+              viewedPrices.push(matchedProd.price);
+            }
+            lastTargetedProduct.id = pId;
+            lastTargetedProduct.title = pTitle;
+            if (matchedProd?.price) {
+              lastTargetedProduct.price = matchedProd.price;
+            }
+          }
           label = 'نبض التفاعل والمعاينة النشطة';
           details = `معاينة مستمرة لـ ${ev.data?.productTitle || ''}`;
           break;
+        }
         case 'whatsapp_order': {
           const pId = String(ev.data?.productId || '0');
           const pTitle = ev.data?.productTitle || `قطعة #${pId}`;
@@ -788,8 +806,8 @@ export function getAggregatedAnalytics(productsList: any[] = []): UserBehaviorSt
     // -------------------------------------------------------------
     const hasIntentSignals = sizesSet.size > 0 || wishlistSet.size > 0;
     const hasNotOrdered = orders.length === 0;
-    const hasDwellTime = durationSeconds >= 30 || viewedMap.size >= 2;
-    const isHesitantBuyer = hasIntentSignals && hasNotOrdered && hasDwellTime;
+    const hasDwellTime = durationSeconds >= 25;
+    const isHesitantBuyer = (hasIntentSignals || hasDwellTime) && hasNotOrdered;
 
     let hesitationReason = '';
     let hesitationSignal: HesitationSignal | undefined = undefined;
@@ -918,7 +936,17 @@ export function getAggregatedAnalytics(productsList: any[] = []): UserBehaviorSt
   const uniqueVisitorSet = new Set(
     events
       .map((e) => e.data?.visitorId || e.sessionId)
-      .filter((id) => Boolean(id) && id !== 'pvid_anon' && id !== 'v_server' && id !== 'sess_anon')
+      .filter(
+        (id) =>
+          Boolean(id) &&
+          id !== 'null' &&
+          id !== 'undefined' &&
+          id !== 'pvid_anon' &&
+          id !== 'v_server' &&
+          id !== 'sess_anon' &&
+          id !== 'sess_cloud' &&
+          id !== 'sess_default'
+      )
   );
   const uniqueVisitors = uniqueVisitorSet.size > 0 ? uniqueVisitorSet.size : customerSessions.length;
   const uniquePersistentVisitors = uniqueVisitors;
