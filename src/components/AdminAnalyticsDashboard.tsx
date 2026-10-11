@@ -78,6 +78,9 @@ import {
   trackSystemError,
 } from '../lib/analytics';
 import type { Product } from '../types';
+import SystemHealthTab from './analytics/SystemHealthTab';
+import { DemandIntelligenceTab } from './analytics/DemandIntelligenceTab';
+import { BuyerPersonasTab } from './analytics/BuyerPersonasTab';
 
 interface Props {
   stats: UserBehaviorStats;
@@ -115,53 +118,6 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     );
   }
   return null;
-};
-
-// Custom SystemErrorCard Component
-const SystemErrorCard = ({ err, expandedErrorId, setExpandedErrorId, handleStatusChange, statusSavingMap, isAr }: any) => {
-  const isExpanded = expandedErrorId === err.id;
-  const isSaving = statusSavingMap[err.id];
-
-  return (
-    <div className={`rounded-2xl border transition-all overflow-hidden ${err.status === 'open' ? 'border-rose-500/30 bg-gradient-to-r from-rose-950/20 via-[#12151f] to-black' : err.status === 'investigating' ? 'border-amber-500/30 bg-gradient-to-r from-amber-950/20 via-[#12151f] to-black' : 'border-emerald-500/20 bg-black/40'}`}>
-      <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-white/[0.02] transition-colors cursor-pointer" onClick={() => setExpandedErrorId(isExpanded ? null : err.id)}>
-        
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-          <span className="shrink-0 rounded-lg bg-rose-500/20 border border-rose-500/40 text-rose-300 px-2 py-1 text-[10px] font-mono font-bold uppercase tracking-wider flex items-center gap-1">
-             SYSTEM_ERROR
-          </span>
-          <div className="space-y-1 flex-1 min-w-0">
-            <h4 className="font-bold text-xs sm:text-sm text-white leading-snug break-words">{err.errorMessage}</h4>
-            <div className="flex items-center gap-2 text-[10px] text-white/40 font-mono flex-wrap">
-              <span className="bg-white/5 px-2 py-0.5 rounded border border-white/5">⏱️ {new Date(err.timestamp).toLocaleTimeString()}</span>
-              <span className="bg-white/5 px-2 py-0.5 rounded border border-white/5 truncate max-w-[220px]">🌐 {err.url}</span>
-            </div>
-          </div>
-        </div>
-        
-        {/* THE BUTTONS ARE HERE - DO NOT MISS THIS */}
-        <div className="flex items-center gap-2 shrink-0 ml-auto z-10" onClick={(e) => e.stopPropagation()}>
-          {err.isRegression && <span className="rounded-lg bg-rose-500/20 px-2 py-1 text-[10px] font-bold text-rose-400 border border-rose-500/40 animate-pulse">⚠️ {isAr ? 'متكرر' : 'Regression'}</span>}
-          <select disabled={isSaving} value={err.status || 'open'} onChange={(e) => handleStatusChange(err.id, e.target.value)} className="rounded-lg border border-white/20 bg-[#12151f] px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-rose-500 cursor-pointer shadow-md">
-            <option value="open">🔴 {isAr ? 'غير محلول' : 'Open'}</option>
-            <option value="investigating">🟡 {isAr ? 'قيد الفحص' : 'Investigating'}</option>
-            <option value="resolved">🟢 {isAr ? 'تم الحل' : 'Resolved'}</option>
-          </select>
-        </div>
-
-      </div>
-      {isExpanded && (
-        <div className="p-4 sm:p-5 bg-black/80 border-t border-white/10 space-y-4">
-           <div className="space-y-2">
-             <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Stack Trace</span>
-             <div className="rounded-xl border border-white/10 bg-black p-4 font-mono text-[10px] text-rose-300/90 overflow-x-auto leading-relaxed max-h-[250px] scrollbar-thin">
-               <pre className="whitespace-pre-wrap break-all">{err.errorStack || 'No stack trace available.'}</pre>
-             </div>
-           </div>
-        </div>
-      )}
-    </div>
-  );
 };
 
 export default function AdminAnalyticsDashboard({
@@ -1777,439 +1733,34 @@ export default function AdminAnalyticsDashboard({
       {/* ========================================================================= */}
       {/* VIEW 3: ALGORITHM 2 - BUYER PERSONAS & INTENT SCORING (0 - 100) */}
       {/* ========================================================================= */}
-      {(activeAlgorithmView === 'algorithm2_personas') && (
-        <div className="space-y-6 animate-fade-in">
-          {/* Persona Distribution Cards Grid */}
-          <div className="rounded-3xl border border-amber-500/20 bg-gradient-to-r from-amber-500/[0.05] via-[#12151f] to-black p-5 sm:p-6 backdrop-blur-md space-y-4">
-            <div>
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-amber-400" />
-                <span>{isAr ? 'الخوارزمية 2: التنميط السلوكي وتصنيف نية الشراء (Buyer Personas 0 - 100)' : 'Algorithm 2: Customer Personas & RFM/Intent Scoring'}</span>
-              </h3>
-              <p className="text-xs text-white/60 mt-1">
-                {isAr
-                  ? 'تصنيف تلقائي متقدم لكل زائر وفق معادلة نية الشراء وبصمة الذوق وتعمق التصفح لاستخراج الشخصيات السلوكية الـ 7'
-                  : 'Automated visitor classification based on lead scoring, dwell time, and catalog engagement depth'}
-              </p>
-            </div>
-
-            {/* Persona Grid (Clickable Filters) */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 pt-2">
-              {(
-                [
-                  { id: 'all', icon: '🌐', label: isAr ? 'كافة الزوار' : 'All', count: stats.customerSessions?.length || 0, color: 'border-white/10' },
-                  { id: 'vip', icon: '👑', label: isAr ? 'نخبوي جاهز (VIP)' : 'VIP', count: stats.personaDistribution?.vip || 0, color: 'border-amber-500/40 text-amber-300' },
-                  { id: 'high_intent', icon: '💎', label: isAr ? 'اهتمام عالي' : 'High Intent', count: stats.personaDistribution?.high_intent || 0, color: 'border-emerald-500/40 text-emerald-300' },
-                  { id: 'hesitant_buyer', icon: '⏳', label: isAr ? 'متردد بحاجة لحافز' : 'Hesitant', count: stats.personaDistribution?.hesitant_buyer || 0, color: 'border-rose-500/40 text-rose-300' },
-                  { id: 'deal_hunter', icon: '🏷️', label: isAr ? 'باحث عروض' : 'Deal Hunter', count: stats.personaDistribution?.deal_hunter || 0, color: 'border-purple-500/40 text-purple-300' },
-                  { id: 'fashion_enthusiast', icon: '👗', label: isAr ? 'متذوق أزياء' : 'Enthusiast', count: stats.personaDistribution?.fashion_enthusiast || 0, color: 'border-cyan-500/40 text-cyan-300' },
-                  { id: 'trend_explorer', icon: '🔍', label: isAr ? 'مستكشف صيحات' : 'Explorer', count: stats.personaDistribution?.trend_explorer || 0, color: 'border-blue-500/40 text-blue-300' },
-                ] as const
-              ).map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setCustomerFilter(p.id)}
-                  className={`rounded-2xl border p-3 text-center transition-all cursor-pointer space-y-1 ${
-                    customerFilter === p.id
-                      ? 'bg-white/15 border-white shadow-md scale-102'
-                      : 'bg-black/40 hover:bg-black/60 ' + p.color
-                  }`}
-                >
-                  <span className="text-base block">{p.icon}</span>
-                  <span className="text-xs font-bold text-white block truncate">{p.label}</span>
-                  <span className="text-sm font-bold font-mono text-white/90 tabular-nums block">{p.count}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Search & Sessions List */}
-          <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={isAr ? 'بحث بمعرف الجلسة، المحافظة، أو القطع المعاينة...' : 'Search by session, governorate, or items...'}
-                  className="w-full rounded-xl border border-white/15 bg-black/40 pr-10 pl-4 py-2 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[#3b82f6]"
-                />
-              </div>
-
-              <div className="text-xs text-white/50">
-                {isAr ? `عرض ${filteredSessions.length} من أصل ${stats.customerSessions?.length || 0} زبون` : `Showing ${filteredSessions.length} sessions`}
-              </div>
-            </div>
-
-            {/* Sessions Cards */}
-            <div className="space-y-2.5">
-              {filteredSessions.length === 0 ? (
-                <div className="py-12 text-center text-xs text-white/40 border border-white/5 rounded-3xl bg-black/20">
-                  {isAr ? 'لا توجد جلسات مسجلة ضمن هذا التصنيف' : 'No customer sessions matching filter'}
-                </div>
-              ) : (
-                filteredSessions.slice(0, 20).map((session) => {
-                  const isExpanded = expandedSessionId === session.sessionId;
-                  return (
-                    <div
-                      key={session.sessionId}
-                      className={`rounded-2xl border transition-all ${
-                        isExpanded
-                          ? 'border-[#004ad7]/60 bg-[#12151f] shadow-xl'
-                          : 'border-white/10 bg-black/30 hover:bg-black/50'
-                      }`}
-                    >
-                      {/* Summary Row */}
-                      <div
-                        onClick={() => setExpandedSessionId(isExpanded ? null : session.sessionId)}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 sm:p-4 gap-3 cursor-pointer select-none"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-sm font-bold ${session.personaBadgeColor}`}>
-                            {session.persona === 'vip' ? '👑' : session.persona === 'high_intent' ? '💎' : session.persona === 'hesitant_buyer' ? '⏳' : session.persona === 'deal_hunter' ? '🏷️' : session.persona === 'fashion_enthusiast' ? '👗' : '🔍'}
-                          </div>
-
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-mono text-xs font-bold text-white">
-                                {session.sessionId.substring(0, 14)}
-                              </span>
-                              <span className={`rounded-full px-2 py-0.2 text-[10px] font-bold border ${session.personaBadgeColor}`}>
-                                {session.personaLabel}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-3 text-[11px] text-white/50 mt-1">
-                              <span>📍 {session.governorate}</span>
-                              <span>📱 {session.device}</span>
-                              <span>⏱️ {Math.floor(session.durationSeconds / 60)}m {session.durationSeconds % 60}s</span>
-                              <span>🎯 {session.eventsCount} تفاعل</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                          <div className="text-end">
-                            <span className="text-[10px] text-white/40 block">{isAr ? 'نقاط العميل' : 'Lead Score'}</span>
-                            <span className={`text-sm font-bold font-mono tabular-nums ${
-                              session.leadScore >= 80 ? 'text-amber-400' : session.leadScore >= 50 ? 'text-emerald-400' : 'text-white/70'
-                            }`}>
-                              {session.leadScore} / 100
-                            </span>
-                          </div>
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.05] text-white/60">
-                            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Expanded Details: Taste Fingerprint + Timeline */}
-                      {isExpanded && (
-                        <div className="border-t border-white/10 p-4 sm:p-5 bg-black/40 rounded-b-2xl space-y-4 animate-fade-in">
-                          {/* Taste Fingerprint Grid */}
-                          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-2">
-                            <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
-                              <Sparkles className="h-3.5 w-3.5" />
-                              <span>{isAr ? 'بصمة الذوق والاهتمام السلوكي (Taste & Intent Fingerprint):' : 'Taste & Intent Fingerprint:'}</span>
-                            </span>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs pt-1">
-                              <div className="p-2 rounded-lg bg-black/40 border border-white/5">
-                                <span className="text-[10px] text-white/40 block">{isAr ? 'القسم الأكثر تصفحاً' : 'Primary Category'}</span>
-                                <span className="font-semibold text-white mt-0.5 block truncate">{session.tasteFingerprint.primaryCategory}</span>
-                              </div>
-                              <div className="p-2 rounded-lg bg-black/40 border border-white/5">
-                                <span className="text-[10px] text-white/40 block">{isAr ? 'المقاس المفضل المرجح' : 'Preferred Size'}</span>
-                                <span className="font-semibold text-emerald-400 font-mono mt-0.5 block">
-                                  {session.tasteFingerprint.preferredSize ? `[${session.tasteFingerprint.preferredSize}]` : isAr ? 'غير محدد' : 'N/A'}
-                                </span>
-                              </div>
-                              <div className="p-2 rounded-lg bg-black/40 border border-white/5">
-                                <span className="text-[10px] text-white/40 block">{isAr ? 'متوسط سعر القطع المعاينة' : 'Avg Viewed Price'}</span>
-                                <span className="font-semibold text-amber-400 font-mono mt-0.5 block">
-                                  {session.tasteFingerprint.avgViewedPrice > 0 ? `${session.tasteFingerprint.avgViewedPrice.toLocaleString()} د.ع` : isAr ? 'تصفح عام' : 'N/A'}
-                                </span>
-                              </div>
-                              <div className="p-2 rounded-lg bg-black/40 border border-white/5">
-                                <span className="text-[10px] text-white/40 block">{isAr ? 'فحص الصور والحاسبة' : 'Gallery & Fit Finder'}</span>
-                                <span className="font-semibold text-cyan-300 mt-0.5 block">
-                                  {session.tasteFingerprint.imageInteractionCount} تقليب {session.tasteFingerprint.fitCalculatorUsed ? '· حاسبة ✓' : ''}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Chronological Action Timeline */}
-                          <div className="space-y-2 pt-1">
-                            <span className="text-xs font-bold text-white/80 flex items-center gap-1.5">
-                              <Clock className="h-3.5 w-3.5 text-amber-400" />
-                              <span>{isAr ? 'الخط الزمني لكافة حركات العميل في المتجر (Chronological Timeline):' : 'Chronological Timeline:'}</span>
-                            </span>
-                            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                              {session.journeyTimeline.map((item) => (
-                                <div
-                                  key={item.id}
-                                  className="flex items-start gap-2.5 rounded-lg bg-white/[0.02] border border-white/5 p-2 text-xs"
-                                >
-                                  <span className="font-mono text-[10px] text-white/40 shrink-0 mt-0.5">
-                                    {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                                  </span>
-                                  <div className="min-w-0 flex-1">
-                                    <span className="font-semibold text-white/90">{item.label}</span>
-                                    {item.details && <p className="text-[10px] text-white/50">{item.details}</p>}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </div>
+      {activeAlgorithmView === 'algorithm2_personas' && (
+        <BuyerPersonasTab
+          stats={stats}
+          customerFilter={customerFilter}
+          setCustomerFilter={setCustomerFilter}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          filteredSessions={filteredSessions}
+          expandedSessionId={expandedSessionId}
+          setExpandedSessionId={setExpandedSessionId}
+          isAr={isAr}
+        />
       )}
 
       {/* ========================================================================= */}
       {/* VIEW 4: ALGORITHM 3 - PREDICTIVE DEMAND VELOCITY, SIZING & UNMET SEARCH */}
       {/* ========================================================================= */}
-      {(activeAlgorithmView === 'algorithm3_demand') && (
-        <div className="space-y-6 animate-fade-in">
-          {/* Header */}
-          <div className="rounded-3xl border border-emerald-500/20 bg-gradient-to-r from-emerald-500/[0.08] via-[#12151f] to-black p-5 sm:p-6 backdrop-blur-md space-y-3">
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <Zap className="h-5 w-5 text-emerald-400" />
-              <span>{isAr ? 'الخوارزمية 3: سرعة الطلب اللحظي، مصفوفة المقاسات، وذكاء البحث المفقود' : 'Algorithm 3: Demand Velocity, Size Matrix & Search Intelligence'}</span>
-            </h3>
-            <p className="text-xs text-white/60">
-              {isAr
-                ? 'خوارزمية تنبؤية لقياس سرعة إقبال الزبائن على القطع (Velocity Index)، ومقارنة طلب المقاسات مع المتوفر في المخزون، ورصد الكلمات المفقودة التي يبحث عنها العملاء'
-                : 'Real-time velocity scoring, size demand vs live inventory balancing, and zero-result search radar'}
-            </p>
-          </div>
-
-          {/* Section 1: Demand Velocity Ranking */}
-          <div className="rounded-3xl border border-white/10 bg-white/[0.025] p-5 sm:p-6 backdrop-blur-md space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-white/10">
-              <div>
-                <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Flame className="h-4 w-4 text-rose-500" />
-                  <span>{isAr ? 'مؤشر سرعة الطلب اللحظي للقطع (Demand Velocity Index)' : 'Demand Velocity Matrix'}</span>
-                </h4>
-                <p className="text-[11px] text-white/50 mt-0.5">
-                  {isAr ? 'حساب سرعة الإقبال المرجحة (المشاهدات × 1 + المفضلة × 3.5 + نقرات الواتساب × 10)' : 'Velocity = (Views*1) + (Wishlist*3.5) + (WhatsApp*10)'}
-                </p>
-              </div>
-
-              {/* Status Filter */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {(
-                  [
-                    { id: 'all', label: isAr ? 'الكل' : 'All' },
-                    { id: 'hot_trending', label: isAr ? '🔥 رواج عالي' : 'Hot Trending' },
-                    { id: 'steady_interest', label: isAr ? '⚡ اهتمام مستقر' : 'Steady' },
-                    { id: 'cold_dormant', label: isAr ? '❄️ منخفض' : 'Cold' },
-                  ] as const
-                ).map((vf) => (
-                  <button
-                    key={vf.id}
-                    type="button"
-                    onClick={() => setVelocityFilter(vf.id)}
-                    className={`rounded-xl px-2.5 py-1 text-xs font-semibold border transition-all cursor-pointer ${
-                      velocityFilter === vf.id
-                        ? 'bg-emerald-600 border-emerald-500 text-white'
-                        : 'border-white/10 bg-black/40 text-white/60 hover:text-white'
-                    }`}
-                  >
-                    {vf.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Velocity Ranking Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-start">
-                <thead>
-                  <tr className="border-b border-white/10 text-white/40 pb-2">
-                    <th className="py-2 px-3 font-semibold text-start">{isAr ? 'القطعة' : 'Piece'}</th>
-                    <th className="py-2 px-3 font-semibold text-center">{isAr ? 'مؤشر السرعة' : 'Velocity'}</th>
-                    <th className="py-2 px-3 font-semibold text-center">{isAr ? 'المشاهدات' : 'Views'}</th>
-                    <th className="py-2 px-3 font-semibold text-center">{isAr ? 'المفضلة' : 'Wishlist'}</th>
-                    <th className="py-2 px-3 font-semibold text-center">{isAr ? 'طلبات الواتساب' : 'WhatsApp'}</th>
-                    <th className="py-2 px-3 font-semibold text-center">{isAr ? 'الحالة والتوصية' : 'Status & Action'}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {filteredVelocityItems.map((p) => (
-                    <tr key={p.id} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="py-3 px-3 font-medium text-white max-w-xs truncate">
-                        {p.title}
-                      </td>
-                      <td className="py-3 px-3 text-center font-mono font-bold text-amber-400">
-                        {p.velocityScore}
-                      </td>
-                      <td className="py-3 px-3 text-center font-mono text-white/80">{p.views}</td>
-                      <td className="py-3 px-3 text-center font-mono text-rose-400">{p.wishlistAdds}</td>
-                      <td className="py-3 px-3 text-center font-mono text-emerald-400 font-bold">{p.whatsappClicks}</td>
-                      <td className="py-3 px-3 text-center">
-                        <div className="inline-flex flex-col items-center gap-0.5">
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold border ${
-                            p.demandStatus === 'hot_trending'
-                              ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
-                              : p.demandStatus === 'steady_interest'
-                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                              : 'bg-white/5 text-white/50 border-white/10'
-                          }`}>
-                            {p.statusLabelAr}
-                          </span>
-                          <span className="text-[9px] text-white/40 max-w-xs truncate">{p.recommendedAction}</span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Section 2: Size Demand vs Live Stock Matrix */}
-          <div className="rounded-3xl border border-white/10 bg-white/[0.025] p-5 sm:p-6 backdrop-blur-md space-y-4">
-            <div className="pb-2 border-b border-white/10">
-              <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                <Tag className="h-4 w-4 text-purple-400" />
-                <span>{isAr ? 'مصفوفة توازن المقاسات الحية (Size Demand vs Live Stock Matrix)' : 'Size Demand vs Stock Matrix'}</span>
-              </h4>
-              <p className="text-[11px] text-white/50 mt-0.5">
-                {isAr ? 'مقارنة حقيقية 100% بين طلبات القياس للزبائن والمعروض الفعلي في الكتالوج لتفادي نفاد المقاسات' : 'Inventory balance radar comparing customer clicks against current stock'}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              {stats.sizeStockMatrix?.map((sm) => (
-                <div
-                  key={sm.size}
-                  className={`rounded-2xl border p-3.5 text-center space-y-2 transition-all ${
-                    sm.status === 'deficit_warning'
-                      ? 'border-rose-500/40 bg-rose-500/[0.06] shadow-lg shadow-rose-500/5'
-                      : sm.status === 'surplus'
-                      ? 'border-amber-500/30 bg-amber-500/[0.04]'
-                      : 'border-white/10 bg-black/40'
-                  }`}
-                >
-                  <span className="text-lg font-bold font-mono text-white block">[{sm.size}]</span>
-
-                  <div className="space-y-1 text-xs">
-                    <div className="flex justify-between text-[11px]">
-                      <span className="text-white/40">{isAr ? 'الطلب:' : 'Demand:'}</span>
-                      <span className="font-mono font-bold text-amber-400">{sm.demandPercentage}%</span>
-                    </div>
-                    <div className="flex justify-between text-[11px]">
-                      <span className="text-white/40">{isAr ? 'المتوفر:' : 'Stock:'}</span>
-                      <span className="font-mono font-bold text-emerald-400">{sm.stockPercentage}%</span>
-                    </div>
-                  </div>
-
-                  <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold border block truncate ${
-                    sm.status === 'deficit_warning'
-                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
-                      : sm.status === 'surplus'
-                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                      : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                  }`}>
-                    {sm.statusLabelAr}
-                  </span>
-
-                  <p className="text-[10px] text-white/50 line-clamp-2 leading-relaxed">
-                    {sm.recommendation}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Section 3: Unmet Search Intelligence */}
-          <div className="rounded-3xl border border-white/10 bg-white/[0.025] p-5 sm:p-6 backdrop-blur-md space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-white/10">
-              <div>
-                <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Search className="h-4 w-4 text-cyan-400" />
-                  <span>{isAr ? 'ذكاء البحث والطلب غير الملبى (Unmet Search Intelligence)' : 'Unmet Search Radar'}</span>
-                </h4>
-                <p className="text-[11px] text-white/50 mt-0.5">
-                  {isAr ? 'رصد الكلمات التي يبحث عنها الزبائن ولم يجدوا لها نتائج في المتجر (فرص بيع ضائعة)' : 'Identifying zero-result queries to bridge inventory gaps'}
-                </p>
-              </div>
-
-              {/* Unmet Filter */}
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setUnmetSearchFilter('all')}
-                  className={`rounded-xl px-2.5 py-1 text-xs font-semibold border transition-all cursor-pointer ${
-                    unmetSearchFilter === 'all' ? 'bg-[#004ad7] border-[#004ad7] text-white' : 'border-white/10 bg-black/40 text-white/60'
-                  }`}
-                >
-                  {isAr ? 'الكل' : 'All'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setUnmetSearchFilter('zero_results')}
-                  className={`rounded-xl px-2.5 py-1 text-xs font-semibold border transition-all cursor-pointer ${
-                    unmetSearchFilter === 'zero_results' ? 'bg-rose-600 border-rose-500 text-white' : 'border-white/10 bg-black/40 text-rose-300'
-                  }`}
-                >
-                  {isAr ? '🚨 طلبات بدون نتائج (0)' : 'Zero Results'}
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              {filteredUnmetSearches.length === 0 ? (
-                <div className="py-8 text-center text-xs text-white/40">
-                  {isAr ? 'لا توجد عمليات بحث مسجلة حالياً.' : 'No search queries recorded yet.'}
-                </div>
-              ) : (
-                filteredUnmetSearches.map((s) => (
-                  <div
-                    key={s.term}
-                    className={`rounded-2xl border p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                      s.status === 'zero_results'
-                        ? 'border-rose-500/30 bg-rose-500/[0.04]'
-                        : 'border-white/10 bg-black/30'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border text-xs font-bold ${
-                        s.status === 'zero_results' ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
-                      }`}>
-                        {s.status === 'zero_results' ? '0' : '✓'}
-                      </span>
-                      <div>
-                        <span className="font-bold text-white text-xs">"{s.term}"</span>
-                        <p className="text-[11px] text-white/60 mt-0.5">{s.suggestedAction}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono text-xs font-bold text-white/80">
-                        {s.count} {isAr ? 'عملية بحث' : 'searches'}
-                      </span>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold border ${
-                        s.status === 'zero_results' ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                      }`}>
-                        {s.status === 'zero_results' ? isAr ? 'مفقود في الكتالوج' : 'Zero Results' : isAr ? 'متوفر' : 'Matched'}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
+      {activeAlgorithmView === 'algorithm3_demand' && (
+        <DemandIntelligenceTab
+          stats={stats}
+          filteredVelocityItems={filteredVelocityItems}
+          velocityFilter={velocityFilter}
+          setVelocityFilter={setVelocityFilter}
+          unmetSearchFilter={unmetSearchFilter}
+          setUnmetSearchFilter={setUnmetSearchFilter}
+          filteredUnmetSearches={filteredUnmetSearches}
+          isAr={isAr}
+        />
       )}
 
       {/* ========================================================================= */}
@@ -2472,136 +2023,19 @@ export default function AdminAnalyticsDashboard({
       {/* VIEW 6: SENTRY-STYLE SYSTEM ERROR TRACKER (رادار الأخطاء البرمجية) */}
       {/* ========================================================================= */}
       {activeAlgorithmView === 'system_health' && (
-        <div className="space-y-6 animate-in fade-in duration-200 pb-10">
-          {/* Header Card */}
-          <div className="rounded-3xl border border-rose-500/20 bg-gradient-to-br from-rose-950/30 via-black/40 to-slate-900/40 p-5 sm:p-6 backdrop-blur-md space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30">
-                  <Bug className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                    <span>{isAr ? 'رادار أخطاء النظام وتحليل الثبات (System Health & Issue Tracker)' : 'System Health & Issue Tracker'}</span>
-                  </h3>
-                  <p className="text-xs text-white/50 mt-1">
-                    {isAr
-                      ? 'رصد ذكي للأخطاء البرمجية، التجميع التلقائي للمشاكل المتشابهة، وتتبع تكرار الأخطاء المحلولة'
-                      : 'Smart error fingerprinting, automated grouping, and regression detection for production stability'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Error Stats */}
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-rose-400" />
-                  <span className="text-xs font-mono font-bold text-white">
-                    {isAr ? 'مفتوح: ' : 'Open: '}
-                    <strong className="text-rose-400">{processedSystemErrors.filter(e => e.status === 'open').length}</strong>
-                  </span>
-                </div>
-                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 flex items-center gap-2">
-                  <RotateCcw className="h-4 w-4 text-amber-400" />
-                  <span className="text-xs font-mono font-bold text-white">
-                    {isAr ? 'قيد التحقيق: ' : 'Investigating: '}
-                    <strong className="text-amber-400">{processedSystemErrors.filter(e => e.status === 'investigating').length}</strong>
-                  </span>
-                </div>
-                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-emerald-400" />
-                  <span className="text-xs font-mono font-bold text-white">
-                    {isAr ? 'محلول: ' : 'Resolved: '}
-                    <strong className="text-emerald-400">{processedSystemErrors.filter(e => e.status === 'resolved').length}</strong>
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Tracker Controls */}
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-2 border-t border-white/10">
-              {/* Search */}
-              <div className="sm:col-span-7 relative">
-                <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-                <input
-                  type="text"
-                  value={errorSearchQuery}
-                  onChange={(e) => setErrorSearchQuery(e.target.value)}
-                  placeholder={isAr ? 'ابحث في رسائل الخطأ، الروابط، أو البصمة الإلكترونية...' : 'Search error messages, URLs, or fingerprints...'}
-                  className="w-full rounded-xl border border-white/15 bg-black/50 py-2.5 pr-10 pl-4 text-xs text-white placeholder-white/40 focus:border-rose-500 focus:outline-none transition-all"
-                />
-              </div>
-
-              {/* Status Filter */}
-              <div className="sm:col-span-5 flex items-center gap-2">
-                <select
-                  value={errorStatusFilter}
-                  onChange={(e) => setErrorStatusFilter(e.target.value as any)}
-                  className="flex-1 rounded-xl border border-white/15 bg-black/50 py-2.5 px-3 text-xs text-white focus:border-rose-500 focus:outline-none cursor-pointer"
-                >
-                  <option value="all" className="bg-[#12151f] text-white">
-                    {isAr ? 'كافة الحالات (All Issues)' : 'All Issues'}
-                  </option>
-                  <option value="open" className="bg-[#12151f] text-rose-400">
-                    {isAr ? '🔴 أخطاء مفتوحة (Open)' : 'Open Issues'}
-                  </option>
-                  <option value="investigating" className="bg-[#12151f] text-amber-400">
-                    {isAr ? '🟡 قيد التحقيق (Investigating)' : 'Investigating'}
-                  </option>
-                  <option value="resolved" className="bg-[#12151f] text-emerald-400">
-                    {isAr ? '🟢 قضايا محلولة (Resolved)' : 'Resolved Issues'}
-                  </option>
-                  <option value="regressions" className="bg-[#12151f] text-rose-500 font-bold">
-                    {isAr ? '🚨 تكرار الأخطاء المحلولة (Regressions)' : 'Regressions'}
-                  </option>
-                </select>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setErrorSearchQuery('');
-                    setErrorStatusFilter('all');
-                  }}
-                  className="p-2.5 rounded-xl border border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
-                  title={isAr ? 'إعادة ضبط' : 'Reset'}
-                >
-                  <RotateCcw className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Issue List as Flexbox CARDS */}
-          <div className="space-y-3">
-            {filteredSystemErrors.length === 0 ? (
-              <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-16 text-center space-y-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mx-auto">
-                  <ShieldCheck className="h-8 w-8" />
-                </div>
-                <div>
-                  <h4 className="text-base font-bold text-white">
-                    {isAr ? 'النظام مستقر تماماً' : 'System is Healthy'}
-                  </h4>
-                  <p className="text-sm text-white/50 mt-1">
-                    {isAr ? 'لا توجد أخطاء مسجلة تطابق معايير البحث الحالية.' : 'No system errors found matching your filters.'}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              filteredSystemErrors.map((err) => (
-                <SystemErrorCard
-                  key={err.id}
-                  err={err}
-                  expandedErrorId={expandedErrorId}
-                  setExpandedErrorId={setExpandedErrorId}
-                  handleStatusChange={handleStatusChange}
-                  statusSavingMap={statusSavingMap}
-                  isAr={isAr}
-                />
-              ))
-            )}
-          </div>
-        </div>
+        <SystemHealthTab
+          isAr={isAr}
+          processedSystemErrors={processedSystemErrors}
+          filteredSystemErrors={filteredSystemErrors}
+          errorSearchQuery={errorSearchQuery}
+          setErrorSearchQuery={setErrorSearchQuery}
+          errorStatusFilter={errorStatusFilter}
+          setErrorStatusFilter={setErrorStatusFilter}
+          expandedErrorId={expandedErrorId}
+          setExpandedErrorId={setExpandedErrorId}
+          handleStatusChange={handleStatusChange}
+          statusSavingMap={statusSavingMap}
+        />
       )}
     </div>
   );
