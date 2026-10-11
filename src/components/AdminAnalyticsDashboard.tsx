@@ -117,6 +117,53 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
+// Custom SystemErrorCard Component
+const SystemErrorCard = ({ err, expandedErrorId, setExpandedErrorId, handleStatusChange, statusSavingMap, isAr }: any) => {
+  const isExpanded = expandedErrorId === err.id;
+  const isSaving = statusSavingMap[err.id];
+
+  return (
+    <div className={`rounded-2xl border transition-all overflow-hidden ${err.status === 'open' ? 'border-rose-500/30 bg-gradient-to-r from-rose-950/20 via-[#12151f] to-black' : err.status === 'investigating' ? 'border-amber-500/30 bg-gradient-to-r from-amber-950/20 via-[#12151f] to-black' : 'border-emerald-500/20 bg-black/40'}`}>
+      <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-white/[0.02] transition-colors cursor-pointer" onClick={() => setExpandedErrorId(isExpanded ? null : err.id)}>
+        
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          <span className="shrink-0 rounded-lg bg-rose-500/20 border border-rose-500/40 text-rose-300 px-2 py-1 text-[10px] font-mono font-bold uppercase tracking-wider flex items-center gap-1">
+             SYSTEM_ERROR
+          </span>
+          <div className="space-y-1 flex-1 min-w-0">
+            <h4 className="font-bold text-xs sm:text-sm text-white leading-snug break-words">{err.errorMessage}</h4>
+            <div className="flex items-center gap-2 text-[10px] text-white/40 font-mono flex-wrap">
+              <span className="bg-white/5 px-2 py-0.5 rounded border border-white/5">⏱️ {new Date(err.timestamp).toLocaleTimeString()}</span>
+              <span className="bg-white/5 px-2 py-0.5 rounded border border-white/5 truncate max-w-[220px]">🌐 {err.url}</span>
+            </div>
+          </div>
+        </div>
+        
+        {/* THE BUTTONS ARE HERE - DO NOT MISS THIS */}
+        <div className="flex items-center gap-2 shrink-0 ml-auto z-10" onClick={(e) => e.stopPropagation()}>
+          {err.isRegression && <span className="rounded-lg bg-rose-500/20 px-2 py-1 text-[10px] font-bold text-rose-400 border border-rose-500/40 animate-pulse">⚠️ {isAr ? 'متكرر' : 'Regression'}</span>}
+          <select disabled={isSaving} value={err.status || 'open'} onChange={(e) => handleStatusChange(err.id, e.target.value)} className="rounded-lg border border-white/20 bg-[#12151f] px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-rose-500 cursor-pointer shadow-md">
+            <option value="open">🔴 {isAr ? 'غير محلول' : 'Open'}</option>
+            <option value="investigating">🟡 {isAr ? 'قيد الفحص' : 'Investigating'}</option>
+            <option value="resolved">🟢 {isAr ? 'تم الحل' : 'Resolved'}</option>
+          </select>
+        </div>
+
+      </div>
+      {isExpanded && (
+        <div className="p-4 sm:p-5 bg-black/80 border-t border-white/10 space-y-4">
+           <div className="space-y-2">
+             <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Stack Trace</span>
+             <div className="rounded-xl border border-white/10 bg-black p-4 font-mono text-[10px] text-rose-300/90 overflow-x-auto leading-relaxed max-h-[250px] scrollbar-thin">
+               <pre className="whitespace-pre-wrap break-all">{err.errorStack || 'No stack trace available.'}</pre>
+             </div>
+           </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function AdminAnalyticsDashboard({
   stats,
   products,
@@ -2541,139 +2588,17 @@ export default function AdminAnalyticsDashboard({
                 </div>
               </div>
             ) : (
-              filteredSystemErrors.map((err) => {
-                const isExpanded = expandedErrorId === err.id;
-                const isSaving = statusSavingMap[err.id];
-
-                return (
-                  <div
-                    key={err.id}
-                    className={`rounded-2xl border transition-all overflow-hidden ${
-                      err.status === 'open'
-                        ? 'border-rose-500/30 bg-gradient-to-r from-rose-950/20 via-[#12151f] to-black'
-                        : err.status === 'investigating'
-                        ? 'border-amber-500/30 bg-gradient-to-r from-amber-950/20 via-[#12151f] to-black'
-                        : 'border-emerald-500/20 bg-black/40'
-                    }`}
-                  >
-                    {/* CARD HEADER */}
-                    <div
-                      className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
-                      onClick={() => setExpandedErrorId(isExpanded ? null : err.id)}
-                    >
-                      {/* Left side: SYSTEM_ERROR Badge + Message + Metadata */}
-                      <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <span className="shrink-0 rounded-lg bg-rose-500/20 border border-rose-500/40 text-rose-300 px-2 py-1 text-[10px] font-mono font-bold uppercase tracking-wider flex items-center gap-1">
-                          <Bug className="h-3 w-3 text-rose-400" />
-                          SYSTEM_ERROR
-                        </span>
-
-                        <div className="space-y-1 flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="font-bold text-xs sm:text-sm text-white leading-snug break-words">
-                              {err.errorMessage}
-                            </h4>
-                          </div>
-
-                          <div className="flex items-center gap-2 text-[10px] text-white/40 font-mono flex-wrap">
-                            <span className="bg-white/5 px-2 py-0.5 rounded border border-white/5">
-                              ⏱️ {err.formattedTime}
-                            </span>
-                            <span className="bg-white/5 px-2 py-0.5 rounded border border-white/5">
-                              🔁 {err.occurrences || 1}x
-                            </span>
-                            <span className="bg-white/5 px-2 py-0.5 rounded border border-white/5 truncate max-w-[220px]">
-                              🌐 {err.url}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Right side: Dropdown & Status Controls & Expand Arrow */}
-                      <div
-                        className="flex items-center gap-2 shrink-0 self-start sm:self-center"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {err.isRegression && (
-                          <span className="rounded-lg bg-rose-500/20 px-2.5 py-1 text-[10px] font-bold text-rose-400 border border-rose-500/40 animate-pulse whitespace-nowrap">
-                            ⚠️ {isAr ? 'خطأ متكرر (Regression)' : 'Regression'}
-                          </span>
-                        )}
-
-                        <div className="flex items-center gap-2 shrink-0 ml-auto mr-2" onClick={(e) => e.stopPropagation()}>
-                          <select
-                            value={err.status || 'open'}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              handleStatusChange(err.id, e.target.value as any);
-                            }}
-                            className="rounded-lg border border-white/20 bg-black/80 px-3 py-1.5 text-xs font-bold text-white hover:bg-black focus:outline-none focus:border-rose-500 cursor-pointer shadow-md"
-                          >
-                            <option value="open">🔴 غير محلول</option>
-                            <option value="investigating">🟡 قيد الفحص</option>
-                            <option value="resolved">🟢 تم الحل</option>
-                          </select>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => setExpandedErrorId(isExpanded ? null : err.id)}
-                          className="p-1.5 rounded-lg border border-white/10 bg-white/5 text-white/60 hover:text-white transition-all cursor-pointer"
-                        >
-                          <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-white' : ''}`} />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* EXPANDED STACK TRACE & DETAILS */}
-                    {isExpanded && (
-                      <div className="p-4 sm:p-5 bg-black/80 border-t border-white/10 space-y-4 animate-in slide-in-from-top-2 duration-300">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div className="rounded-xl border border-white/10 bg-white/5 p-3 space-y-1.5">
-                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-1.5">
-                              <Terminal className="h-3 w-3" />
-                              {isAr ? 'تفاصيل الخطأ الفنية' : 'Technical Details'}
-                            </span>
-                            <p className="text-xs text-rose-300 font-bold break-all leading-relaxed">{err.errorMessage}</p>
-                            <p className="text-[10px] text-white/50 font-mono break-all">SIG: {err.errorSignature}</p>
-                          </div>
-
-                          <div className="rounded-xl border border-white/10 bg-white/5 p-3 space-y-1.5">
-                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-1.5">
-                              <Filter className="h-3 w-3" />
-                              {isAr ? 'معلومات السياق' : 'Contextual Info'}
-                            </span>
-                            <div className="text-xs text-white/70 space-y-1 font-mono">
-                              <p><strong className="text-white">URL:</strong> {err.url}</p>
-                              <p><strong className="text-white">First Seen:</strong> {new Date(err.timestamp).toLocaleString()}</p>
-                              <p><strong className="text-white">ID:</strong> {err.id}</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-1.5">
-                              <Bug className="h-3 w-3" />
-                              {isAr ? 'مسار تكدس الأخطاء (Stack Trace)' : 'Stack Trace'}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => navigator.clipboard.writeText(err.errorStack)}
-                              className="text-[10px] text-blue-400 hover:text-blue-300 font-bold px-2 py-1 rounded bg-blue-500/10 border border-blue-500/20 transition-colors cursor-pointer"
-                            >
-                              {isAr ? 'نسخ الكود' : 'Copy Trace'}
-                            </button>
-                          </div>
-                          <div className="rounded-xl border border-white/10 bg-black p-4 font-mono text-[10px] text-rose-300/90 overflow-x-auto leading-relaxed max-h-[250px] scrollbar-thin">
-                            <pre className="whitespace-pre-wrap break-all">{err.errorStack || (isAr ? 'لا يوجد مسار تكدس متوفر.' : 'No stack trace available.')}</pre>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })
+              filteredSystemErrors.map((err) => (
+                <SystemErrorCard
+                  key={err.id}
+                  err={err}
+                  expandedErrorId={expandedErrorId}
+                  setExpandedErrorId={setExpandedErrorId}
+                  handleStatusChange={handleStatusChange}
+                  statusSavingMap={statusSavingMap}
+                  isAr={isAr}
+                />
+              ))
             )}
           </div>
         </div>
