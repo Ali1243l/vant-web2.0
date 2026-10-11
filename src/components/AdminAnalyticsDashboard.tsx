@@ -2589,7 +2589,7 @@ export default function AdminAnalyticsDashboard({
                         </div>
                       </div>
 
-                      {/* Right side: Interactive Status Control Buttons & Expand Arrow */}
+                      {/* Right side: Dropdown & Status Controls & Expand Arrow */}
                       <div
                         className="flex items-center gap-2 shrink-0 self-start sm:self-center"
                         onClick={(e) => e.stopPropagation()}
@@ -2600,52 +2600,19 @@ export default function AdminAnalyticsDashboard({
                           </span>
                         )}
 
-                        {/* Interactive Status Control Buttons */}
-                        <div className="flex items-center rounded-xl bg-black/60 p-1 border border-white/15 shadow-inner gap-1">
-                          <button
-                            type="button"
-                            disabled={isSaving}
-                            onClick={() => handleStatusChange(err.id, 'open')}
-                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                              err.status === 'open'
-                                ? 'bg-rose-500 text-white shadow-md shadow-rose-500/30'
-                                : 'text-white/50 hover:text-white hover:bg-white/10'
-                            } ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            title={isAr ? 'تغيير إلى غير محلول' : 'Set to Open'}
+                        <div className="flex items-center gap-2 shrink-0 ml-auto mr-2" onClick={(e) => e.stopPropagation()}>
+                          <select
+                            value={err.status || 'open'}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              handleStatusChange(err.id, e.target.value as any);
+                            }}
+                            className="rounded-lg border border-white/20 bg-black/80 px-3 py-1.5 text-xs font-bold text-white hover:bg-black focus:outline-none focus:border-rose-500 cursor-pointer shadow-md"
                           >
-                            <span>🔴</span>
-                            <span className="hidden xs:inline">{isAr ? 'غير محلول' : 'Open'}</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            disabled={isSaving}
-                            onClick={() => handleStatusChange(err.id, 'investigating')}
-                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                              err.status === 'investigating'
-                                ? 'bg-amber-500 text-black font-extrabold shadow-md shadow-amber-500/30'
-                                : 'text-white/50 hover:text-white hover:bg-white/10'
-                            } ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            title={isAr ? 'تغيير إلى قيد الفحص' : 'Set to Investigating'}
-                          >
-                            <span>🟡</span>
-                            <span className="hidden xs:inline">{isAr ? 'قيد الفحص' : 'Investigating'}</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            disabled={isSaving}
-                            onClick={() => handleStatusChange(err.id, 'resolved')}
-                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                              err.status === 'resolved'
-                                ? 'bg-emerald-500 text-black font-extrabold shadow-md shadow-emerald-500/30'
-                                : 'text-white/50 hover:text-white hover:bg-white/10'
-                            } ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            title={isAr ? 'تغيير إلى تم الحل' : 'Set to Resolved'}
-                          >
-                            <span>🟢</span>
-                            <span className="hidden xs:inline">{isAr ? 'تم الحل' : 'Resolved'}</span>
-                          </button>
+                            <option value="open">🔴 غير محلول</option>
+                            <option value="investigating">🟡 قيد الفحص</option>
+                            <option value="resolved">🟢 تم الحل</option>
+                          </select>
                         </div>
 
                         <button
