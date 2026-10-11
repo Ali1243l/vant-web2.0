@@ -1,15 +1,21 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { AnimatePresence, motion, useMotionValue, useTransform, animate, type Variants } from 'framer-motion';
-import { ChevronLeft, ChevronRight, X, Check, AlertCircle, Copy, Ruler, MessageCircle, Truck, Share2, Sparkles, Tag } from 'lucide-react';
-import { ALL_SIZES, type Product, type Language, type Size } from '../types';
-import { formatPrice } from '../lib/supabase';
+import { AnimatePresence, motion, useMotionValue, useTransform, animate } from 'framer-motion';
+import { X } from 'lucide-react';
+import type { Product, Language } from '../types';
 import { DEFAULT_WHATSAPP_PHONE } from '../lib/constants';
 import ShareModal from './ShareModal';
 import ProductDrawerSkeleton from './ProductDrawerSkeleton';
-import { calculateRecommendedSize } from '../data/sizeGuide';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { trackEvent } from '../lib/analytics';
-import { resolveProductColorVariants, type ColorVariant } from '../lib/productVariants';
+import { resolveProductColorVariants } from '../lib/productVariants';
+
+import ProductDrawerGallery from './product_drawer/ProductDrawerGallery';
+import ProductHeaderInfo from './product_drawer/ProductHeaderInfo';
+import ProductColorSelector from './product_drawer/ProductColorSelector';
+import ProductSizeSection from './product_drawer/ProductSizeSection';
+import ProductOrderButton from './product_drawer/ProductOrderButton';
+import ProductDetailsBadges from './product_drawer/ProductDetailsBadges';
+import ProductMobileOrderBar from './product_drawer/ProductMobileOrderBar';
 
 interface Props {
   product: Product | null;
@@ -17,36 +23,6 @@ interface Props {
   lang: Language;
   onClose: () => void;
 }
-
-// Snappy, zero-glitch directional slide variants for carousel
-const slideVariants: Variants = {
-  enter: (direction: number) => ({
-    x: direction > 0 ? 55 : -55,
-    opacity: 0,
-    scale: 0.98,
-  }),
-  center: {
-    x: 0,
-    opacity: 1,
-    scale: 1,
-    transition: {
-      x: { type: 'spring' as const, stiffness: 480, damping: 38 },
-      opacity: { duration: 0.16 },
-      scale: { duration: 0.16 },
-    },
-  },
-  exit: (direction: number) => ({
-    x: direction < 0 ? 55 : -55,
-    opacity: 0,
-    scale: 0.98,
-    transition: {
-      x: { type: 'spring' as const, stiffness: 480, damping: 38 },
-      opacity: { duration: 0.14 },
-      scale: { duration: 0.14 },
-    },
-  }),
-};
-
 
 export default function ProductDrawer({ product, loading, lang, onClose }: Props) {
   const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false));
@@ -60,6 +36,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [slideDirection, setSlideDirection] = useState(1);
   const { getControl, formatPrice, masterSizes } = useSiteControls();
+
   const whatsappControl = getControl('btn_product_whatsapp');
   const shareControl = getControl('btn_product_share');
   const copyControl = getControl('btn_product_copy');
@@ -71,36 +48,10 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
   const craftBadgeControl = getControl('sec_product_craft_badge');
   const carouselNavControl = getControl('btn_product_carousel_nav');
 
-  // Carousel pointer drag state hoisted to top
-  const [carouselDragOffset, setCarouselDragOffset] = useState(0);
-  const [isSwipingCarousel, setIsSwipingCarousel] = useState(false);
-  const carouselPointerRef = useRef<{
-    pointerId: number | null;
-    startX: number;
-    startY: number;
-    currentX: number;
-    currentY: number;
-    startTime: number;
-    isLocked: boolean;
-    lockDirection: 'horizontal' | 'vertical' | null;
-  }>({
-    pointerId: null,
-    startX: 0,
-    startY: 0,
-    currentX: 0,
-    currentY: 0,
-    startTime: 0,
-    isLocked: false,
-    lockDirection: null,
-  });
-
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [sizeFeedback, setSizeFeedback] = useState<string | null>(null);
-  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
-  const [imageRatios, setImageRatios] = useState<Record<string, number>>({});
   const [copiedTitle, setCopiedTitle] = useState(false);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
-  const [sizeGuideTab, setSizeGuideTab] = useState<'calculator' | 'table'>('calculator');
   const [showShareModal, setShowShareModal] = useState(false);
   const [calcHeight, setCalcHeight] = useState<string>('');
   const [calcWeight, setCalcWeight] = useState<string>('');
@@ -142,7 +93,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
       setHoverColorIdx(null);
       setActiveImageIndex(0);
     }
-  }, [product?.id, defaultVariantIdx]);
+  }, [product?.id, defaultVariantIdx, variantInfo]);
 
   // When a color is selected, hover previews another color variant smoothly.
   const effectiveColorIdx = hoverColorIdx !== null ? hoverColorIdx : selectedColorIdx;
@@ -159,20 +110,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     );
   }, [variantInfo, effectiveColorIdx, defaultVariantIdx]);
 
-  const dynamicRecommendation = useMemo(() => {
-    if (calcHeight.length !== 3) return null;
-    if (calcWeight.length < 2) return null;
-    const h = parseInt(calcHeight, 10);
-    const w = parseInt(calcWeight, 10);
-    if (isNaN(h) || isNaN(w) || h < 120 || h > 220 || w < 30 || w > 200) return null;
-    return calculateRecommendedSize(h, w, masterSizes);
-  }, [calcHeight, calcWeight, masterSizes]);
-
-  // "كل لون يعرض اللون مال التيشيرت فقط"
-  // STRICT RULE:
-  // Each color variant strictly and exclusively displays ONLY its own images!
-  // If the user has not chosen a specific color, show strictly ONLY the primary shirt's images!
-  // Top image and bottom thumbnails MUST ALWAYS match and belong to the SAME shirt!
+  // STRICT RULE: Each color variant strictly and exclusively displays ONLY its own images!
   const images = useMemo(() => {
     if (!product || !variantInfo) return [];
 
@@ -217,75 +155,19 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
       trackEvent('engagement_heartbeat', {
         productId: product.id,
         productTitle: pTitle,
-        isExit: false
+        isExit: false,
       });
     }, 10000);
 
-    // CLEANUP: Fire one final precise ping when they close the drawer
     return () => {
       clearInterval(intervalId);
       trackEvent('engagement_heartbeat', {
         productId: product.id,
         productTitle: pTitle,
-        isExit: true
+        isExit: true,
       });
     };
   }, [product?.id, product?.title, product?.title_ar]);
-
-  // Reset gallery position and preload image when active color variant changes
-  useEffect(() => {
-    if (product) {
-      setActiveImageIndex(0);
-      setCarouselDragOffset(0);
-      setIsSwipingCarousel(false);
-
-      images.forEach((imgSrc) => {
-        if (imgSrc && !imgSrc.startsWith('data:') && !imageRatios[imgSrc]) {
-          const img = new Image();
-          img.src = imgSrc;
-          img.onload = () => {
-            setLoadedImages((prev) => new Set(prev).add(imgSrc));
-            if (img.naturalWidth && img.naturalHeight) {
-              const r = img.naturalWidth / img.naturalHeight;
-              setImageRatios((prev) => ({ ...prev, [imgSrc]: r }));
-            }
-          };
-        }
-      });
-    }
-  }, [effectiveColorIdx, product?.id, images]);
-
-  // Helper to parse aspect ratio like "3:4" or "4/5" or "1:1"
-  const parseRatioString = useCallback((ar?: string): number | null => {
-    if (!ar) return null;
-    const parts = ar.includes('/') ? ar.split('/') : ar.split(':');
-    if (parts.length === 2) {
-      const w = parseFloat(parts[0]);
-      const h = parseFloat(parts[1]);
-      if (w > 0 && h > 0) return w / h;
-    }
-    return null;
-  }, []);
-
-  // Compute smart dynamic aspect ratio for the currently displayed image
-  const activeImageSrc = images[activeImageIndex] || product?.image_url;
-  const activeRatio = useMemo(() => {
-    if (activeImageSrc && imageRatios[activeImageSrc]) {
-      return imageRatios[activeImageSrc];
-    }
-    const parsed = parseRatioString(product?.aspect_ratio);
-    if (parsed) return parsed;
-    if (product?.width && product?.height && product.width > 0 && product.height > 0) {
-      return product.width / product.height;
-    }
-    return null;
-  }, [activeImageSrc, imageRatios, product?.aspect_ratio, product?.width, product?.height, parseRatioString]);
-
-  const carouselViewportRef = useRef<HTMLDivElement>(null);
-  const slideItemRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  const thumbnailContainerRef = useRef<HTMLDivElement>(null);
-  const thumbnailItemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const displayTitle = lang === 'ar' && product?.title_ar ? product.title_ar : product?.title;
 
@@ -304,66 +186,17 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     [images.length, activeImageIndex, product, displayTitle]
   );
 
-  // Auto-center active thumbnail smoothly strictly within its own scroll container
-  useEffect(() => {
-    const container = thumbnailContainerRef.current;
-    const activeItem = thumbnailItemRefs.current[activeImageIndex];
-    if (container && activeItem) {
-      const containerWidth = container.clientWidth;
-      const itemOffsetLeft = activeItem.offsetLeft;
-      const itemWidth = activeItem.clientWidth;
-      const targetScrollLeft = itemOffsetLeft - containerWidth / 2 + itemWidth / 2;
-      container.scrollTo({
-        left: targetScrollLeft,
-        behavior: 'smooth',
-      });
-    }
-  }, [activeImageIndex]);
-
-  // Keyboard navigation: ESC to close, Left/Right for gallery + Zero-Reflow Body Lock
-  useEffect(() => {
-    if (!product) return;
-    const prevBodyOverflow = document.body.style.overflow;
-    const prevBodyPaddingRight = document.body.style.paddingRight;
-
-    // Only apply desktop scrollbar gutter compensation to prevent layout shift
-    if (!isMobile) {
-      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-      if (scrollbarWidth > 0) {
-        document.body.style.paddingRight = `${scrollbarWidth}px`;
-      }
-      document.body.style.overflow = 'hidden';
-    }
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (showSizeGuide) {
-          setShowSizeGuide(false);
-        } else {
-          onClose();
-        }
-      } else if (e.key === 'ArrowRight') {
-        paginate(1);
-      } else if (e.key === 'ArrowLeft') {
-        paginate(-1);
-      }
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      if (!isMobile) {
-        document.body.style.overflow = prevBodyOverflow;
-        document.body.style.paddingRight = prevBodyPaddingRight;
-      }
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [product, onClose, paginate, lang, showSizeGuide, isMobile]);
-
   const availability = activeVariant?.availability ?? product?.availability ?? 'in_stock';
   const isSoldOut = availability === 'sold_out';
-  const availableSizes = isSoldOut
-    ? new Set<string>()
-    : new Set((activeVariant?.sizes || product?.sizes || []).map((s) => s.toUpperCase()));
+  const availableSizes = useMemo(() => {
+    if (isSoldOut) return new Set<string>();
+    return new Set((activeVariant?.sizes || product?.sizes || []).map((s) => s.toUpperCase()));
+  }, [isSoldOut, activeVariant?.sizes, product?.sizes]);
+
+  const renderedSizes = useMemo(() => {
+    const prodSizes = (activeVariant?.sizes || product?.sizes || []).filter(Boolean);
+    return prodSizes;
+  }, [activeVariant?.sizes, product?.sizes]);
 
   const displayCategory = lang === 'ar' && product?.category_ar ? product.category_ar : product?.category;
   const displayDescription = lang === 'ar' && product?.description_ar ? product.description_ar : product?.description;
@@ -516,7 +349,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
           ? `المقاس (${size}) منتهي حالياً ضمن هذا العرض — تم تحديده لطلب إعادة توفيره عبر واتساب بالأسفل`
           : `Size (${size}) is sold out — selected for restock request via WhatsApp below`
       );
-    } else if (availableSizes.has(size)) {
+    } else if (availableSizes.has(size.toUpperCase())) {
       setSizeFeedback(
         lang === 'ar'
           ? `المقاس (${size}) متوفر وجاهز للشحن الفوري`
@@ -531,12 +364,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     }
   };
 
-  const renderedSizes = useMemo(() => {
-    const prodSizes = (activeVariant?.sizes || product?.sizes || []).filter(Boolean);
-    return prodSizes;
-  }, [activeVariant?.sizes, product?.sizes]);
-
-  // Mobile & Modal Handlers
+  // Mobile & Modal Drag Handlers
   const dragY = useMotionValue(0);
   const backdropOpacity = useTransform(dragY, [0, 280], [1, 0]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -592,7 +420,6 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     const deltaY = touch.clientY - touchStateRef.current.startY;
     const deltaX = touch.clientX - touchStateRef.current.startX;
 
-    // Direct 1:1 finger tracking when dragging downwards
     if (deltaY > 0 && touchStateRef.current.initialScrollTop <= 0 && deltaY > Math.abs(deltaX) * 0.25) {
       dragY.set(deltaY);
     } else if (deltaY < 0 && dragY.get() > 0) {
@@ -608,7 +435,6 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     const elapsedTime = Math.max(1, Date.now() - touchStateRef.current.startTime);
     const velocity = currentDeltaY / elapsedTime;
 
-    // Ultra-sensitive threshold: Dismiss if dragged > 25px or flicked with velocity > 0.12
     if (currentDeltaY > 25 || velocity > 0.12) {
       isClosingRef.current = true;
       const targetY = typeof window !== 'undefined' ? window.innerHeight : 650;
@@ -620,7 +446,6 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
         },
       });
     } else {
-      // Snap back smoothly to open position
       animate(dragY, 0, { type: 'spring', damping: 28, stiffness: 350 });
     }
   };
@@ -642,133 +467,43 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     }
   }, [isMobile, dragY, onClose]);
 
-  const onCarouselPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    // Only handle primary button
-    if (e.button !== 0) return;
+  // Keyboard navigation: ESC to close, Left/Right for gallery + Zero-Reflow Body Lock
+  useEffect(() => {
+    if (!product) return;
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevBodyPaddingRight = document.body.style.paddingRight;
 
-    // Do not capture or intercept pointer if clicking interactive buttons or dots
-    if ((e.target as HTMLElement).closest('button, a, input, textarea')) {
-      return;
-    }
-    
-    // Prevent image drag default browser behavior
-    e.preventDefault();
-
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {
-      // Ignore if pointer capture fails
-    }
-
-    carouselPointerRef.current = {
-      pointerId: e.pointerId,
-      startX: e.clientX,
-      startY: e.clientY,
-      currentX: e.clientX,
-      currentY: e.clientY,
-      startTime: Date.now(),
-      isLocked: false,
-      lockDirection: null,
-    };
-    setIsSwipingCarousel(true);
-  };
-
-  const onCarouselPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isSwipingCarousel || carouselPointerRef.current.pointerId !== e.pointerId) return;
-    
-    const clientX = e.clientX;
-    const clientY = e.clientY;
-    carouselPointerRef.current.currentX = clientX;
-    carouselPointerRef.current.currentY = clientY;
-
-    const deltaX = clientX - carouselPointerRef.current.startX;
-    const deltaY = clientY - carouselPointerRef.current.startY;
-
-    // Direction locking after 6px movement to eliminate scroll conflict
-    if (!carouselPointerRef.current.isLocked) {
-      if (Math.abs(deltaY) > 6 && Math.abs(deltaY) > Math.abs(deltaX)) {
-        carouselPointerRef.current.isLocked = true;
-        carouselPointerRef.current.lockDirection = 'vertical';
-      } else if (Math.abs(deltaX) > 6 && Math.abs(deltaX) > Math.abs(deltaY)) {
-        carouselPointerRef.current.isLocked = true;
-        carouselPointerRef.current.lockDirection = 'horizontal';
+    if (!isMobile) {
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      if (scrollbarWidth > 0) {
+        document.body.style.paddingRight = `${scrollbarWidth}px`;
       }
+      document.body.style.overflow = 'hidden';
     }
 
-    if (carouselPointerRef.current.lockDirection === 'horizontal') {
-      if (images.length > 1) {
-        // Natural 1:1 drag with rubber-band resistance at boundaries
-        let offset = deltaX;
-        if (activeImageIndex === 0 && deltaX > 0) {
-          offset = deltaX * 0.25;
-        } else if (activeImageIndex === images.length - 1 && deltaX < 0) {
-          offset = deltaX * 0.25;
-        }
-        setCarouselDragOffset(offset);
-      }
-    }
-  };
-
-  const onCarouselPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isSwipingCarousel || carouselPointerRef.current.pointerId !== e.pointerId) return;
-    setIsSwipingCarousel(false);
-
-    try {
-      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-        e.currentTarget.releasePointerCapture(e.pointerId);
-      }
-    } catch {
-      // Ignore
-    }
-
-    const { startX, startY, currentX, currentY, startTime, lockDirection } = carouselPointerRef.current;
-    carouselPointerRef.current.pointerId = null;
-
-    const deltaX = currentX - startX;
-    const duration = Math.max(1, Date.now() - startTime);
-    const velocityX = deltaX / duration;
-
-    if (lockDirection === 'horizontal' && images.length > 1) {
-      const threshold = 40;
-      const isFlick = Math.abs(velocityX) > 0.2;
-
-      // Swiped LEFT (finger moved left, negative deltaX) -> Advance to NEXT image
-      if (deltaX < -threshold || (isFlick && velocityX < 0)) {
-        if (activeImageIndex < images.length - 1) {
-          setSlideDirection(1);
-          setActiveImageIndex((prev) => prev + 1);
-        }
-      }
-      // Swiped RIGHT (finger moved right, positive deltaX) -> Return to PREVIOUS image
-      else if (deltaX > threshold || (isFlick && velocityX > 0)) {
-        if (activeImageIndex > 0) {
-          setSlideDirection(-1);
-          setActiveImageIndex((prev) => prev - 1);
-        }
-      }
-
-      setCarouselDragOffset(0);
-    } else {
-      setCarouselDragOffset(0);
-    }
-  };
-
-  // Trackpad horizontal wheel navigation
-  const lastWheelTimeRef = useRef(0);
-  const onCarouselWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    if (images.length <= 1) return;
-    if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 20) {
-      const now = Date.now();
-      if (now - lastWheelTimeRef.current > 350) {
-        lastWheelTimeRef.current = now;
-        if (e.deltaX > 0) {
-          paginate(1);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showSizeGuide) {
+          setShowSizeGuide(false);
         } else {
-          paginate(-1);
+          onClose();
         }
+      } else if (e.key === 'ArrowRight') {
+        paginate(1);
+      } else if (e.key === 'ArrowLeft') {
+        paginate(-1);
       }
-    }
-  };
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      if (!isMobile) {
+        document.body.style.overflow = prevBodyOverflow;
+        document.body.style.paddingRight = prevBodyPaddingRight;
+      }
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [product, onClose, paginate, showSizeGuide, isMobile]);
 
   return (
     <AnimatePresence>
@@ -811,920 +546,156 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                 : { duration: 0.22, ease: [0.16, 1, 0.3, 1] }
             }
           >
-              {/* Mobile Drag to Close Zone (Direct 1:1 hardware follower) */}
-              <div
-                className="flex flex-col shrink-0 items-center justify-center pt-2.5 pb-2 cursor-grab active:cursor-grabbing md:hidden select-none touch-none w-full"
-                onTouchStart={onTouchStartDrag}
-                onTouchMove={onTouchMoveDrag}
-                onTouchEnd={onTouchEndDrag}
-                onTouchCancel={onTouchEndDrag}
-              >
-                <div className="h-1.5 w-11 rounded-full bg-black/25 dark:bg-white/30 active:bg-black/50 transition-colors" />
-                <span className="mt-1 text-[10px] font-medium text-black/40 dark:text-white/40 tracking-wider select-none">
-                  {lang === 'ar' ? 'اسحب للأسفل للإغلاق' : 'Swipe down to close'}
-                </span>
-              </div>
+            {/* Mobile Drag to Close Zone */}
+            <div
+              className="flex flex-col shrink-0 items-center justify-center pt-2.5 pb-2 cursor-grab active:cursor-grabbing md:hidden select-none touch-none w-full"
+              onTouchStart={onTouchStartDrag}
+              onTouchMove={onTouchMoveDrag}
+              onTouchEnd={onTouchEndDrag}
+              onTouchCancel={onTouchEndDrag}
+            >
+              <div className="h-1.5 w-11 rounded-full bg-black/25 dark:bg-white/30 active:bg-black/50 transition-colors" />
+              <span className="mt-1 text-[10px] font-medium text-black/40 dark:text-white/40 tracking-wider select-none">
+                {lang === 'ar' ? 'اسحب للأسفل للإغلاق' : 'Swipe down to close'}
+              </span>
+            </div>
 
-              {/* Dedicated Close Button (Visible on both desktop and mobile, positioned cleanly with safe clearance) */}
-              <button
-                type="button"
-                onClick={handleClose}
-                className="absolute top-3.5 md:top-5 z-20 flex h-9 w-9 md:h-12 md:w-12 items-center justify-center rounded-full bg-white/85 dark:bg-[#0d0f12]/85 text-[#15171c] dark:text-white backdrop-blur-md shadow-xs border border-black/5 dark:border-white/10 transition-all hover:bg-white dark:hover:bg-[#0d0f12] active:scale-95 ltr:right-3.5 rtl:left-3.5 md:ltr:right-5 md:rtl:left-5 cursor-pointer"
-                aria-label={lang === 'ar' ? 'إغلاق' : 'Close'}
-              >
-                <X className="h-4 w-4 md:h-5 md:w-5" />
-              </button>
+            {/* Dedicated Close Button */}
+            <button
+              type="button"
+              onClick={handleClose}
+              className="absolute top-3.5 md:top-5 z-20 flex h-9 w-9 md:h-12 md:w-12 items-center justify-center rounded-full bg-white/85 dark:bg-[#0d0f12]/85 text-[#15171c] dark:text-white backdrop-blur-md shadow-xs border border-black/5 dark:border-white/10 transition-all hover:bg-white dark:hover:bg-[#0d0f12] active:scale-95 ltr:right-3.5 rtl:left-3.5 md:ltr:right-5 md:rtl:left-5 cursor-pointer"
+              aria-label={lang === 'ar' ? 'إغلاق' : 'Close'}
+            >
+              <X className="h-4 w-4 md:h-5 md:w-5" />
+            </button>
 
-              {/* Responsive Layout Grid (Split screen on Desktop, Stack on Mobile) */}
-              <div
-                ref={scrollContainerRef}
-                className="grid flex-1 overflow-y-auto overscroll-contain touch-pan-y md:grid-cols-12 md:overflow-hidden md:h-full pb-20 md:pb-0"
-              >
-                {/* GALLERY SECTION (Column 1-6 on desktop, Unified LTR Media Track for 100% Spatial Agreement) */}
-                <div
-                  dir="ltr"
-                  className="relative flex flex-col justify-center md:justify-between bg-black/[0.02] dark:bg-black/20 p-2 sm:p-4 md:p-7 lg:p-8 md:col-span-6 md:border-e md:border-black/5 md:dark:border-white/10 md:overflow-y-auto md:h-full [direction:ltr] no-scrollbar"
-                >
-                  {/* Main Active Image Viewport with Dynamic Proportional Aspect Ratio Matching Uploaded Image */}
-                  <div
-                    ref={carouselViewportRef}
-                    dir="ltr"
-                    style={{
-                      aspectRatio: activeRatio ? `${activeRatio}` : '3 / 4',
+            {/* Responsive Layout Grid (Split screen on Desktop, Stack on Mobile) */}
+            <div
+              ref={scrollContainerRef}
+              className="grid flex-1 overflow-y-auto overscroll-contain touch-pan-y md:grid-cols-12 md:overflow-hidden md:h-full pb-20 md:pb-0"
+            >
+              {/* GALLERY SECTION (Column 1-6 on desktop) */}
+              <ProductDrawerGallery
+                images={images}
+                product={product}
+                displayTitle={displayTitle}
+                activeImageIndex={activeImageIndex}
+                setActiveImageIndex={setActiveImageIndex}
+                slideDirection={slideDirection}
+                setSlideDirection={setSlideDirection}
+                carouselNavVisible={carouselNavControl.visible}
+                lang={lang}
+                paginate={paginate}
+              />
+
+              {/* DETAILS SECTION (Column 7-12 on desktop) */}
+              <div className="flex flex-col justify-between p-4 sm:p-6 md:p-7 lg:p-8 md:col-span-6 lg:col-span-6 md:overflow-y-auto md:h-full no-scrollbar pb-6 md:pb-8">
+                <div className="space-y-4 sm:space-y-5 md:space-y-6">
+                  {/* Category, Title, Price & Status Info */}
+                  <ProductHeaderInfo
+                    displayCategory={displayCategory}
+                    statusBadgeClasses={statusBadgeClasses}
+                    statusDotClass={statusDotClass}
+                    statusBadgeLabel={statusBadgeLabel}
+                    displayTitle={displayTitle}
+                    formatPrice={formatPrice}
+                    activePrice={activePrice}
+                    product={product}
+                    activeVariant={activeVariant}
+                    lang={lang}
+                    availability={availability}
+                    statusBannerText={statusBannerText}
+                  />
+
+                  {/* Garment Colors Selector */}
+                  <ProductColorSelector
+                    variantInfo={variantInfo}
+                    product={product}
+                    lang={lang}
+                    selectedColorIdx={selectedColorIdx}
+                    setSelectedColorIdx={setSelectedColorIdx}
+                    hoverColorIdx={hoverColorIdx}
+                    setHoverColorIdx={setHoverColorIdx}
+                    defaultVariantIdx={defaultVariantIdx}
+                    onColorChange={() => {
+                      setActiveImageIndex(0);
                     }}
-                    className="relative flex flex-1 min-h-0 items-center justify-center w-full max-w-full sm:max-w-md md:max-w-full overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-b from-black/[0.03] to-black/[0.07] dark:from-white/[0.02] dark:to-white/[0.05] border border-black/5 dark:border-white/10 touch-pan-y select-none cursor-grab active:cursor-grabbing [direction:ltr] shadow-inner max-h-[58vh] sm:max-h-[62vh] md:max-h-[520px] lg:max-h-[560px] xl:max-h-[600px] mx-auto transition-[aspect-ratio] duration-300 ease-out"
-                    onPointerDown={onCarouselPointerDown}
-                    onPointerMove={onCarouselPointerMove}
-                    onPointerUp={onCarouselPointerUp}
-                    onPointerCancel={onCarouselPointerUp}
-                    onWheel={onCarouselWheel}
-                  >
-                    {/* Ambient Luxury Spotlight Glow */}
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(0,74,215,0.06),transparent_70%)] dark:bg-[radial-gradient(circle_at_50%_40%,rgba(59,130,246,0.1),transparent_70%)] pointer-events-none" />
+                  />
 
-                    {/* Continuous Hardware-Accelerated Sliding Track */}
-                    {images.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center p-8 h-full w-full min-h-[300px] text-[#15171c]/40 dark:text-white/40">
-                        <svg className="w-16 h-16 stroke-[1.2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                        </svg>
-                        <span className="mt-3 text-xs tracking-widest uppercase font-medium">VANT · ڤانت</span>
-                      </div>
-                    ) : (
-                      <div
-                        dir="ltr"
-                        className="flex h-full w-full will-change-transform [direction:ltr]"
-                        style={{
-                          transform: `translate3d(calc(-${activeImageIndex * 100}% + ${carouselDragOffset}px), 0, 0)`,
-                          transition: isSwipingCarousel ? 'none' : 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
-                        }}
-                      >
-                        {images.map((imgSrc, idx) => {
-                          const isImageLoaded = loadedImages.has(imgSrc);
+                  {/* Sizing & Fit Section + Smart Guide */}
+                  <ProductSizeSection
+                    renderedSizes={renderedSizes}
+                    availableSizes={availableSizes}
+                    selectedSize={selectedSize}
+                    onSizeClick={handleSizeClick}
+                    sizeFeedback={sizeFeedback}
+                    isSoldOut={isSoldOut}
+                    lang={lang}
+                    sizeGuideControl={sizeGuideControl}
+                    showSizeGuide={showSizeGuide}
+                    setShowSizeGuide={setShowSizeGuide}
+                    masterSizes={masterSizes}
+                    bespokeControl={bespokeControl}
+                    bespokeWhatsappUrl={bespokeWhatsappUrl}
+                    product={product}
+                    displayTitle={displayTitle}
+                    calcHeight={calcHeight}
+                    setCalcHeight={setCalcHeight}
+                    calcWeight={calcWeight}
+                    setCalcWeight={setCalcWeight}
+                  />
 
-                          return (
-                            <div
-                              key={idx}
-                              ref={(el) => {
-                                slideItemRefs.current[idx] = el;
-                              }}
-                              data-slide-index={idx}
-                              dir="ltr"
-                              className="relative flex h-full w-full shrink-0 items-center justify-center p-3 sm:p-5 select-none [direction:ltr]"
-                            >
-                              {/* High-fidelity shimmer skeleton placeholder while image is fetching */}
-                              {!isImageLoaded && (
-                                <div className="absolute inset-3 sm:inset-5 rounded-2xl bg-neutral-200/80 dark:bg-neutral-800/60 overflow-hidden flex items-center justify-center pointer-events-none border border-black/5 dark:border-white/10">
-                                  <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/50 dark:via-white/12 to-transparent pointer-events-none" />
-                                  <div className="opacity-20 dark:opacity-10 pointer-events-none">
-                                    <svg className="w-12 h-12 stroke-[1.2] text-neutral-400 dark:text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                                    </svg>
-                                  </div>
-                                </div>
-                              )}
+                  {/* Primary Conversion Action: Desktop WhatsApp Order Button */}
+                  <ProductOrderButton
+                    whatsappControl={whatsappControl}
+                    whatsappUrl={whatsappUrl}
+                    product={product}
+                    displayTitle={displayTitle}
+                    selectedSize={selectedSize}
+                    buttonLabel={buttonLabel}
+                    lang={lang}
+                  />
 
-                              {(imgSrc || product?.image_url)?.trim() ? (
-                                <img
-                                  src={(imgSrc || product?.image_url)!.trim()}
-                                  alt={`${displayTitle} - ${idx + 1}`}
-                                  decoding="async"
-                                  loading={idx === 0 || idx === activeImageIndex ? 'eager' : 'lazy'}
-                                  referrerPolicy="no-referrer"
-                                  draggable={false}
-                                  className={`max-h-full max-w-full w-auto h-auto object-contain drop-shadow-md select-none pointer-events-none transition-opacity duration-250 ${
-                                    isImageLoaded ? 'opacity-100' : 'opacity-0'
-                                  }`}
-                                  onError={(e) => {
-                                    const target = e.currentTarget;
-                                    if (product?.image_url?.trim() && target.src !== product.image_url.trim()) {
-                                      target.src = product.image_url.trim();
-                                    }
-                                  }}
-                                  onLoad={(e) => {
-                                    if (imgSrc) {
-                                      setLoadedImages((prev) => new Set(prev).add(imgSrc));
-                                      const target = e.currentTarget;
-                                      if (target.naturalWidth && target.naturalHeight) {
-                                        const r = target.naturalWidth / target.naturalHeight;
-                                        setImageRatios((prev) => (prev[imgSrc] === r ? prev : { ...prev, [imgSrc]: r }));
-                                      }
-                                    }
-                                  }}
-                                />
-                              ) : null}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Carousel Navigation Arrows (Responsive on Desktop, Tablet & Mobile) */}
-                    {carouselNavControl.visible && images.length > 1 && (
-                      <>
-                        <button
-                          type="button"
-                          disabled={activeImageIndex <= 0}
-                          onPointerDown={(e) => e.stopPropagation()}
-                          onPointerUp={(e) => e.stopPropagation()}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (activeImageIndex > 0) paginate(-1);
-                          }}
-                          className={`absolute left-2.5 sm:left-3.5 top-1/2 -translate-y-1/2 z-30 flex h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 lg:h-13 lg:w-13 items-center justify-center rounded-full bg-white/90 dark:bg-[#16191f]/90 text-[#15171c] dark:text-white backdrop-blur-md shadow-lg border border-black/10 dark:border-white/15 transition-all ${
-                            activeImageIndex > 0
-                              ? 'hover:scale-110 active:scale-95 cursor-pointer opacity-100'
-                              : 'opacity-0 pointer-events-none'
-                          }`}
-                          aria-label={lang === 'ar' ? 'الصورة السابقة' : 'Previous image'}
-                        >
-                          <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5 md:h-5.5 md:w-5.5 lg:h-6 lg:w-6" />
-                        </button>
-
-                        <button
-                          type="button"
-                          disabled={activeImageIndex >= images.length - 1}
-                          onPointerDown={(e) => e.stopPropagation()}
-                          onPointerUp={(e) => e.stopPropagation()}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (activeImageIndex < images.length - 1) paginate(1);
-                          }}
-                          className={`absolute right-2.5 sm:right-3.5 top-1/2 -translate-y-1/2 z-30 flex h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 lg:h-13 lg:w-13 items-center justify-center rounded-full bg-white/90 dark:bg-[#16191f]/90 text-[#15171c] dark:text-white backdrop-blur-md shadow-lg border border-black/10 dark:border-white/15 transition-all ${
-                            activeImageIndex < images.length - 1
-                              ? 'hover:scale-110 active:scale-95 cursor-pointer opacity-100'
-                              : 'opacity-0 pointer-events-none'
-                          }`}
-                          aria-label={lang === 'ar' ? 'الصورة التالية' : 'Next image'}
-                        >
-                          <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 md:h-5.5 md:w-5.5 lg:h-6 lg:w-6" />
-                        </button>
-
-                        {/* Refined Luxury Floating Image Counter Badge (Compact & Elegant) */}
-                        <div className="absolute top-3 left-3 z-20 flex items-center gap-1 rounded-full bg-black/60 dark:bg-black/75 px-2.5 py-0.5 text-[10.5px] font-mono font-semibold tracking-wide text-white/95 backdrop-blur-md border border-white/15 shadow-xs select-none">
-                          <span className="text-[#60a5fa] font-bold">{activeImageIndex + 1}</span>
-                          <span className="text-white/35">/</span>
-                          <span className="text-white/75">{images.length}</span>
-                        </div>
-
-                        {/* Subtle Dynamic Pagination Dots Indicator at Bottom with Spring Physics */}
-                        <div
-                          dir="ltr"
-                          className="absolute bottom-3.5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 rounded-full bg-black/60 dark:bg-black/80 px-2.5 py-1 backdrop-blur-md border border-white/15 shadow-lg pointer-events-auto select-none [direction:ltr]"
-                        >
-                          {images.map((_, i) => {
-                            const isCurrent = i === activeImageIndex;
-                            return (
-                              <button
-                                key={i}
-                                type="button"
-                                onPointerDown={(e) => e.stopPropagation()}
-                                onPointerUp={(e) => e.stopPropagation()}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSlideDirection(i > activeImageIndex ? 1 : -1);
-                                  setActiveImageIndex(i);
-                                }}
-                                className="relative flex items-center justify-center p-0.5 cursor-pointer focus:outline-none"
-                                aria-label={`Slide ${i + 1}`}
-                              >
-                                <motion.span
-                                  layout
-                                  transition={{ type: 'spring', stiffness: 500, damping: 32 }}
-                                  className={`block rounded-full ${
-                                    isCurrent
-                                      ? 'w-4.5 h-1.5 bg-gradient-to-r from-[#004ad7] to-[#3b82f6] shadow-sm shadow-[#3b82f6]/50'
-                                      : 'w-1.5 h-1.5 bg-white/40 hover:bg-white/75'
-                                  }`}
-                                />
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Stable Luxury Animated Thumbnail Navigation Strip with Auto-Centering (Matched LTR Direction) - Hidden on Mobile */}
-                  {images.length > 1 && (
-                    <div
-                      ref={thumbnailContainerRef}
-                      dir="ltr"
-                      className="mt-3 sm:mt-4 hidden md:flex items-center justify-center overflow-x-auto py-1 px-2 no-scrollbar scroll-smooth [direction:ltr] w-full min-h-[64px] sm:min-h-[72px] md:min-h-[76px] shrink-0"
-                    >
-                      <div className="flex items-center justify-center gap-2 sm:gap-2.5 mx-auto min-w-fit">
-                        {images.map((img, idx) => {
-                          const isActive = idx === activeImageIndex;
-                          return (
-                            <button
-                              key={idx}
-                              ref={(el) => {
-                                thumbnailItemRefs.current[idx] = el;
-                              }}
-                              dir="ltr"
-                              type="button"
-                              onPointerDown={(e) => e.stopPropagation()}
-                              onClick={() => {
-                                setSlideDirection(idx > activeImageIndex ? 1 : -1);
-                                setActiveImageIndex(idx);
-                              }}
-                              onMouseEnter={() => {
-                                if (idx !== activeImageIndex) {
-                                  setSlideDirection(idx > activeImageIndex ? 1 : -1);
-                                  setActiveImageIndex(idx);
-                                }
-                              }}
-                              className={`group relative h-13 w-13 sm:h-15 sm:w-15 md:h-16 md:w-16 shrink-0 overflow-hidden rounded-2xl transition-all duration-200 active:scale-95 cursor-pointer [direction:ltr] ${
-                                isActive
-                                  ? 'ring-2 ring-[#004ad7] dark:ring-[#3b82f6] ring-offset-2 ring-offset-[#f8f9fa] dark:ring-offset-[#16191f] shadow-md scale-105'
-                                  : 'opacity-60 hover:opacity-100 hover:scale-100 border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5'
-                              }`}
-                              aria-label={`View image ${idx + 1}`}
-                            >
-                              {img?.trim() ? (
-                                <img
-                                  src={img.trim()}
-                                  alt=""
-                                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
-                                />
-                              ) : null}
-
-                              {/* Thumbnail Index Pill */}
-                              <span className="absolute bottom-1 right-1 z-10 rounded-md bg-black/65 px-1 py-0.2 text-[8.5px] font-mono font-bold text-white backdrop-blur-xs">
-                                {idx + 1}
-                              </span>
-
-                              {isActive && (
-                                <motion.div
-                                  layoutId="active-thumb-glow"
-                                  className="absolute inset-0 bg-[#004ad7]/15 dark:bg-[#3b82f6]/20 ring-1 ring-inset ring-white/30"
-                                />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* DETAILS SECTION: Spacious, Architectural & Uncluttered Luxury Layout (50/50 Balanced on Desktop) */}
-                <div className="flex flex-col justify-between p-4 sm:p-6 md:p-7 lg:p-8 md:col-span-6 lg:col-span-6 md:overflow-y-auto md:h-full no-scrollbar pb-6 md:pb-8">
-                  {/* Top Details Body */}
-                  <div className="space-y-4 sm:space-y-5 md:space-y-6">
-                    {/* 1. Header Metadata: Category + Availability Badge (With Safe Clearance from Close Button) */}
-                    <div className="flex items-center gap-2 flex-wrap ltr:pe-12 rtl:pe-12 md:ltr:pe-16 md:rtl:pe-16">
-                      {displayCategory && (
-                        <span className="text-[11px] md:text-xs font-bold tracking-widest uppercase text-[#6b7280] dark:text-[#9ca3af]">
-                          {displayCategory}
-                        </span>
-                      )}
-                      {displayCategory && <span className="text-black/20 dark:text-white/20">•</span>}
-                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs font-semibold border backdrop-blur-md ${statusBadgeClasses}`}>
-                        {statusDotClass && <span className={`h-1.5 w-1.5 rounded-full ${statusDotClass}`} />}
-                        <span>{statusBadgeLabel}</span>
-                      </span>
-                    </div>
-
-                    {/* 2. Editorial Title */}
-                    <h2
-                      dir="auto"
-                      className="text-lg sm:text-2xl md:text-2xl lg:text-[28px] xl:text-3xl font-extrabold leading-snug tracking-tight text-[#15171c] dark:text-white"
-                    >
-                      {displayTitle}
-                    </h2>
-
-                    {/* 3. Luxury Price & Offer Showcase */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <div className="flex items-baseline gap-2.5">
-                          <p className="text-2xl sm:text-3xl md:text-3xl lg:text-4xl font-extrabold tabular-nums text-[#004ad7] dark:text-[#3b82f6] tracking-tight">
-                            {formatPrice(activePrice)}
-                          </p>
-                          {product.is_offer && (activeVariant?.originalPrice || product.original_price) && (activeVariant?.originalPrice || product.original_price)! > activePrice && (
-                            <span className="text-sm sm:text-base md:text-lg text-black/35 dark:text-white/40 line-through tabular-nums font-mono font-medium">
-                              {formatPrice(activeVariant?.originalPrice || product.original_price!)}
-                            </span>
-                          )}
-                        </div>
-
-                        {product.is_offer && (
-                          <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 md:px-3.5 md:py-1.5 lg:px-4 lg:py-2 text-xs md:text-sm lg:text-[15px] font-bold bg-[#004ad7]/10 dark:bg-[#3b82f6]/15 border border-[#004ad7]/25 dark:border-[#3b82f6]/35 text-[#004ad7] dark:text-[#60a5fa] shadow-2xs">
-                            <Tag className="h-3.5 w-3.5 md:h-4 md:w-4 shrink-0" />
-                            <span>{lang === 'ar' ? (product.offer_badge_ar || 'عرض خاص') : (product.offer_badge_en || 'Special Offer')}</span>
-                            {(activeVariant?.originalPrice || product.original_price) && (activeVariant?.originalPrice || product.original_price)! > activePrice && (
-                              <span dir="ltr" className="rounded-md bg-[#004ad7] dark:bg-[#3b82f6] text-white px-1.5 py-0.2 font-mono font-black text-[10px] md:text-xs">
-                                -{Math.round((((activeVariant?.originalPrice || product.original_price)! - activePrice) / (activeVariant?.originalPrice || product.original_price)!) * 100)}%
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Single clean status strip if not regular in_stock */}
-                      {availability !== 'in_stock' && (
-                        <div className="flex items-center gap-2 rounded-xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/5 dark:border-white/10 px-3 py-2 text-xs md:text-sm text-[#15171c] dark:text-white/85">
-                          <span className={`h-2 w-2 rounded-full shrink-0 ${statusDotClass || 'bg-[#004ad7]'}`} />
-                          <span dir="auto" className="leading-snug">{statusBannerText}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 4. Compact Garment Colors Selector (Only shown if product has real colors) */}
-                    {variantInfo && (variantInfo.hasMultipleColors || (Array.isArray(product?.colors) && product.colors.length > 0)) && (
-                      <div className="space-y-2.5 pt-0.5">
-                        <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs md:text-sm font-bold text-[#15171c] dark:text-white uppercase tracking-wider">
-                              {lang === 'ar' ? 'اللون:' : 'Color:'}
-                            </span>
-                            {selectedColorIdx !== null ? (
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs md:text-sm font-bold text-[#004ad7] dark:text-[#3b82f6]">
-                                  {variantInfo.variants[selectedColorIdx]?.colorNameAr || ''}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedColorIdx(null);
-                                    setHoverColorIdx(null);
-                                    setActiveImageIndex(0);
-                                  }}
-                                  className="text-[11px] font-semibold text-black/45 dark:text-white/50 hover:text-red-500 dark:hover:text-red-400 underline underline-offset-2 transition-colors cursor-pointer"
-                                  title={lang === 'ar' ? 'إلغاء تحديد اللون' : 'Clear color selection'}
-                                >
-                                  {lang === 'ar' ? 'إلغاء التحديد' : 'Deselect'}
-                                </button>
-                              </div>
-                            ) : hoverColorIdx !== null ? (
-                              <span className="text-xs md:text-sm font-semibold text-[#004ad7]/80 dark:text-[#3b82f6]/85">
-                                {variantInfo.variants[hoverColorIdx]?.colorNameAr || ''}
-                                <span className="text-[10px] text-black/40 dark:text-white/40 ms-1.5 font-normal">
-                                  ({lang === 'ar' ? 'معاينة' : 'preview'})
-                                </span>
-                              </span>
-                            ) : (
-                              <span className="text-xs md:text-sm font-normal text-black/45 dark:text-white/45">
-                                {lang === 'ar' ? 'اختر لوناً' : 'Select a color'}
-                              </span>
-                            )}
-                          </div>
-                          {variantInfo.variants.length > 1 && (
-                            <span className="text-[11px] text-[#6b7280] dark:text-[#9ca3af]">
-                              {lang === 'ar' ? `${variantInfo.variants.length} ألوان متوفرة` : `${variantInfo.variants.length} colors`}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Compact Pure Color Swatches Strip */}
-                        <div className="flex flex-wrap gap-2">
-                          {variantInfo.variants.map((v, vIdx) => {
-                            const isSelected = selectedColorIdx === vIdx;
-                            const isHoveredPreview = selectedColorIdx === null && hoverColorIdx === vIdx;
-                            const isLight = v.hex.toLowerCase() === '#fafafc' || v.hex.toLowerCase() === '#f3efe6' || v.hex.toLowerCase() === '#ffffff';
-
-                            return (
-                              <button
-                                key={`${v.id}-${vIdx}`}
-                                type="button"
-                                onClick={() => {
-                                  if (selectedColorIdx === vIdx) {
-                                    // If already selected, reset to primary default variant
-                                    setSelectedColorIdx(defaultVariantIdx);
-                                    setHoverColorIdx(null);
-                                    setActiveImageIndex(0);
-                                  } else {
-                                    // Lock onto this color
-                                    setSelectedColorIdx(vIdx);
-                                    setHoverColorIdx(null);
-                                    setActiveImageIndex(0);
-                                    setCarouselDragOffset(0);
-                                    setIsSwipingCarousel(false);
-                                  }
-                                }}
-                                onMouseEnter={() => {
-                                  if (selectedColorIdx !== vIdx) {
-                                    setHoverColorIdx(vIdx);
-                                    setActiveImageIndex(0);
-                                  }
-                                }}
-                                onMouseLeave={() => {
-                                  setHoverColorIdx(null);
-                                  setActiveImageIndex(0);
-                                }}
-                                className={`group/color relative flex items-center gap-2 rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 text-start transition-all duration-200 active:scale-95 cursor-pointer select-none ${
-                                  isSelected
-                                    ? 'border-2 border-[#004ad7] dark:border-[#3b82f6] bg-[#004ad7]/12 dark:bg-[#3b82f6]/20 text-[#004ad7] dark:text-[#60a5fa] font-bold shadow-xs ring-2 ring-[#004ad7]/25 dark:ring-[#3b82f6]/30 scale-[1.02]'
-                                    : isHoveredPreview
-                                    ? 'border border-[#004ad7]/60 dark:border-[#3b82f6]/60 bg-[#004ad7]/6 dark:bg-[#3b82f6]/10 text-[#004ad7] dark:text-[#60a5fa]'
-                                    : 'border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.03] hover:border-black/30 dark:hover:border-white/30 hover:bg-black/[0.05] dark:hover:bg-white/[0.06] text-[#15171c] dark:text-white/90'
-                                }`}
-                                title={isSelected ? `${v.colorNameAr} (اضغط لإلغاء التحديد)` : v.colorNameAr}
-                                aria-label={v.colorNameAr}
-                              >
-                                {/* Pure Color Circle with distinct selected halo */}
-                                <span
-                                  className={`h-4.5 w-4.5 rounded-full shrink-0 transition-transform duration-200 ${
-                                    isSelected
-                                      ? 'ring-2 ring-offset-2 ring-offset-[#f0f4ff] dark:ring-offset-[#161a22] ring-[#004ad7] dark:ring-[#3b82f6] scale-110 shadow-xs'
-                                      : isHoveredPreview
-                                      ? 'ring-1 ring-offset-1 ring-[#004ad7]/50 scale-105'
-                                      : isLight
-                                      ? 'border border-black/25 dark:border-white/30 shadow-2xs'
-                                      : 'border border-black/10 dark:border-white/10 shadow-2xs'
-                                  }`}
-                                  style={{ backgroundColor: v.hex }}
-                                />
-
-                                {/* Color Name in Arabic */}
-                                <span className={`text-xs ${isSelected ? 'font-bold' : isHoveredPreview ? 'font-semibold' : 'font-medium'}`}>
-                                  {v.colorNameAr}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 5. Clean Sizing & Fit Section (Only shown if product has sizes in database) */}
-                    {renderedSizes.length > 0 && (
-                      <div className="space-y-3">
-                      {/* Sizing Header Row: Title + Guide Trigger */}
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs md:text-sm font-bold text-[#15171c] dark:text-white uppercase tracking-wider">
-                            {lang === 'ar' ? 'المقاس:' : 'Size:'}
-                          </span>
-                          {selectedSize ? (
-                            <span className="rounded-lg bg-[#004ad7] text-white px-2 py-0.5 md:px-3 md:py-1 text-xs md:text-sm font-bold shadow-2xs">
-                              {selectedSize}
-                            </span>
-                          ) : (
-                            <span className="text-xs md:text-sm text-[#6b7280] dark:text-[#9ca3af]">
-                              {lang === 'ar' ? 'يرجى اختيار مقاسك' : 'Please select'}
-                            </span>
-                          )}
-                        </div>
-
-                        {sizeGuideControl.visible && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const next = !showSizeGuide;
-                              setShowSizeGuide(next);
-                              if (next && product) {
-                                trackEvent('size_guide_open', { productId: product.id, title: displayTitle });
-                              }
-                            }}
-                            className="inline-flex items-center gap-1.5 md:gap-2 rounded-full px-2.5 py-1 md:h-10 md:px-4 lg:h-10.5 lg:px-4.5 bg-black/[0.03] dark:bg-white/[0.05] border border-black/8 dark:border-white/10 text-xs md:text-sm font-semibold text-[#004ad7] dark:text-[#3b82f6] hover:bg-[#004ad7]/10 dark:hover:bg-[#3b82f6]/15 cursor-pointer transition-all active:scale-95"
-                          >
-                            <Ruler className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                            <span>{lang === 'ar' ? sizeGuideControl.label_ar : sizeGuideControl.label_en}</span>
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Size Selection Grid */}
-                      <ul className="flex flex-wrap gap-2 md:gap-2.5 lg:gap-3">
-                        {renderedSizes.map((size) => {
-                          const isAvailable = availableSizes.has(size.toUpperCase());
-                          const isSelected = selectedSize === size;
-
-                          return (
-                            <li key={size}>
-                              <button
-                                type="button"
-                                onClick={() => handleSizeClick(size)}
-                                className={`flex h-10 min-w-[44px] sm:min-w-[48px] px-3 sm:px-3.5 md:h-13.5 md:min-w-[60px] lg:h-14 lg:min-w-[66px] md:px-5 lg:px-6 items-center justify-center rounded-xl md:rounded-2xl border text-xs sm:text-sm md:text-[15px] lg:text-base font-bold transition-all active:scale-95 cursor-pointer ${
-                                  isSelected
-                                    ? 'border-[#004ad7] bg-[#004ad7] text-white shadow-md shadow-[#004ad7]/25 ring-2 ring-[#004ad7]/30 dark:border-[#3b82f6] dark:bg-[#3b82f6]'
-                                    : isAvailable
-                                    ? 'border-black/12 dark:border-white/15 bg-white dark:bg-[#20242c] text-[#15171c] dark:text-white hover:border-[#004ad7] dark:hover:border-[#3b82f6]'
-                                    : 'border-black/8 dark:border-white/8 bg-black/[0.02] dark:bg-white/[0.02] text-black/30 dark:text-white/25 line-through hover:border-black/20'
-                                }`}
-                                aria-label={`${size} ${isAvailable ? 'available' : isSoldOut ? 'sold out' : 'out of stock'}`}
-                              >
-                                {size}
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
-
-                      {/* Size selection feedback banner */}
-                      {sizeFeedback && (
-                        <div
-                          className={`flex items-center gap-2 rounded-xl p-2.5 md:p-3 text-xs md:text-sm transition-colors ${
-                            selectedSize && availableSizes.has(selectedSize)
-                              ? 'bg-[#004ad7]/8 dark:bg-[#3b82f6]/15 text-[#004ad7] dark:text-[#3b82f6] border border-[#004ad7]/20 dark:border-[#3b82f6]/30'
-                              : 'bg-black/[0.03] dark:bg-white/[0.05] text-[#15171c] dark:text-white/85 border border-black/5 dark:border-white/10'
-                          }`}
-                        >
-                          {selectedSize && availableSizes.has(selectedSize) ? (
-                            <Check className="h-3.5 w-3.5 md:h-4 md:w-4 shrink-0 text-[#004ad7] dark:text-[#3b82f6]" />
-                          ) : (
-                            <AlertCircle className="h-3.5 w-3.5 md:h-4 md:w-4 shrink-0 text-[#004ad7] dark:text-[#3b82f6]" />
-                          )}
-                          <span className="font-medium">{sizeFeedback}</span>
-                        </div>
-                      )}
-
-                      {/* Tabbed Expandable Size Guide (Calculators & Tables) */}
-                      <AnimatePresence>
-                        {showSizeGuide && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.22, ease: 'easeInOut' }}
-                            className="overflow-hidden rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#1e222a] p-3.5 sm:p-4 shadow-sm space-y-3"
-                          >
-                            <div className="flex items-center justify-between pb-2 border-b border-black/5 dark:border-white/10">
-                              {/* 2 Clean Tabs */}
-                              <div className="flex items-center gap-1.5 bg-black/[0.04] dark:bg-white/[0.05] p-1 rounded-xl">
-                                <button
-                                  type="button"
-                                  onClick={() => setSizeGuideTab('calculator')}
-                                  className={`rounded-lg px-2.5 py-1 md:px-4 md:py-2 text-[11px] md:text-xs font-bold transition-all cursor-pointer ${
-                                    sizeGuideTab === 'calculator'
-                                      ? 'bg-white dark:bg-[#14171f] text-[#004ad7] dark:text-[#60a5fa] shadow-2xs'
-                                      : 'text-[#6b7280] dark:text-[#9ca3af] hover:text-black dark:hover:text-white'
-                                  }`}
-                                >
-                                  {lang === 'ar' ? 'حاسبة المقاس' : 'Fit Calculator'}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setSizeGuideTab('table')}
-                                  className={`rounded-lg px-2.5 py-1 md:px-4 md:py-2 text-[11px] md:text-xs font-bold transition-all cursor-pointer ${
-                                    sizeGuideTab === 'table'
-                                      ? 'bg-white dark:bg-[#14171f] text-[#004ad7] dark:text-[#60a5fa] shadow-2xs'
-                                      : 'text-[#6b7280] dark:text-[#9ca3af] hover:text-black dark:hover:text-white'
-                                  }`}
-                                >
-                                  {lang === 'ar' ? 'جدول المقاسات' : 'Size Table'}
-                                </button>
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={() => setShowSizeGuide(false)}
-                                className="text-[#6b7280] dark:text-[#9ca3af] hover:text-black dark:hover:text-white cursor-pointer p-1.5 md:p-2 rounded-lg"
-                                aria-label={lang === 'ar' ? 'إغلاق الدليل' : 'Close guide'}
-                              >
-                                <X className="h-4 w-4 md:h-4.5 md:w-4.5" />
-                              </button>
-                            </div>
-
-                            {/* TAB 1: Smart Fit Recommender */}
-                            {sizeGuideTab === 'calculator' && (
-                              <div className="space-y-3">
-                                <span className="text-[11px] md:text-xs font-medium text-[#6b7280] dark:text-[#9ca3af] block">
-                                  {lang === 'ar'
-                                    ? 'أدخل طولك ووزنك لاقتراح المقاس المثالي فوراً:'
-                                    : 'Enter your height and weight for an instant fit recommendation:'}
-                                </span>
-
-                                <div className="grid grid-cols-2 gap-2.5 md:gap-3.5">
-                                  <div>
-                                    <label className="text-[10px] md:text-xs text-[#6b7280] dark:text-[#9ca3af] block mb-1">
-                                      {lang === 'ar' ? 'الطول (120 - 220 سم)' : 'Height (120 - 220 cm)'}
-                                    </label>
-                                    <input
-                                      type="text"
-                                      inputMode="numeric"
-                                      maxLength={3}
-                                      placeholder={lang === 'ar' ? 'مثال: 175' : 'e.g. 175'}
-                                      value={calcHeight}
-                                      onChange={(e) => {
-                                        const val = e.target.value.replace(/\D/g, '').slice(0, 3);
-                                        setCalcHeight(val);
-                                      }}
-                                      className="w-full rounded-lg md:rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#16191f] px-2.5 py-1.5 md:py-2.5 md:px-3 text-xs md:text-sm text-[#15171c] dark:text-white outline-none focus:border-[#004ad7]"
-                                    />
-                                  </div>
-
-                                  <div>
-                                    <label className="text-[10px] md:text-xs text-[#6b7280] dark:text-[#9ca3af] block mb-1">
-                                      {lang === 'ar' ? 'الوزن (30 - 200 كغم)' : 'Weight (30 - 200 kg)'}
-                                    </label>
-                                    <input
-                                      type="text"
-                                      inputMode="numeric"
-                                      maxLength={3}
-                                      placeholder={lang === 'ar' ? 'مثال: 72' : 'e.g. 72'}
-                                      value={calcWeight}
-                                      onChange={(e) => {
-                                        const val = e.target.value.replace(/\D/g, '').slice(0, 3);
-                                        setCalcWeight(val);
-                                      }}
-                                      className="w-full rounded-lg md:rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#16191f] px-2.5 py-1.5 md:py-2.5 md:px-3 text-xs md:text-sm text-[#15171c] dark:text-white outline-none focus:border-[#004ad7]"
-                                    />
-                                  </div>
-                                </div>
-
-                                {dynamicRecommendation && (
-                                  <motion.div
-                                    initial={{ opacity: 0, y: 3 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className={`rounded-xl md:rounded-2xl p-3 md:p-3.5 border flex flex-col gap-2 ${
-                                      dynamicRecommendation.isBespoke
-                                        ? 'border-amber-500/30 bg-amber-500/[0.08] dark:bg-amber-500/[0.1]'
-                                        : 'border-[#004ad7]/20 bg-[#004ad7]/[0.05] dark:bg-[#3b82f6]/[0.08]'
-                                    }`}
-                                  >
-                                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                                      <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span className="text-xs md:text-sm text-[#15171c] dark:text-white font-medium">
-                                          {lang === 'ar' ? 'المقاس المقترح:' : 'Recommended Fit:'}
-                                        </span>
-                                        <span
-                                          className={`rounded-md md:rounded-lg px-2 py-0.5 md:px-2.5 md:py-1 text-xs md:text-sm font-bold text-white shadow-2xs ${
-                                            dynamicRecommendation.isBespoke
-                                              ? 'bg-amber-600 dark:bg-amber-500'
-                                              : 'bg-[#004ad7] dark:bg-[#3b82f6]'
-                                          }`}
-                                        >
-                                          {dynamicRecommendation.displaySize}
-                                        </span>
-                                      </div>
-
-                                      {dynamicRecommendation.isBespoke ? (
-                                        bespokeControl.visible ? (
-                                          <a
-                                            href={bespokeWhatsappUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="rounded-lg md:rounded-xl bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 px-2.5 py-1 md:px-3.5 md:py-1.5 text-[11px] md:text-xs font-semibold text-white shadow-2xs cursor-pointer"
-                                          >
-                                            {lang === 'ar' ? bespokeControl.label_ar : bespokeControl.label_en}
-                                          </a>
-                                        ) : null
-                                      ) : dynamicRecommendation.size ? (
-                                        <button
-                                          type="button"
-                                          onClick={() => handleSizeClick(dynamicRecommendation.size!)}
-                                          className="rounded-lg md:rounded-xl bg-[#004ad7] dark:bg-[#3b82f6] px-2.5 py-1 md:px-3.5 md:py-1.5 text-[11px] md:text-xs font-semibold text-white shadow-2xs cursor-pointer active:scale-95"
-                                        >
-                                          {lang === 'ar'
-                                            ? `اختيار مقاس (${dynamicRecommendation.displaySize})`
-                                            : `Select (${dynamicRecommendation.displaySize})`}
-                                        </button>
-                                      ) : null}
-                                    </div>
-
-                                    <p className="text-[10px] md:text-xs text-[#6b7280] dark:text-[#9ca3af] leading-relaxed">
-                                      {lang === 'ar' ? dynamicRecommendation.note_ar : dynamicRecommendation.note_en}
-                                    </p>
-                                  </motion.div>
-                                )}
-                              </div>
-                            )}
-
-                            {/* TAB 2: Measurements Table (Only Height & Weight) */}
-                            {sizeGuideTab === 'table' && (
-                              <div className="space-y-2.5">
-                                <div className="rounded-xl sm:rounded-2xl border border-black/8 dark:border-white/10 bg-black/[0.02] dark:bg-black/30 overflow-hidden">
-                                  <table className="w-full text-center text-xs md:text-sm">
-                                    <thead>
-                                      <tr className="text-[#6b7280] dark:text-[#9ca3af] border-b border-black/8 dark:border-white/10 bg-black/[0.03] dark:bg-white/[0.04]">
-                                        <th className="py-2.5 px-3 md:py-3 md:px-4 font-bold text-start w-[30%]">{lang === 'ar' ? 'المقاس' : 'Size'}</th>
-                                        <th className="py-2.5 px-3 md:py-3 md:px-4 font-bold w-[35%]">{lang === 'ar' ? 'الطول' : 'Height'}</th>
-                                        <th className="py-2.5 px-3 md:py-3 md:px-4 font-bold w-[35%]">{lang === 'ar' ? 'الوزن' : 'Weight'}</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-black/5 dark:divide-white/5 text-xs md:text-sm">
-                                      {masterSizes.filter((r) => r.enabled).map((row) => {
-                                        const isRowSelected = selectedSize === row.size;
-                                        return (
-                                          <tr
-                                            key={row.id || row.size}
-                                            onClick={() => handleSizeClick(row.size)}
-                                            className={`transition-colors cursor-pointer ${
-                                              isRowSelected
-                                                ? 'bg-[#004ad7]/12 dark:bg-[#3b82f6]/20 font-bold text-[#004ad7] dark:text-[#3b82f6]'
-                                                : 'text-[#15171c] dark:text-white/90 hover:bg-black/5 dark:hover:bg-white/5'
-                                            }`}
-                                            title={lang === 'ar' ? `انقر لاختيار مقاس (${row.size})` : `Click to select (${row.size})`}
-                                          >
-                                            <td className="py-2.5 px-3 md:py-3 md:px-4 font-bold text-start font-sans">
-                                              <span className="inline-flex items-center gap-2">
-                                                <span className={`h-2 w-2 rounded-full transition-transform ${isRowSelected ? 'bg-[#004ad7] dark:bg-[#3b82f6] scale-125' : 'bg-black/20 dark:bg-white/20'}`} />
-                                                <span className="px-2 py-0.5 rounded-md bg-black/5 dark:bg-white/10 text-xs md:text-sm font-bold">{row.size}</span>
-                                              </span>
-                                            </td>
-                                            <td className="py-2.5 px-3 md:py-3 md:px-4 tabular-nums font-medium text-zinc-700 dark:text-zinc-200">{row.height || '—'}</td>
-                                            <td className="py-2.5 px-3 md:py-3 md:px-4 tabular-nums font-medium text-zinc-700 dark:text-zinc-200">{row.weight || '—'}</td>
-                                          </tr>
-                                        );
-                                      })}
-                                    </tbody>
-                                  </table>
-                                </div>
-                                <p className="text-[10.5px] md:text-xs text-[#6b7280] dark:text-[#9ca3af] text-center">
-                                  {lang === 'ar' ? 'انقر على أي مقاس لاعتماده فوراً للقطعة' : 'Tap any size row to select it instantly'}
-                                </p>
-                              </div>
-                            )}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                    )}
-
-                    {/* 6. PRIMARY CONVERSION ACTION: WhatsApp Order Button (Desktop / Inline view) */}
-                    {whatsappControl.visible && (
-                      <div className="pt-1 sm:pt-2 hidden md:block">
-                        <a
-                          href={whatsappUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={() => {
-                            if (product) {
-                              trackEvent('whatsapp_order', {
-                                productId: product.id,
-                                title: displayTitle,
-                                size: selectedSize,
-                                isBespoke: false,
-                              });
-                            }
-                          }}
-                          className="group relative flex h-12 md:h-13.5 lg:h-14 w-full items-center justify-center gap-2.5 md:gap-3 rounded-2xl bg-[#004ad7] hover:bg-[#003db3] dark:bg-[#3b82f6] dark:hover:bg-[#2563eb] text-white text-sm md:text-base font-bold tracking-wide transition-all active:scale-[0.98] shadow-md md:shadow-lg shadow-[#004ad7]/25 dark:shadow-[#3b82f6]/30 cursor-pointer"
-                        >
-                          <MessageCircle className="h-4.5 w-4.5 md:h-5 md:w-5 fill-white/20 stroke-white stroke-[2]" />
-                          <span>
-                            {selectedSize
-                              ? `${lang === 'ar' ? whatsappControl.label_ar : whatsappControl.label_en} (${selectedSize})`
-                              : buttonLabel || (lang === 'ar' ? whatsappControl.label_ar : whatsappControl.label_en)}
-                          </span>
-                        </a>
-                      </div>
-                    )}
-
-                    {/* Secondary Actions (Copy Title & Share) - Understated Pill Row */}
-                    {(shareControl.visible || copyControl.visible) && (
-                      <div className="flex items-center gap-2 flex-wrap pt-0.5">
-                        {copyControl.visible && (
-                          <button
-                            type="button"
-                            onClick={handleCopyTitle}
-                            className="relative flex h-8.5 items-center gap-1.5 rounded-xl border border-black/10 dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.05] hover:bg-black/[0.06] dark:hover:bg-white/10 px-3 text-xs text-[#15171c] dark:text-white hover:border-[#004ad7] dark:hover:border-[#3b82f6] hover:text-[#004ad7] dark:hover:text-[#3b82f6] transition-all active:scale-95 cursor-pointer shadow-2xs font-semibold select-none"
-                            title={lang === 'ar' ? copyControl.label_ar : copyControl.label_en}
-                          >
-                            {copiedTitle ? (
-                              <>
-                                <Check className="h-3.5 w-3.5 text-[#004ad7] dark:text-[#3b82f6] shrink-0" />
-                                <span className="font-bold text-[#004ad7] dark:text-[#3b82f6]">
-                                  {lang === 'ar' ? 'تم النسخ' : 'Copied'}
-                                </span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="h-3.5 w-3.5 text-[#6b7280] dark:text-[#9ca3af] shrink-0" />
-                                <span>
-                                  {lang === 'ar' ? copyControl.label_ar : copyControl.label_en}
-                                </span>
-                              </>
-                            )}
-                          </button>
-                        )}
-
-                        {shareControl.visible && (
-                          <button
-                            type="button"
-                            onClick={() => setShowShareModal(true)}
-                            className="flex h-8.5 items-center gap-1.5 rounded-xl border border-black/10 dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.05] hover:bg-black/[0.06] dark:hover:bg-white/10 px-3 text-xs text-[#15171c] dark:text-white hover:border-[#004ad7] dark:hover:border-[#3b82f6] hover:text-[#004ad7] dark:hover:text-[#3b82f6] transition-all active:scale-95 cursor-pointer shadow-2xs font-semibold select-none"
-                            title={lang === 'ar' ? shareControl.label_ar : shareControl.label_en}
-                            aria-label={lang === 'ar' ? shareControl.label_ar : shareControl.label_en}
-                          >
-                            <Share2 className="h-3.5 w-3.5 text-[#6b7280] dark:text-[#9ca3af] shrink-0" />
-                            <span>
-                              {lang === 'ar' ? shareControl.label_ar : shareControl.label_en}
-                            </span>
-                          </button>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="h-px w-full bg-black/5 dark:bg-white/5" />
-
-                    {/* Editorial Description */}
-                    {displayDescription && (
-                      <p
-                        dir="auto"
-                        className="text-xs sm:text-sm leading-relaxed text-[#15171c]/70 dark:text-white/70"
-                      >
-                        {displayDescription}
-                      </p>
-                    )}
-
-                    {/* 7. Cohesive Micro Highlights Grid (Delivery & Craftsmanship) */}
-                    {(deliveryBadgeControl.visible || craftBadgeControl.visible) && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 text-xs md:text-sm pb-2">
-                        {deliveryBadgeControl.visible && (
-                          <div className="flex items-start gap-2.5 md:gap-3 rounded-xl md:rounded-2xl border border-black/6 dark:border-white/8 bg-black/[0.02] dark:bg-white/[0.03] p-2.5 md:p-3.5">
-                            <Truck className="h-4 w-4 md:h-5 md:w-5 shrink-0 text-[#004ad7] dark:text-[#3b82f6] mt-0.5" />
-                            <div>
-                              <span className="font-bold text-[11px] md:text-xs text-[#15171c] dark:text-white block">
-                                {lang === 'ar' ? deliveryBadgeControl.label_ar : deliveryBadgeControl.label_en}
-                              </span>
-                              <span className="text-[10px] md:text-[11px] text-[#6b7280] dark:text-[#9ca3af] leading-normal block mt-0.5">
-                                {lang === 'ar' ? 'خلال 3 - 5 أيام مع حق الفحص والمعاينة عند الاستلام' : 'Within 3 - 5 days with inspection upon arrival'}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-
-                        {craftBadgeControl.visible && (
-                          <div className="flex items-start gap-2.5 md:gap-3 rounded-xl md:rounded-2xl border border-black/6 dark:border-white/8 bg-black/[0.02] dark:bg-white/[0.03] p-2.5 md:p-3.5">
-                            <Sparkles className="h-4 w-4 md:h-5 md:w-5 shrink-0 text-[#004ad7] dark:text-[#3b82f6] mt-0.5" />
-                            <div>
-                              <span className="font-bold text-[11px] md:text-xs text-[#15171c] dark:text-white block">
-                                {lang === 'ar' ? craftBadgeControl.label_ar : craftBadgeControl.label_en}
-                              </span>
-                              <span className="text-[10px] md:text-[11px] text-[#6b7280] dark:text-[#9ca3af] leading-normal block mt-0.5">
-                                {lang === 'ar' ? 'حرفية يدوية بإتقان مع ضمان أصالة المظهر' : 'Handcrafted precision & authentic lookbook drop'}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  {/* Secondary Actions & Editorial Highlights */}
+                  <ProductDetailsBadges
+                    shareControl={shareControl}
+                    copyControl={copyControl}
+                    deliveryBadgeControl={deliveryBadgeControl}
+                    craftBadgeControl={craftBadgeControl}
+                    lang={lang}
+                    displayDescription={displayDescription}
+                    handleCopyTitle={handleCopyTitle}
+                    copiedTitle={copiedTitle}
+                    onOpenShareModal={() => setShowShareModal(true)}
+                  />
                 </div>
               </div>
+            </div>
 
-              {/* Dedicated Sticky Mobile Quick-Order Floating Bar (Safe Area Compliant) */}
-              {whatsappControl.visible && (
-                <div className="md:hidden shrink-0 fixed bottom-0 left-0 right-0 z-30 bg-white/90 dark:bg-[#16191f]/90 backdrop-blur-xl border-t border-black/5 dark:border-white/10 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] shadow-[0_-8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.3)]">
-                  <div className="flex items-center justify-between gap-3 max-w-lg mx-auto">
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[11px] font-medium text-black/50 dark:text-white/50 truncate">
-                        {selectedSize ? `${lang === 'ar' ? 'المقاس المحدد:' : 'Selected:'} ${selectedSize}` : (lang === 'ar' ? 'السعر الكلي' : 'Total Price')}
-                      </span>
-                      <span className="text-lg font-extrabold text-[#004ad7] dark:text-[#3b82f6] tabular-nums tracking-tight">
-                        {formatPrice(activePrice)}
-                      </span>
-                    </div>
-
-                    <a
-                      href={whatsappUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={() => {
-                        if (product) {
-                          trackEvent('whatsapp_order', {
-                            productId: product.id,
-                            title: displayTitle,
-                            size: selectedSize,
-                            isBespoke: false,
-                          });
-                        }
-                      }}
-                      className="flex-1 flex h-12 items-center justify-center gap-2 rounded-xl bg-[#004ad7] hover:bg-[#003db3] dark:bg-[#3b82f6] dark:hover:bg-[#2563eb] text-white text-sm font-bold tracking-wide transition-all active:scale-[0.98] shadow-md shadow-[#004ad7]/25 dark:shadow-[#3b82f6]/30 cursor-pointer"
-                    >
-                      <MessageCircle className="h-4.5 w-4.5 fill-white/20 stroke-white stroke-[2]" />
-                      <span className="truncate">
-                        {selectedSize
-                          ? `${lang === 'ar' ? whatsappControl.label_ar : whatsappControl.label_en} (${selectedSize})`
-                          : buttonLabel || (lang === 'ar' ? whatsappControl.label_ar : whatsappControl.label_en)}
-                      </span>
-                    </a>
-                  </div>
-                </div>
-              )}
-            </motion.div>
-
-            {/* Share Modal Dialog */}
-            <ShareModal
-              isOpen={showShareModal}
-              onClose={() => setShowShareModal(false)}
-              product={product}
+            {/* Dedicated Sticky Mobile Quick-Order Floating Bar */}
+            <ProductMobileOrderBar
+              whatsappControl={whatsappControl}
+              selectedSize={selectedSize}
               lang={lang}
+              activePrice={activePrice}
+              formatPrice={formatPrice}
+              whatsappUrl={whatsappUrl}
+              product={product}
+              displayTitle={displayTitle}
+              buttonLabel={buttonLabel}
             />
-          </div>
-        )}
-      </AnimatePresence>
-    );
-  }
+          </motion.div>
+
+          {/* Share Modal Dialog */}
+          <ShareModal
+            isOpen={showShareModal}
+            onClose={() => setShowShareModal(false)}
+            product={product}
+            lang={lang}
+          />
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}

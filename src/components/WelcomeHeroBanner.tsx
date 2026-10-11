@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ArrowDown, ChevronLeft, ChevronRight, ArrowUpRight, Sparkles } from 'lucide-react';
 import type { Language } from '../types';
 import { useSiteControls } from '../context/SiteControlsContext';
+import { toWesternNumerals } from '../admin/format';
 
 interface Props {
   lang: Language;
@@ -24,13 +25,6 @@ interface TrendItem {
   tagEn: string;
   tagAr: string;
   image: string;
-}
-
-export function toWesternNumerals(str: string): string {
-  if (!str) return '';
-  return str
-    .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
-    .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
 }
 
 export function cleanTagText(str: string): string {

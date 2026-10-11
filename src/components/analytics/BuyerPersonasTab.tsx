@@ -339,3 +339,5 @@ export const BuyerPersonasTab: React.FC<BuyerPersonasTabProps> = ({
     </div>
   );
 };
+
+export default BuyerPersonasTab;

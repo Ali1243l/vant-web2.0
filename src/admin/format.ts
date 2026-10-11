@@ -36,16 +36,20 @@ export const formatNumber = (
   }
 };
 
+export const formatIQD = (amount: number): string => formatCurrency(amount, 'IQD');
+
 /**
- * Converts any Arabic-Indic (٠-٩) or Eastern Arabic digits to standard Western/English digits (0-9)
+ * Converts any Arabic-Indic (٠-٩) or Eastern Arabic/Persian digits to standard Western/English digits (0-9)
  */
-export const toEnglishDigits = (val: string | number): string => {
+export const toWesternNumerals = (val: string | number | null | undefined): string => {
+  if (val === null || val === undefined) return '';
   if (typeof val === 'number') return val.toString();
-  if (!val) return '';
   return val.replace(/[\u0660-\u0669\u06F0-\u06F9]/g, (d) =>
     (d.charCodeAt(0) & 0xf).toString()
   );
 };
+
+export const toEnglishDigits = toWesternNumerals;
 
 export const formatPercent = (
   val: number,

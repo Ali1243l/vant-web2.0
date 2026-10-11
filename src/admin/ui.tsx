@@ -104,11 +104,12 @@ Input.displayName = 'Input';
    ========================================================================== */
 export interface StatusBadgeProps {
   status: 'active' | 'inactive' | 'draft' | 'archived' | 'outOfStock' | 'lowStock' | 'success' | 'warning' | 'danger';
-  label: string;
+  label?: string;
   dotOnly?: boolean;
 }
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label, dotOnly = false }) => {
+  const displayLabel = label || status;
   const configs = {
     active: { bg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', dot: 'bg-emerald-400' },
     success: { bg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', dot: 'bg-emerald-400' },
@@ -127,7 +128,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label, dotOnly
     return (
       <span className="inline-flex items-center gap-1.5 text-xs text-slate-300">
         <span className={`w-2 h-2 rounded-full ${current.dot}`} />
-        <span>{label}</span>
+        <span>{displayLabel}</span>
       </span>
     );
   }
@@ -135,7 +136,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label, dotOnly
   return (
     <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-0.5 rounded-md border ${current.bg}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${current.dot}`} />
-      <span>{label}</span>
+      <span>{displayLabel}</span>
     </span>
   );
 };

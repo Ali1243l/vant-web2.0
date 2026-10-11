@@ -11,6 +11,7 @@ import type {
   Offer,
   Subscriber,
   NotificationItem,
+  AdminSiteSettings,
   SiteSettings,
   AdminView,
 } from './useAdminBridge';
@@ -27,6 +28,7 @@ export type {
   Offer,
   Subscriber,
   NotificationItem,
+  AdminSiteSettings,
   SiteSettings,
   AdminView,
 };

@@ -3,7 +3,7 @@ import { Zap, Flame, Tag, Search } from 'lucide-react';
 import type { UserBehaviorStats } from '../../lib/analytics';
 
 export interface VelocityItem {
-  id: string;
+  id: string | number;
   title: string;
   velocityScore: number;
   views: number;
@@ -344,3 +344,5 @@ export const DemandIntelligenceTab: React.FC<DemandIntelligenceTabProps> = ({
     </div>
   );
 };
+
+export default DemandIntelligenceTab;

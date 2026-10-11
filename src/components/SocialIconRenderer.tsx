@@ -51,7 +51,6 @@ import {
   Globe,
   AtSign,
   Shield,
-  Link as LinkIcon,
 } from 'lucide-react';
 
 interface Props {
@@ -62,10 +61,16 @@ interface Props {
 
 export default function SocialIconRenderer({ iconName, customSvg, className = 'h-3.5 w-3.5' }: Props) {
   if (customSvg) {
+    // Sanitize custom SVG string to prevent script injection and DOM XSS
+    const sanitizedSvg = customSvg
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/on\w+\s*=\s*(["']).*?\1/gi, '')
+      .replace(/javascript:/gi, '');
+
     return (
       <span
         className={`inline-flex items-center justify-center ${className}`}
-        dangerouslySetInnerHTML={{ __html: customSvg }}
+        dangerouslySetInnerHTML={{ __html: sanitizedSvg }}
       />
     );
   }

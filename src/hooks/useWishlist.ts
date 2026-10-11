@@ -1,26 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
+import { safeStorage } from '../utils/safeStorage';
 
 const STORAGE_KEY = 'vant_wishlist';
 const EVENT_NAME = 'vant-wishlist-update';
 
 export function useWishlist() {
-  const [wishlist, setWishlist] = useState<string[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [wishlist, setWishlist] = useState<string[]>(() => 
+    safeStorage.getItemJSON<string[]>(STORAGE_KEY, [])
+  );
 
   useEffect(() => {
     const handleSync = () => {
-      try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        setWishlist(stored ? JSON.parse(stored) : []);
-      } catch {
-        // Fallback
-      }
+      setWishlist(safeStorage.getItemJSON<string[]>(STORAGE_KEY, []));
     };
 
     window.addEventListener(EVENT_NAME, handleSync);
@@ -41,12 +32,8 @@ export function useWishlist() {
       const idStr = String(id);
       setWishlist((prev) => {
         const next = prev.includes(idStr) ? prev.filter((item) => item !== idStr) : [...prev, idStr];
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-          window.dispatchEvent(new Event(EVENT_NAME));
-        } catch {
-          // LocalStorage fallback
-        }
+        safeStorage.setItemJSON(STORAGE_KEY, next);
+        window.dispatchEvent(new Event(EVENT_NAME));
         return next;
       });
     },

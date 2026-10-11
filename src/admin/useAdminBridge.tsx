@@ -143,7 +143,7 @@ export interface NotificationItem {
   type: 'order' | 'stock' | 'system';
 }
 
-export interface SiteSettings {
+export interface AdminSiteSettings {
   storeName: string;
   storeNameEn: string;
   currency: string;
@@ -182,6 +182,8 @@ export interface SiteSettings {
   whatsappDefaultMsg: string;
   pin?: string;
 }
+
+export type SiteSettings = AdminSiteSettings;
 
 export const defaultSiteSettings: SiteSettings = {
   storeName: 'دار ڤانت (Maison VANT)',
@@ -299,10 +301,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [siteControls]);
 
   const unlock = useCallback((enteredPin: string) => {
-    return siteControls.unlockAdmin(enteredPin);
+    const cleanPin = String(enteredPin || '').trim();
+    return siteControls.unlockAdmin(cleanPin);
   }, [siteControls]);
 
-  const pin = '1234';
+  const pin = siteControls.siteSettings ? (localStorage.getItem('vant_admin_pin') || '1234') : '1234';
   const setPin = useCallback((newPin: string) => {
     siteControls.setAdminPin(newPin);
   }, [siteControls]);

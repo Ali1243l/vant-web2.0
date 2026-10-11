@@ -127,6 +127,7 @@ export interface SystemHealthTabProps {
     React.SetStateAction<'all' | 'open' | 'investigating' | 'resolved' | 'regressions'>
   >;
   isAr?: boolean;
+  onTriggerTestError?: () => Promise<void>;
 }
 
 export const SystemHealthTab: React.FC<SystemHealthTabProps> = ({
@@ -141,6 +142,7 @@ export const SystemHealthTab: React.FC<SystemHealthTabProps> = ({
   errorStatusFilter,
   setErrorStatusFilter,
   isAr = true,
+  onTriggerTestError,
 }) => {
   return (
     <div className="space-y-6 animate-in fade-in duration-200 pb-10">
@@ -196,6 +198,17 @@ export const SystemHealthTab: React.FC<SystemHealthTabProps> = ({
                 </strong>
               </span>
             </div>
+            {onTriggerTestError && (
+              <button
+                type="button"
+                onClick={onTriggerTestError}
+                className="rounded-xl border border-rose-500/40 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 px-3 py-1.5 flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                title={isAr ? 'إرسال خطأ اختباري للتحقق من الرادار' : 'Trigger simulated test error'}
+              >
+                <Bug className="h-3.5 w-3.5 text-rose-400" />
+                <span>{isAr ? 'محاكاة خطأ' : 'Test Error'}</span>
+              </button>
+            )}
           </div>
         </div>
 
