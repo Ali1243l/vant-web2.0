@@ -209,6 +209,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
   // Heartbeat Telemetry: Fire 'engagement_heartbeat' every 10 seconds while the product drawer is open & tab is visible
   useEffect(() => {
     if (!product) return;
+
     const pTitle = product.title_ar || product.title || 'القطعة المصممة';
 
     const intervalId = setInterval(() => {
@@ -216,7 +217,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
       trackEvent('engagement_heartbeat', {
         productId: product.id,
         productTitle: pTitle,
-        isExit: false,
+        isExit: false
       });
     }, 10000);
 
@@ -226,7 +227,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
       trackEvent('engagement_heartbeat', {
         productId: product.id,
         productTitle: pTitle,
-        isExit: true,
+        isExit: true
       });
     };
   }, [product?.id, product?.title, product?.title_ar]);

@@ -55,12 +55,18 @@ import {
   ShieldCheck,
   ArrowRight,
   Filter,
+  Terminal,
+  Bug,
+  AlertCircle,
+  CheckCircle,
+  RotateCcw,
 } from 'lucide-react';
 import {
   type UserBehaviorStats,
   type CustomerSessionProfile,
   type HesitationSignal,
   type CustomerPersonaType,
+  type SystemErrorLog,
   downloadAnalyticsCSV,
   downloadAnalyticsExcel,
   downloadAnalyticsJSON,
@@ -68,6 +74,8 @@ import {
   downloadAnalyticsMarkdown,
   clearStoredAnalytics,
   syncFromSupabaseCloud,
+  updateSystemErrorStatus,
+  trackSystemError,
 } from '../lib/analytics';
 import type { Product } from '../types';
 
@@ -115,9 +123,9 @@ export default function AdminAnalyticsDashboard({
   isAr = true,
   onRefresh,
 }: Props) {
-  // Navigation View: Overview + Pieces Performance Matrix + The 3 Core Behavioral Algorithms
+  // Navigation View: Overview + Pieces Performance Matrix + The 3 Core Behavioral Algorithms + Sentry Error Tracker
   const [activeAlgorithmView, setActiveAlgorithmView] = useState<
-    'all' | 'piece_matrix' | 'algorithm1_hesitation' | 'algorithm2_personas' | 'algorithm3_demand'
+    'all' | 'piece_matrix' | 'algorithm1_hesitation' | 'algorithm2_personas' | 'algorithm3_demand' | 'system_health'
   >('all');
 
   // Filter & Search States
@@ -130,6 +138,39 @@ export default function AdminAnalyticsDashboard({
   const [searchQuery, setSearchQuery] = useState('');
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [copiedSignalId, setCopiedSignalId] = useState<string | null>(null);
+
+  // System Error Tracker & Fingerprinting States
+  const [localErrorStatuses, setLocalErrorStatuses] = useState<Record<string, 'open' | 'investigating' | 'resolved'>>({});
+  const [errorSearchQuery, setErrorSearchQuery] = useState('');
+  const [errorStatusFilter, setErrorStatusFilter] = useState<'all' | 'open' | 'investigating' | 'resolved' | 'regressions'>('all');
+  const [expandedErrorId, setExpandedErrorId] = useState<string | null>(null);
+  const [statusSavingMap, setStatusSavingMap] = useState<Record<string, boolean>>({});
+
+  // Handle Optimistic Status Change for System Error Logs
+  const handleStatusChange = async (logId: string, newStatus: 'open' | 'investigating' | 'resolved') => {
+    setLocalErrorStatuses((prev) => ({ ...prev, [logId]: newStatus }));
+    setStatusSavingMap((prev) => ({ ...prev, [logId]: true }));
+    try {
+      await updateSystemErrorStatus(logId, newStatus);
+      if (onRefresh) await onRefresh();
+    } catch (e) {
+      console.warn('Failed to update system error status', e);
+    } finally {
+      setStatusSavingMap((prev) => ({ ...prev, [logId]: false }));
+    }
+  };
+
+  // Trigger test system error for Sentry-style Issue Tracker verification
+  const handleTriggerTestError = async () => {
+    const errorTypes = [
+      { msg: 'Supabase API Rate Limit Exceeded', stack: 'Error: Rate limit 429\n    at fetchProducts (src/context/SiteControlsContext.tsx:142)\n    at loadMore (src/components/MasonryGrid.tsx:88)' },
+      { msg: 'TypeError: Cannot read properties of undefined (reading "title_ar")', stack: 'TypeError: Cannot read properties of undefined\n    at ProductDrawer (src/components/ProductDrawer.tsx:212)\n    at ReactDev (react-dom.js:1082)' },
+      { msg: 'NetworkError: Failed to fetch inventory stream', stack: 'TypeError: Failed to fetch\n    at syncFromSupabaseCloud (src/lib/analytics.ts:502)\n    at handleTriggerSync (src/components/AdminAnalyticsDashboard.tsx:150)' },
+    ];
+    const selected = errorTypes[Math.floor(Math.random() * errorTypes.length)];
+    trackSystemError(selected.msg, selected.stack);
+    if (onRefresh) await onRefresh();
+  };
 
   // Live Database Sync & Simulation States
   const [isLiveSyncing, setIsLiveSyncing] = useState(false);
@@ -298,6 +339,67 @@ export default function AdminAnalyticsDashboard({
       return true;
     });
   }, [stats.unmetSearches, unmetSearchFilter]);
+
+  // Processed System Error Logs with local optimistic statuses & regression detection
+  const processedSystemErrors = useMemo(() => {
+    const rawList = stats.systemErrors || [];
+    // Apply optimistic overrides
+    const listWithOverrides = rawList.map((err) => {
+      const overrideStatus = localErrorStatuses[err.id];
+      const effectiveStatus = overrideStatus || err.status || 'open';
+      return {
+        ...err,
+        status: effectiveStatus,
+      };
+    });
+
+    // Re-evaluate regression flag: sorted by timestamp ascending (oldest to newest)
+    const sortedAsc = [...listWithOverrides].sort((a, b) => a.timestamp - b.timestamp);
+    const resolvedSignatures = new Set<string>();
+    const reCalculated = sortedAsc.map((err) => {
+      let isRegression = false;
+      if (err.status === 'resolved') {
+        resolvedSignatures.add(err.errorSignature);
+      } else if (err.status === 'open' && resolvedSignatures.has(err.errorSignature)) {
+        isRegression = true;
+      }
+      return { ...err, isRegression };
+    });
+
+    // Group occurrences count by errorSignature
+    const signatureGroupMap = new Map<string, number>();
+    reCalculated.forEach((err) => {
+      signatureGroupMap.set(err.errorSignature, (signatureGroupMap.get(err.errorSignature) || 0) + 1);
+    });
+
+    const finalWithGroupInfo = reCalculated.map((err) => ({
+      ...err,
+      occurrencesCount: signatureGroupMap.get(err.errorSignature) || 1,
+    }));
+
+    // Return sorted descending (newest first)
+    return finalWithGroupInfo.reverse();
+  }, [stats.systemErrors, localErrorStatuses]);
+
+  // Filtered System Error Logs for Sentry-style Issue Tracker Table
+  const filteredSystemErrors = useMemo(() => {
+    return processedSystemErrors.filter((err) => {
+      if (errorStatusFilter === 'regressions') {
+        if (!err.isRegression) return false;
+      } else if (errorStatusFilter !== 'all') {
+        if (err.status !== errorStatusFilter) return false;
+      }
+      if (errorSearchQuery.trim()) {
+        const q = errorSearchQuery.toLowerCase().trim();
+        const matchMsg = err.errorMessage.toLowerCase().includes(q);
+        const matchStack = err.errorStack.toLowerCase().includes(q);
+        const matchUrl = err.url.toLowerCase().includes(q);
+        const matchSig = err.errorSignature.toLowerCase().includes(q);
+        return matchMsg || matchStack || matchUrl || matchSig;
+      }
+      return true;
+    });
+  }, [processedSystemErrors, errorStatusFilter, errorSearchQuery]);
 
   // Detailed Piece Performance Matrix Computation
   const detailedPiecesData = useMemo(() => {
@@ -732,9 +834,9 @@ export default function AdminAnalyticsDashboard({
       )}
 
       {/* ========================================================================= */}
-      {/* ALGORITHMIC NAVIGATION TABS: OVERVIEW & 3 ALGORITHMS + PIECES MATRIX */}
+      {/* ALGORITHMIC NAVIGATION TABS: OVERVIEW, 3 ALGORITHMS, PIECES & SYSTEM HEALTH */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 p-1.5 rounded-2xl bg-black/40 border border-white/10">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 p-1.5 rounded-2xl bg-black/40 border border-white/10">
         <button
           type="button"
           onClick={() => setActiveAlgorithmView('all')}
@@ -810,6 +912,24 @@ export default function AdminAnalyticsDashboard({
           <Zap className="h-4 w-4" />
           <span>{isAr ? '🚀 3. سرعة الطلب' : '3. Demand Matrix'}</span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveAlgorithmView('system_health')}
+          className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer relative ${
+            activeAlgorithmView === 'system_health'
+              ? 'bg-[#004ad7] text-white shadow-md shadow-[#004ad7]/30 ring-1 ring-[#3b82f6]/40'
+              : 'text-white/70 hover:text-white hover:bg-white/[0.05]'
+          }`}
+        >
+          <ShieldCheck className="h-4 w-4" />
+          <span>{isAr ? '🛡️ رادار الأخطاء' : '4. Error Tracker'}</span>
+          {processedSystemErrors.filter((e) => e.status === 'open').length > 0 && (
+            <span className="rounded-full bg-rose-500 text-[10px] font-mono font-bold px-1.5 py-0.2 text-white">
+              {processedSystemErrors.filter((e) => e.status === 'open').length}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* ========================================================================= */}
@@ -818,7 +938,7 @@ export default function AdminAnalyticsDashboard({
       {(activeAlgorithmView === 'all') && (
         <div className="space-y-6">
           {/* Quick Deep-Dive Highlight Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
             {/* Algorithm 1 Highlight */}
             <div
               onClick={() => setActiveAlgorithmView('algorithm1_hesitation')}
@@ -886,6 +1006,40 @@ export default function AdminAnalyticsDashboard({
               </div>
               <p className="text-[11px] text-white/60 line-clamp-1">
                 {isAr ? 'مقارنة حية لطلب المقاسات مقابل المعروض وذكاء البحث المفقود.' : 'Live size vs stock comparison & zero-result search radar.'}
+              </p>
+            </div>
+
+            {/* Sentry-Style Error Tracker Highlight */}
+            <div
+              onClick={() => setActiveAlgorithmView('system_health')}
+              className="rounded-2xl border border-rose-500/30 bg-rose-500/[0.05] hover:bg-rose-500/10 p-4 transition-all cursor-pointer space-y-2 group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-rose-400 flex items-center gap-1.5">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>{isAr ? 'رادار مراقبة الأخطاء والصيانة' : 'Sentry Issue Tracker'}</span>
+                </span>
+                <span className="text-[11px] font-mono text-rose-300 font-bold group-hover:translate-x-[-4px] transition-transform">
+                  {isAr ? 'استعراض الأخطاء ↵' : 'Open ↵'}
+                </span>
+              </div>
+              <div className="text-2xl font-bold font-mono text-white flex items-center gap-2">
+                <span>{processedSystemErrors.filter((e) => e.status === 'open').length}</span>
+                <span className="text-xs text-white/50 font-normal">{isAr ? 'أخطاء مفتوحة' : 'open issues'}</span>
+                {processedSystemErrors.some((e) => e.isRegression) && (
+                  <span className="rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 px-2 py-0.5 text-[10px] font-bold animate-pulse">
+                    ⚠️ {isAr ? 'تكرار بعد الحل' : 'Regression'}
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-white/60 line-clamp-1">
+                {processedSystemErrors.length > 0
+                  ? isAr
+                    ? `أحدث خطأ: ${processedSystemErrors[0].errorMessage}`
+                    : processedSystemErrors[0].errorMessage
+                  : isAr
+                  ? 'جميع الأكواد والخدمات السحابية تعمل باستقرار 100%.'
+                  : 'All system operations are healthy.'}
               </p>
             </div>
           </div>
@@ -2264,6 +2418,297 @@ export default function AdminAnalyticsDashboard({
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* VIEW 6: SENTRY-STYLE SYSTEM ERROR TRACKER (رادار الأخطاء البرمجية) */}
+      {/* ========================================================================= */}
+      {activeAlgorithmView === 'system_health' && (
+        <div className="space-y-6 animate-in fade-in duration-200 pb-10">
+          {/* Header Card */}
+          <div className="rounded-3xl border border-rose-500/20 bg-gradient-to-br from-rose-950/30 via-black/40 to-slate-900/40 p-5 sm:p-6 backdrop-blur-md space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                  <Bug className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                    <span>{isAr ? 'رادار أخطاء النظام وتحليل الثبات (System Health & Issue Tracker)' : 'System Health & Issue Tracker'}</span>
+                  </h3>
+                  <p className="text-xs text-white/50 mt-1">
+                    {isAr
+                      ? 'رصد ذكي للأخطاء البرمجية، التجميع التلقائي للمشاكل المتشابهة، وتتبع تكرار الأخطاء المحلولة'
+                      : 'Smart error fingerprinting, automated grouping, and regression detection for production stability'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Error Stats */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-rose-400" />
+                  <span className="text-xs font-mono font-bold text-white">
+                    {isAr ? 'مفتوح: ' : 'Open: '}
+                    <strong className="text-rose-400">{processedSystemErrors.filter(e => e.status === 'open').length}</strong>
+                  </span>
+                </div>
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 flex items-center gap-2">
+                  <RotateCcw className="h-4 w-4 text-amber-400" />
+                  <span className="text-xs font-mono font-bold text-white">
+                    {isAr ? 'قيد التحقيق: ' : 'Investigating: '}
+                    <strong className="text-amber-400">{processedSystemErrors.filter(e => e.status === 'investigating').length}</strong>
+                  </span>
+                </div>
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-emerald-400" />
+                  <span className="text-xs font-mono font-bold text-white">
+                    {isAr ? 'محلول: ' : 'Resolved: '}
+                    <strong className="text-emerald-400">{processedSystemErrors.filter(e => e.status === 'resolved').length}</strong>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Tracker Controls */}
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-2 border-t border-white/10">
+              {/* Search */}
+              <div className="sm:col-span-7 relative">
+                <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+                <input
+                  type="text"
+                  value={errorSearchQuery}
+                  onChange={(e) => setErrorSearchQuery(e.target.value)}
+                  placeholder={isAr ? 'ابحث في رسائل الخطأ، الروابط، أو البصمة الإلكترونية...' : 'Search error messages, URLs, or fingerprints...'}
+                  className="w-full rounded-xl border border-white/15 bg-black/50 py-2.5 pr-10 pl-4 text-xs text-white placeholder-white/40 focus:border-rose-500 focus:outline-none transition-all"
+                />
+              </div>
+
+              {/* Status Filter */}
+              <div className="sm:col-span-5 flex items-center gap-2">
+                <select
+                  value={errorStatusFilter}
+                  onChange={(e) => setErrorStatusFilter(e.target.value as any)}
+                  className="flex-1 rounded-xl border border-white/15 bg-black/50 py-2.5 px-3 text-xs text-white focus:border-rose-500 focus:outline-none cursor-pointer"
+                >
+                  <option value="all" className="bg-[#12151f] text-white">
+                    {isAr ? 'كافة الحالات (All Issues)' : 'All Issues'}
+                  </option>
+                  <option value="open" className="bg-[#12151f] text-rose-400">
+                    {isAr ? '🔴 أخطاء مفتوحة (Open)' : 'Open Issues'}
+                  </option>
+                  <option value="investigating" className="bg-[#12151f] text-amber-400">
+                    {isAr ? '🟡 قيد التحقيق (Investigating)' : 'Investigating'}
+                  </option>
+                  <option value="resolved" className="bg-[#12151f] text-emerald-400">
+                    {isAr ? '🟢 قضايا محلولة (Resolved)' : 'Resolved Issues'}
+                  </option>
+                  <option value="regressions" className="bg-[#12151f] text-rose-500 font-bold">
+                    {isAr ? '🚨 تكرار الأخطاء المحلولة (Regressions)' : 'Regressions'}
+                  </option>
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setErrorSearchQuery('');
+                    setErrorStatusFilter('all');
+                  }}
+                  className="p-2.5 rounded-xl border border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+                  title={isAr ? 'إعادة ضبط' : 'Reset'}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Issue List as Flexbox CARDS */}
+          <div className="space-y-3">
+            {filteredSystemErrors.length === 0 ? (
+              <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-16 text-center space-y-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mx-auto">
+                  <ShieldCheck className="h-8 w-8" />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-white">
+                    {isAr ? 'النظام مستقر تماماً' : 'System is Healthy'}
+                  </h4>
+                  <p className="text-sm text-white/50 mt-1">
+                    {isAr ? 'لا توجد أخطاء مسجلة تطابق معايير البحث الحالية.' : 'No system errors found matching your filters.'}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              filteredSystemErrors.map((err) => {
+                const isExpanded = expandedErrorId === err.id;
+                const isSaving = statusSavingMap[err.id];
+
+                return (
+                  <div
+                    key={err.id}
+                    className={`rounded-2xl border transition-all overflow-hidden ${
+                      err.status === 'open'
+                        ? 'border-rose-500/30 bg-gradient-to-r from-rose-950/20 via-[#12151f] to-black'
+                        : err.status === 'investigating'
+                        ? 'border-amber-500/30 bg-gradient-to-r from-amber-950/20 via-[#12151f] to-black'
+                        : 'border-emerald-500/20 bg-black/40'
+                    }`}
+                  >
+                    {/* CARD HEADER */}
+                    <div
+                      className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                      onClick={() => setExpandedErrorId(isExpanded ? null : err.id)}
+                    >
+                      {/* Left side: SYSTEM_ERROR Badge + Message + Metadata */}
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <span className="shrink-0 rounded-lg bg-rose-500/20 border border-rose-500/40 text-rose-300 px-2 py-1 text-[10px] font-mono font-bold uppercase tracking-wider flex items-center gap-1">
+                          <Bug className="h-3 w-3 text-rose-400" />
+                          SYSTEM_ERROR
+                        </span>
+
+                        <div className="space-y-1 flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-bold text-xs sm:text-sm text-white leading-snug break-words">
+                              {err.errorMessage}
+                            </h4>
+                          </div>
+
+                          <div className="flex items-center gap-2 text-[10px] text-white/40 font-mono flex-wrap">
+                            <span className="bg-white/5 px-2 py-0.5 rounded border border-white/5">
+                              ⏱️ {err.formattedTime}
+                            </span>
+                            <span className="bg-white/5 px-2 py-0.5 rounded border border-white/5">
+                              🔁 {err.occurrences || 1}x
+                            </span>
+                            <span className="bg-white/5 px-2 py-0.5 rounded border border-white/5 truncate max-w-[220px]">
+                              🌐 {err.url}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right side: Interactive Status Control Buttons & Expand Arrow */}
+                      <div
+                        className="flex items-center gap-2 shrink-0 self-start sm:self-center"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {err.isRegression && (
+                          <span className="rounded-lg bg-rose-500/20 px-2.5 py-1 text-[10px] font-bold text-rose-400 border border-rose-500/40 animate-pulse whitespace-nowrap">
+                            ⚠️ {isAr ? 'خطأ متكرر (Regression)' : 'Regression'}
+                          </span>
+                        )}
+
+                        {/* Interactive Status Control Buttons */}
+                        <div className="flex items-center rounded-xl bg-black/60 p-1 border border-white/15 shadow-inner gap-1">
+                          <button
+                            type="button"
+                            disabled={isSaving}
+                            onClick={() => handleStatusChange(err.id, 'open')}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                              err.status === 'open'
+                                ? 'bg-rose-500 text-white shadow-md shadow-rose-500/30'
+                                : 'text-white/50 hover:text-white hover:bg-white/10'
+                            } ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            title={isAr ? 'تغيير إلى غير محلول' : 'Set to Open'}
+                          >
+                            <span>🔴</span>
+                            <span className="hidden xs:inline">{isAr ? 'غير محلول' : 'Open'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={isSaving}
+                            onClick={() => handleStatusChange(err.id, 'investigating')}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                              err.status === 'investigating'
+                                ? 'bg-amber-500 text-black font-extrabold shadow-md shadow-amber-500/30'
+                                : 'text-white/50 hover:text-white hover:bg-white/10'
+                            } ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            title={isAr ? 'تغيير إلى قيد الفحص' : 'Set to Investigating'}
+                          >
+                            <span>🟡</span>
+                            <span className="hidden xs:inline">{isAr ? 'قيد الفحص' : 'Investigating'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={isSaving}
+                            onClick={() => handleStatusChange(err.id, 'resolved')}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                              err.status === 'resolved'
+                                ? 'bg-emerald-500 text-black font-extrabold shadow-md shadow-emerald-500/30'
+                                : 'text-white/50 hover:text-white hover:bg-white/10'
+                            } ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            title={isAr ? 'تغيير إلى تم الحل' : 'Set to Resolved'}
+                          >
+                            <span>🟢</span>
+                            <span className="hidden xs:inline">{isAr ? 'تم الحل' : 'Resolved'}</span>
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setExpandedErrorId(isExpanded ? null : err.id)}
+                          className="p-1.5 rounded-lg border border-white/10 bg-white/5 text-white/60 hover:text-white transition-all cursor-pointer"
+                        >
+                          <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-white' : ''}`} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* EXPANDED STACK TRACE & DETAILS */}
+                    {isExpanded && (
+                      <div className="p-4 sm:p-5 bg-black/80 border-t border-white/10 space-y-4 animate-in slide-in-from-top-2 duration-300">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="rounded-xl border border-white/10 bg-white/5 p-3 space-y-1.5">
+                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-1.5">
+                              <Terminal className="h-3 w-3" />
+                              {isAr ? 'تفاصيل الخطأ الفنية' : 'Technical Details'}
+                            </span>
+                            <p className="text-xs text-rose-300 font-bold break-all leading-relaxed">{err.errorMessage}</p>
+                            <p className="text-[10px] text-white/50 font-mono break-all">SIG: {err.errorSignature}</p>
+                          </div>
+
+                          <div className="rounded-xl border border-white/10 bg-white/5 p-3 space-y-1.5">
+                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-1.5">
+                              <Filter className="h-3 w-3" />
+                              {isAr ? 'معلومات السياق' : 'Contextual Info'}
+                            </span>
+                            <div className="text-xs text-white/70 space-y-1 font-mono">
+                              <p><strong className="text-white">URL:</strong> {err.url}</p>
+                              <p><strong className="text-white">First Seen:</strong> {new Date(err.timestamp).toLocaleString()}</p>
+                              <p><strong className="text-white">ID:</strong> {err.id}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-1.5">
+                              <Bug className="h-3 w-3" />
+                              {isAr ? 'مسار تكدس الأخطاء (Stack Trace)' : 'Stack Trace'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => navigator.clipboard.writeText(err.errorStack)}
+                              className="text-[10px] text-blue-400 hover:text-blue-300 font-bold px-2 py-1 rounded bg-blue-500/10 border border-blue-500/20 transition-colors cursor-pointer"
+                            >
+                              {isAr ? 'نسخ الكود' : 'Copy Trace'}
+                            </button>
+                          </div>
+                          <div className="rounded-xl border border-white/10 bg-black p-4 font-mono text-[10px] text-rose-300/90 overflow-x-auto leading-relaxed max-h-[250px] scrollbar-thin">
+                            <pre className="whitespace-pre-wrap break-all">{err.errorStack || (isAr ? 'لا يوجد مسار تكدس متوفر.' : 'No stack trace available.')}</pre>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
       )}
     </div>

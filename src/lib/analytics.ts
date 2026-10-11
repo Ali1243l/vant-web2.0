@@ -166,6 +166,24 @@ export interface FunnelDropOffDiagnosis {
   diagnosisMessage: string;
 }
 
+export interface SystemErrorLog {
+  id: string;
+  errorMessage: string;
+  errorStack: string;
+  errorSignature: string;
+  status: 'open' | 'investigating' | 'resolved';
+  isRegression?: boolean;
+  timestamp: number;
+  formattedTime: string;
+  url: string;
+  userAgent: string;
+  device: string;
+  sessionId: string;
+  visitorId: string;
+  visitCount: number;
+  occurrencesCount?: number;
+}
+
 export interface UserBehaviorStats {
   totalPageViews: number;
   totalProductViews: number;
@@ -214,6 +232,7 @@ export interface UserBehaviorStats {
   unmetSearches: UnmetSearchInsight[];
   sizeStockMatrix: SizeDemandComparison[];
   personaDistribution: Record<CustomerPersonaType, number>;
+  systemErrors: SystemErrorLog[];
   funnel: {
     catalogViews: number;
     productSheetOpens: number;
@@ -409,9 +428,16 @@ export function trackSystemError(errorMessage: string, errorStack?: string) {
     const { visitorId, sessionId, visitCount } = manageVisitorSession();
     const nowTimestamp = Date.now();
 
+    const cleanMsg = String(errorMessage || 'Unknown Error').trim();
+    const stackLines = (errorStack || '').split('\n').map((s) => s.trim()).filter(Boolean);
+    const firstStackLine = stackLines[0] || '';
+    const errorSignature = firstStackLine ? `${cleanMsg}::${firstStackLine}` : cleanMsg;
+
     const errorData = {
-      errorMessage: String(errorMessage || 'Unknown Error'),
+      errorMessage: cleanMsg,
       errorStack: errorStack || '',
+      errorSignature,
+      status: 'open' as const,
       visitorId,
       visitCount,
       url: typeof window !== 'undefined' ? window.location.href : '',
@@ -459,6 +485,64 @@ export function trackSystemError(errorMessage: string, errorStack?: string) {
     }
   } catch (e) {
     console.warn('System error telemetry recording failed', e);
+  }
+}
+
+// Update Supabase logs JSONB status for specific system error log
+export async function updateSystemErrorStatus(
+  logId: string,
+  newStatus: 'open' | 'investigating' | 'resolved'
+): Promise<boolean> {
+  try {
+    // 1. Update local storage ring buffer for optimistic UI state
+    const rawEvents = getStoredEvents();
+    let found = false;
+    const updatedEvents = rawEvents.map((ev) => {
+      if (String(ev.id) === String(logId) || ev.data?.id === logId) {
+        found = true;
+        return {
+          ...ev,
+          data: {
+            ...ev.data,
+            status: newStatus,
+          },
+        };
+      }
+      return ev;
+    });
+
+    if (found) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedEvents));
+    }
+
+    // Always dispatch reactive update event
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('vant_analytics_updated', { detail: { id: logId, status: newStatus } }));
+    }
+
+    // 2. Update Supabase `logs` table data JSONB column
+    if (supabase) {
+      const { data: row } = await supabase.from('logs').select('*').eq('id', logId).maybeSingle();
+      if (row) {
+        const currentData = typeof row.data === 'object' && row.data !== null ? row.data : {};
+        const newData = { ...currentData, status: newStatus };
+        await supabase.from('logs').update({ data: newData }).eq('id', logId);
+      } else {
+        const { data: allLogs } = await supabase.from('logs').select('*').eq('event_type', 'system_error');
+        if (allLogs) {
+          const matchedRow = allLogs.find((r: any) => String(r.id) === String(logId) || r.data?.id === logId);
+          if (matchedRow) {
+            const currentData = typeof matchedRow.data === 'object' && matchedRow.data !== null ? matchedRow.data : {};
+            const newData = { ...currentData, status: newStatus };
+            await supabase.from('logs').update({ data: newData }).eq('id', matchedRow.id);
+          }
+        }
+      }
+    }
+    return true;
+  } catch (err) {
+    console.warn('Failed to update system error status', err);
+    return false;
   }
 }
 
@@ -1333,6 +1417,46 @@ export function getAggregatedAnalytics(productsList: any[] = []): UserBehaviorSt
 
   const lastEventTime = events.length > 0 ? events[0].timestamp : null;
 
+  // System Error Logs processing with error fingerprinting & regression tracking
+  const systemErrorEvents = rawEvents.filter((e) => e.type === 'system_error');
+  const sortedSystemErrors = [...systemErrorEvents].sort((a, b) => a.timestamp - b.timestamp);
+
+  const resolvedSignatures = new Set<string>();
+  const systemErrors: SystemErrorLog[] = sortedSystemErrors.map((ev) => {
+    const data = ev.data || {};
+    const cleanMsg = String(data.errorMessage || 'Unknown Error').trim();
+    const stackLines = String(data.errorStack || '').split('\n').map((s) => s.trim()).filter(Boolean);
+    const firstStackLine = stackLines[0] || '';
+    const errorSignature = data.errorSignature || (firstStackLine ? `${cleanMsg}::${firstStackLine}` : cleanMsg);
+    const status: 'open' | 'investigating' | 'resolved' = (data.status as any) || 'open';
+
+    let isRegression = false;
+    if (status === 'resolved') {
+      resolvedSignatures.add(errorSignature);
+    } else if (status === 'open' && resolvedSignatures.has(errorSignature)) {
+      isRegression = true;
+    }
+
+    return {
+      id: String(ev.id),
+      errorMessage: cleanMsg,
+      errorStack: data.errorStack || '',
+      errorSignature,
+      status,
+      isRegression,
+      timestamp: ev.timestamp,
+      formattedTime: new Date(ev.timestamp).toLocaleString('en-GB'),
+      url: data.url || '',
+      userAgent: data.userAgent || '',
+      device: ev.device || 'desktop',
+      sessionId: ev.sessionId || 'sess_unknown',
+      visitorId: data.visitorId || 'pvid_unknown',
+      visitCount: data.visitCount || 1,
+    };
+  });
+
+  systemErrors.reverse();
+
   console.log("=== FINAL RADAR SIGNALS ===", hesitationSignals);
 
   return {
@@ -1359,6 +1483,7 @@ export function getAggregatedAnalytics(productsList: any[] = []): UserBehaviorSt
     unmetSearches,
     sizeStockMatrix,
     personaDistribution,
+    systemErrors,
     funnel,
     funnelDiagnosis,
     hourlyTraffic,
@@ -1863,6 +1988,19 @@ export function clearStoredAnalytics() {
       }, 0);
     }
   } catch {}
+}
+
+// Auto-register global error listeners for error telemetry
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', (event) => {
+    trackSystemError(event.message || 'Window Runtime Error', event.error?.stack);
+  });
+  window.addEventListener('unhandledrejection', (event) => {
+    const reason = event.reason;
+    const msg = typeof reason === 'string' ? reason : reason?.message || 'Unhandled Promise Rejection';
+    const stack = reason?.stack || '';
+    trackSystemError(msg, stack);
+  });
 }
 
 

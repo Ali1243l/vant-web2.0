@@ -4,6 +4,7 @@ import { useSiteControls } from '../context/SiteControlsContext';
 import type { Product as StoreProduct, ProductAvailability } from '../types';
 import { getStoredSubscribers, addSubscriber as addStoredSubscriber, removeSubscriber as removeStoredSubscriber, syncSubscribersFromCloud, saveSubscribers } from '../lib/newsletter';
 import { saveOrdersToSupabase, fetchOrdersFromSupabase, saveOffersToSupabase, fetchOffersFromSupabase } from '../lib/storage';
+import { updateSystemErrorStatus } from '../lib/analytics';
 
 export type AdminView = 'dashboard' | 'orders' | 'products' | 'sizes' | 'offers' | 'banners' | 'subscribers' | 'welcome_modal' | 'controls' | 'social' | 'backup' | 'settings' | 'security';
 
@@ -274,6 +275,7 @@ interface AdminContextType {
   // Master Site Controls & Settings
   siteSettings: SiteSettings;
   updateSiteSettings: (settings: Partial<SiteSettings>) => Promise<{ success: boolean; syncedWithCloud: boolean }>;
+  updateSystemErrorStatus: (logId: string, newStatus: 'open' | 'investigating' | 'resolved') => Promise<boolean>;
 }
 
 const defaultProducts: Product[] = [];
@@ -958,6 +960,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setIsOfferModalOpen,
         siteSettings,
         updateSiteSettings,
+        updateSystemErrorStatus,
       }}
     >
       {children}

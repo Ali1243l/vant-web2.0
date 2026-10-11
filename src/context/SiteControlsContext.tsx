@@ -5,6 +5,7 @@ import { supabase, toWesternNumerals } from '../lib/supabase';
 import { DEFAULT_ACTIVE_FOOTER_LINKS, type FooterSocialLink } from '../data/socialPlatforms';
 import { MasterSizeItem, DEFAULT_MASTER_SIZES } from '../data/sizeGuide';
 import { saveSiteConfigToSupabase, fetchSiteConfigFromSupabase, uploadDataUrlToSupabase, type CloudSiteConfig } from '../lib/storage';
+import { getPersistentVisitorId, getAggregatedAnalytics, getStoredEvents } from '../lib/analytics';
 
 export interface SiteControlItem {
   id: string;
@@ -972,11 +973,42 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
 
       if (data) {
         const mapped = mapSupabaseProducts(data);
-        setProducts(mapped);
+        let finalProducts = [...mapped];
+
+        // SAFETY CHECK 1: Do not disrupt product sorting for Logged-in Admins!
+        let isAdmin = false;
+        try {
+          isAdmin = sessionStorage.getItem('vant_admin_auth_session') === 'true';
+        } catch {}
+
+        if (!isAdmin) {
+          try {
+            const stats = getAggregatedAnalytics(mapped);
+            // Get the most recent session for this local browser
+            const recentSession = stats.customerSessions[0];
+            const preferredCategory = recentSession?.tasteFingerprint?.primaryCategory;
+
+            if (preferredCategory && preferredCategory !== 'الكل' && preferredCategory !== 'All') {
+              // Stable sort: Matches go to top, non-matches keep their original 'created_at' order
+              finalProducts.sort((a, b) => {
+                const aMatch = (a.category === preferredCategory || (a as any).category_ar === preferredCategory) ? 1 : 0;
+                const bMatch = (b.category === preferredCategory || (b as any).category_ar === preferredCategory) ? 1 : 0;
+                if (aMatch !== bMatch) {
+                  return bMatch - aMatch;
+                }
+                return 0; // Maintain original database sort for ties
+              });
+            }
+          } catch (e) {
+            console.warn('Recommendation engine skipped', e);
+          }
+        }
+
+        setProducts(finalProducts);
         setCurrentPage(0);
-        const total = typeof count === 'number' ? count : mapped.length;
+        const total = typeof count === 'number' ? count : finalProducts.length;
         setTotalProductsCount(total);
-        setHasMore(total > mapped.length && data.length >= PAGE_SIZE);
+        setHasMore(total > finalProducts.length && data.length >= PAGE_SIZE);
         setIsLiveDatabase(true);
         setError(null);
         setLastSyncTime(new Date());
@@ -1016,7 +1048,34 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
         setProducts((prev) => {
           const existingIds = new Set(prev.map((p) => String(p.id)));
           const uniqueNew = mapped.filter((p) => !existingIds.has(String(p.id)));
-          const combined = [...prev, ...uniqueNew];
+          let combined = [...prev, ...uniqueNew];
+
+          let isAdmin = false;
+          try {
+            isAdmin = sessionStorage.getItem('vant_admin_auth_session') === 'true';
+          } catch {}
+
+          if (!isAdmin) {
+            try {
+              const stats = getAggregatedAnalytics(combined);
+              const recentSession = stats.customerSessions[0];
+              const preferredCategory = recentSession?.tasteFingerprint?.primaryCategory;
+
+              if (preferredCategory && preferredCategory !== 'الكل' && preferredCategory !== 'All') {
+                combined.sort((a, b) => {
+                  const aMatch = (a.category === preferredCategory || (a as any).category_ar === preferredCategory) ? 1 : 0;
+                  const bMatch = (b.category === preferredCategory || (b as any).category_ar === preferredCategory) ? 1 : 0;
+                  if (aMatch !== bMatch) {
+                    return bMatch - aMatch;
+                  }
+                  return 0;
+                });
+              }
+            } catch (e) {
+              console.warn('Recommendation engine skipped in loadMore', e);
+            }
+          }
+
           const total = typeof count === 'number' ? count : totalProductsCount;
           setHasMore(total > combined.length && data.length >= PAGE_SIZE);
           return combined;
