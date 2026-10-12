@@ -13,9 +13,13 @@ import {
   ShieldAlert,
   Eye,
   RotateCcw,
+  Layers,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import type { DateRange } from 'react-day-picker';
+import { format } from 'date-fns';
 import { useAdminBridge } from './useAdminBridge';
+import { DateRangeFilterWidget } from '../components/admin/widgets/DateRangeFilterWidget';
 import {
   getAggregatedAnalytics,
   syncFromSupabaseCloud,
@@ -45,8 +49,26 @@ export const AdminAnalyticsDashboard: React.FC = () => {
   const { lang, products, offers, subscribers, orders = [], setActiveView } = useAdminBridge();
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview');
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
+  const [widgetDateRange, setWidgetDateRange] = useState<DateRange | undefined>(undefined);
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
+
+  const handleDateRangeWidgetChange = (range: DateRange | undefined) => {
+    setWidgetDateRange(range);
+    if (range?.from) {
+      setCustomStartDate(format(range.from, 'yyyy-MM-dd'));
+      if (range.to) {
+        setCustomEndDate(format(range.to, 'yyyy-MM-dd'));
+      } else {
+        setCustomEndDate(format(range.from, 'yyyy-MM-dd'));
+      }
+      setTimeRange('custom');
+    } else {
+      setCustomStartDate('');
+      setCustomEndDate('');
+      setTimeRange('30d');
+    }
+  };
   const [showCustomDateModal, setShowCustomDateModal] = useState<boolean>(false);
   const [hoveredDataIndex, setHoveredDataIndex] = useState<number | null>(null);
   const [refreshSeed, setRefreshSeed] = useState<number>(0);
@@ -287,8 +309,41 @@ export const AdminAnalyticsDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
+      {/* VANT UI Widgets Suite Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-3xl bg-gradient-to-r from-blue-950/40 via-slate-900/70 to-slate-900/40 border border-blue-500/25 backdrop-blur-xl shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-500/20 shrink-0">
+            <Layers className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-white">
+                {isAr ? 'نظام الأدوات والوحدات المعيارية المدمج' : 'VANT UI Widgets Suite'}
+              </span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase">
+                {isAr ? 'مُفعّل' : 'Active'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-400">
+              {isAr
+                ? 'تم دمج DateRangePicker (منتقي التواريخ الفاخر)، RangeSlider (سلايدر الأسعار)، و Pagination (التصفح المتجاوب).'
+                : 'DateRangePicker, RangeSlider, and Pagination integrated across all management views.'}
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setActiveView('widgets')}
+          className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all cursor-pointer shadow-md shadow-blue-600/30 shrink-0"
+        >
+          <Layers className="h-3.5 w-3.5" />
+          <span>{isAr ? 'معاينة استوديو الأدوات (Widgets Studio)' : 'Open Widgets Studio'}</span>
+        </button>
+      </div>
+
       {/* Top Header Banner with Live Refresh and Title */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
@@ -307,9 +362,20 @@ export const AdminAnalyticsDashboard: React.FC = () => {
           </p>
         </div>
 
-        {/* Top Header Actions (Organized & Spaced Logically) */}
+        {/* Top Header Actions (Organized & Spaced Logically with Live DateRangeFilterWidget) */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
-          {/* Time range segmented tabs for overview */}
+          {/* Live DateRangeFilterWidget directly in the dashboard toolbar */}
+          {activeTab === 'overview' && (
+            <DateRangeFilterWidget
+              value={widgetDateRange}
+              onChange={handleDateRangeWidgetChange}
+              lang={isAr ? 'ar' : 'en'}
+              label={isAr ? 'تصفية الفترة' : 'Date Range'}
+              align="left"
+            />
+          )}
+
+          {/* Time range segmented quick presets */}
           {activeTab === 'overview' && (
             <div className="flex items-center gap-0.5 p-1 bg-slate-900/90 border border-slate-800 rounded-xl shadow-inner">
               {[
@@ -317,15 +383,14 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                 { id: '30d', labelAr: '30D', labelEn: '30D' },
                 { id: '90d', labelAr: '90D', labelEn: '90D' },
                 { id: 'year', labelAr: 'سنة', labelEn: 'Year' },
-                { id: 'custom', labelAr: 'مخصص 📅', labelEn: 'Custom 📅' },
               ].map((t) => (
                 <button
                   key={t.id}
                   onClick={() => {
                     setTimeRange(t.id as TimeRange);
-                    if (t.id === 'custom') {
-                      setShowCustomDateModal(true);
-                    }
+                    setWidgetDateRange(undefined);
+                    setCustomStartDate('');
+                    setCustomEndDate('');
                   }}
                   className={`px-2.5 py-1 text-xs font-mono font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                     timeRange === t.id

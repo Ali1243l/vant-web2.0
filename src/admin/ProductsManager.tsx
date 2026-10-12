@@ -7,6 +7,7 @@ import { ProductsTableView } from './products_manager/ProductsTableView';
 import { ProductsGridView } from './products_manager/ProductsGridView';
 import { DeleteProductModal } from './products_manager/DeleteProductModal';
 import ToastNotification from '../components/ToastNotification';
+import { PaginationWidget } from '../components/admin/widgets/PaginationWidget';
 
 export const ProductsManager: React.FC = () => {
   const { products, deleteProduct, addProduct, updateProduct, offers, addOffer, lang } = useAdminBridge();
@@ -17,6 +18,11 @@ export const ProductsManager: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'default' | 'price-asc' | 'price-desc' | 'sales' | 'stock'>('default');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+
+  // VANT UI Widgets States: RangeSlider & Pagination
+  const [priceRange, setPriceRange] = useState<number[]>([0, 500000]);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(8);
 
   // Sheet & Modal state
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -42,7 +48,7 @@ export const ProductsManager: React.FC = () => {
     }, 3500);
   };
 
-  // Filter products
+  // Filter products with Search, Category, Status, and Price Range Slider Widget
   const filteredProducts = products
     .filter((p) => {
       const matchSearch =
@@ -52,8 +58,9 @@ export const ProductsManager: React.FC = () => {
 
       const matchCategory = selectedCategory === 'all' || p.category === selectedCategory;
       const matchStatus = selectedStatus === 'all' || p.status === selectedStatus;
+      const matchPrice = p.price >= priceRange[0] && p.price <= priceRange[1];
 
-      return matchSearch && matchCategory && matchStatus;
+      return matchSearch && matchCategory && matchStatus && matchPrice;
     })
     .sort((a, b) => {
       if (sortBy === 'price-asc') return a.price - b.price;
@@ -62,6 +69,14 @@ export const ProductsManager: React.FC = () => {
       if (sortBy === 'stock') return a.stock - b.stock;
       return 0;
     });
+
+  // Paginated slice for current page
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedProducts = filteredProducts.slice(
+    (safeCurrentPage - 1) * pageSize,
+    safeCurrentPage * pageSize
+  );
 
   // Open Offer Modal
   const handleOpenOfferModal = (p: Product) => {
@@ -272,13 +287,22 @@ export const ProductsManager: React.FC = () => {
         totalUnits={totalUnits}
         activeOffersCount={activeOffersCount}
         outOfStockCount={outOfStockCount}
+        priceRange={priceRange}
+        setPriceRange={(range) => {
+          setPriceRange(range);
+          setCurrentPage(1);
+        }}
+        onResetPriceRange={() => {
+          setPriceRange([0, 500000]);
+          setCurrentPage(1);
+        }}
       />
 
-      {/* Main View Mode: Table or Grid */}
+      {/* Main View Mode: Table or Grid with Paginated Items */}
       {viewMode === 'table' ? (
         <ProductsTableView
           isAr={isAr}
-          filteredProducts={filteredProducts}
+          filteredProducts={paginatedProducts}
           totalCatalogCount={products.length}
           activeOffersCount={activeOffersCount}
           copiedId={copiedId}
@@ -291,13 +315,32 @@ export const ProductsManager: React.FC = () => {
       ) : (
         <ProductsGridView
           isAr={isAr}
-          filteredProducts={filteredProducts}
+          filteredProducts={paginatedProducts}
           copiedId={copiedId}
           onQuickEdit={handleQuickEdit}
           onOpenOfferModal={handleOpenOfferModal}
           onCopyLink={handleCopyLink}
           onDeleteConfirm={(id) => setDeleteConfirmId(id)}
         />
+      )}
+
+      {/* Pagination Widget for Products */}
+      {filteredProducts.length > 0 && (
+        <div className="pt-2">
+          <PaginationWidget
+            currentPage={safeCurrentPage}
+            totalItems={filteredProducts.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+            pageSizeOptions={[6, 8, 12, 24]}
+            lang={isAr ? 'ar' : 'en'}
+            itemLabel={isAr ? 'منتج' : 'products'}
+          />
+        </div>
       )}
 
       {/* Product Form Slide-over Sheet */}

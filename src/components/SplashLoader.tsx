@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { SplashMotifType } from '../context/SiteControlsContext';
 import type { Theme } from '../types';
 import FashionMotifGraphic from './splash/FashionMotifGraphic';
+import Spinner from './ui/Spinner';
 
 export { AVAILABLE_SPLASH_MOTIFS, type MotifOption } from './splash/splashMotifs';
 
@@ -324,7 +325,7 @@ export default function SplashLoader({
               }`}
             >
               <span className="flex items-center gap-2">
-                <span className="animate-spin inline-block h-2 w-2 rounded-full border border-current border-t-[#004ad7]" />
+                <Spinner size="xs" color="#004ad7" />
                 <span className="tracking-widest uppercase font-semibold">{progress >= 100 ? 'READY' : 'LOADING'}</span>
               </span>
               <span className={`tabular-nums font-black text-xs ${isDark ? 'text-white' : 'text-[#004ad7]'}`}>{progress}%</span>

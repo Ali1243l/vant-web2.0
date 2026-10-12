@@ -2,6 +2,8 @@ import React from 'react';
 import type { Product, Language } from '../types';
 import ProductCard from './ProductCard';
 import SkeletonCard from './SkeletonCard';
+import PremiumGlowWrapper from './ui/PremiumGlowWrapper';
+import BlurFade from './ui/BlurFade';
 
 interface Props {
   products: Product[];
@@ -63,15 +65,18 @@ export default function MasonryGrid({
   return (
     <div className={gridClasses}>
       {products.map((p, i) => (
-        <ProductCard
-          key={p.id}
-          product={p}
-          index={i}
-          lang={lang}
-          isWishlisted={isWishlisted ? isWishlisted(p.id) : false}
-          onToggleWishlist={onToggleWishlist}
-          onOpen={handleOpen}
-        />
+        <BlurFade key={`blur-fade-${p.id}`} delay={(i % 4) * 0.08} duration={0.6}>
+          <PremiumGlowWrapper>
+            <ProductCard
+              product={p}
+              index={i}
+              lang={lang}
+              isWishlisted={isWishlisted ? isWishlisted(p.id) : false}
+              onToggleWishlist={onToggleWishlist}
+              onOpen={handleOpen}
+            />
+          </PremiumGlowWrapper>
+        </BlurFade>
       ))}
       {loadingMore &&
         Array.from({ length: 4 }).map((_, idx) => (

@@ -95,6 +95,50 @@ function resendEmailPlugin(): Plugin {
 
       server.middlewares.use('/api/send-welcome', emailHandler);
       server.middlewares.use('/api/send-email', emailHandler);
+
+      // Server-side products endpoint that bypasses browser CORS / ad-blocker restrictions
+      server.middlewares.use('/api/products', async (req: any, res: any) => {
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+
+        const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+        const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || '';
+
+        if (!supabaseUrl || !supabaseKey) {
+          res.statusCode = 200;
+          res.end(JSON.stringify({ success: true, data: [] }));
+          return;
+        }
+
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 6000);
+
+          const response = await fetch(
+            `${supabaseUrl}/rest/v1/products?select=*,product_media(*)&order=created_at.desc`,
+            {
+              headers: {
+                apikey: supabaseKey,
+                Authorization: `Bearer ${supabaseKey}`,
+              },
+              signal: controller.signal,
+            }
+          );
+          clearTimeout(timeout);
+
+          if (!response.ok) {
+            throw new Error(`Supabase returned status ${response.status}`);
+          }
+
+          const products = await response.json();
+          res.statusCode = 200;
+          res.end(JSON.stringify({ success: true, data: products, count: products.length }));
+        } catch (err: any) {
+          console.warn('Server Supabase proxy error (returning graceful empty):', err?.message);
+          res.statusCode = 200;
+          res.end(JSON.stringify({ success: false, data: [], error: err?.message }));
+        }
+      });
     },
   };
 }

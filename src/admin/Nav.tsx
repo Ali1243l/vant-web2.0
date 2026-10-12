@@ -52,13 +52,44 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
 
   const sections: NavSection[] = [
     {
-      title: 'العمليات الأساسية',
-      titleEn: 'CORE OPERATIONS',
+      title: 'المشاريع والكتالوج (Projects)',
+      titleEn: 'PROJECTS & CATALOG',
+      items: [
+        {
+          id: 'products',
+          label: 'إدارة المنتجات والمشاريع',
+          labelEn: 'Products & Projects',
+          icon: Package,
+          count: products.length,
+        },
+        {
+          id: 'sizes',
+          label: 'دليل المقاسات والأبعاد',
+          labelEn: 'Size Guide & Specs',
+          icon: Ruler,
+        },
+        {
+          id: 'banners',
+          label: 'البانرات والوسائط',
+          labelEn: 'Banners & Media',
+          icon: ImageIcon,
+        },
+        {
+          id: 'welcome_modal',
+          label: 'النافذة الترحيبية والهدايا',
+          labelEn: 'Welcome Popup & Gift',
+          icon: Gift,
+        },
+      ],
+    },
+    {
+      title: 'المحفظة والمالية (Wallet)',
+      titleEn: 'WALLET & REVENUE',
       items: [
         {
           id: 'dashboard',
-          label: 'الرئيسية والتحليلات',
-          labelEn: 'Analytics & Overview',
+          label: 'الرئيسية وتحليلات الأرباح',
+          labelEn: 'Overview & Wallet Analytics',
           icon: LayoutDashboard,
         },
         {
@@ -70,55 +101,30 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
           isGlowingAmber: pendingOrdersCount > 0,
         },
         {
-          id: 'products',
-          label: 'إدارة المنتجات',
-          labelEn: 'Products Catalog',
-          icon: Package,
-          count: products.length,
-        },
-        {
-          id: 'sizes',
-          label: 'دليل المقاسات',
-          labelEn: 'Size Guide & Specs',
-          icon: Ruler,
-        },
-      ],
-    },
-    {
-      title: 'التسويق والعروض',
-      titleEn: 'MARKETING & PROMOS',
-      items: [
-        {
           id: 'offers',
-          label: 'العروض والقسائم',
-          labelEn: 'Offers & Coupons',
+          label: 'العروض وقسائم الخصم',
+          labelEn: 'Offers & Promos',
           icon: Tag,
           count: offers.filter((o) => o.status === 'active').length,
         },
+      ],
+    },
+    {
+      title: 'الوحدات والأدوات (Widgets)',
+      titleEn: 'WIDGETS & UI TOOLS',
+      items: [
         {
-          id: 'banners',
-          label: 'البانرات والتريندات',
-          labelEn: 'Banners & Media',
-          icon: ImageIcon,
-        },
-        {
-          id: 'welcome_modal',
-          label: 'النافذة الترحيبية',
-          labelEn: 'Welcome Popup & Gift',
-          icon: Gift,
-        },
-        {
-          id: 'subscribers',
-          label: 'النشرات والعملاء',
-          labelEn: 'Campaigns & Subscribers',
-          icon: Users,
-          count: subscribers.length,
+          id: 'widgets',
+          label: 'استوديو الأدوات والوحدات',
+          labelEn: 'Widgets Studio & UI Tools',
+          icon: Layers,
+          badgeText: 'New',
         },
       ],
     },
     {
-      title: 'تخصيص الواجهة والنظام',
-      titleEn: 'SYSTEM & CONTROLS',
+      title: 'الـ API والتكاملات (API & Cloud)',
+      titleEn: 'API & INTEGRATIONS',
       items: [
         {
           id: 'controls',
@@ -127,27 +133,40 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
           icon: Sliders,
         },
         {
+          id: 'subscribers',
+          label: 'النشرات والعملاء',
+          labelEn: 'Campaigns & Subscribers',
+          icon: Users,
+          count: subscribers.length,
+        },
+        {
           id: 'social',
-          label: 'روابط التواصل',
-          labelEn: 'Social Media Links',
+          label: 'روابط التواصل والـ API',
+          labelEn: 'Social & External APIs',
           icon: Globe,
         },
         {
           id: 'backup',
-          label: 'النسخ الاحتياطي',
-          labelEn: 'Export & Backup',
+          label: 'النسخ الاحتياطي السحابي',
+          labelEn: 'Cloud Backup & JSON',
           icon: Download,
         },
         {
           id: 'settings',
-          label: 'إعدادات المتجر العامة',
-          labelEn: 'Storefront Settings',
-          icon: Layers,
+          label: 'إعدادات النظام العامة',
+          labelEn: 'System Settings',
+          icon: Store,
         },
+      ],
+    },
+    {
+      title: 'الأمان والوصول (Security)',
+      titleEn: 'SECURITY & ACCESS',
+      items: [
         {
           id: 'security',
-          label: 'الأمان ورمز الدخول',
-          labelEn: 'Security & PIN',
+          label: 'الأمان ورمز دخول الإدارة',
+          labelEn: 'Security & Access PIN',
           icon: KeyRound,
         },
       ],
@@ -164,18 +183,18 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
   return (
     <nav className="flex flex-col h-full select-none" aria-label="Main Navigation">
       {/* Brand / Logo section */}
-      <div className={`px-5 py-5 flex items-center justify-between border-b border-slate-800/80 ${collapsed ? 'justify-center px-2' : ''}`}>
+      <div className={`px-5 py-5 flex items-center justify-between border-b border-neutral-800/80 bg-neutral-950/40 ${collapsed ? 'justify-center px-2' : ''}`}>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#004ad7] to-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-950 shrink-0 font-bold text-lg tracking-wider">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#004ad7] to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-950 shrink-0 font-bold text-lg tracking-wider">
             <Store className="w-5 h-5 text-white" />
           </div>
           {!collapsed && (
             <div className="flex flex-col overflow-hidden text-start">
               <span className="font-bold text-white text-base leading-tight truncate flex items-center gap-1.5">
                 <span>{isAr ? 'دار ڤانت (VANT)' : 'Maison VANT'}</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] inline-block shrink-0 animate-pulse" />
               </span>
-              <span className="text-xs text-slate-400 truncate">
+              <span className="text-xs text-neutral-400 truncate">
                 {isAr ? 'لوحة تحكم المتجر المتكاملة' : 'Admin Operations Hub'}
               </span>
             </div>
@@ -184,7 +203,7 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
         {!collapsed && onCloseAdmin && (
           <button
             onClick={onCloseAdmin}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-xl text-neutral-400 hover:text-rose-400 hover:bg-neutral-800 transition-colors cursor-pointer"
             title={isAr ? 'العودة للمتجر' : 'Return to Boutique'}
           >
             <X className="w-4 h-4" />
@@ -193,7 +212,7 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
       </div>
 
       {/* Nav Sections List */}
-      <div className="flex-1 py-4 px-3 space-y-4 overflow-y-auto">
+      <div className="flex-1 py-4 px-3 space-y-4 overflow-y-auto no-scrollbar">
         {sections.map((sec, idx) => (
           <div key={idx} className="space-y-1">
             {!collapsed && (
@@ -209,10 +228,10 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
                 <button
                   key={item.id}
                   onClick={() => handleSelect(item.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group text-start relative cursor-pointer ${
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group text-start relative cursor-pointer ${
                     isActive
-                      ? 'bg-indigo-600/15 text-indigo-300 border border-indigo-500/30 font-semibold'
-                      : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 border border-transparent'
+                      ? 'bg-blue-600/15 text-blue-400 border border-blue-500/30 font-semibold shadow-xs'
+                      : 'text-neutral-400 hover:text-white hover:bg-neutral-800/80 border border-transparent'
                   } ${collapsed ? 'justify-center px-0' : ''}`}
                   title={collapsed ? (isAr ? item.label : item.labelEn) : undefined}
                 >
@@ -220,14 +239,14 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
                     <span
                       className={`absolute inset-y-1.5 ${
                         isAr ? 'right-0 rounded-l-full' : 'left-0 rounded-r-full'
-                      } w-1 bg-indigo-500`}
+                      } w-1 bg-blue-500`}
                     />
                   )}
 
                   <div className="relative shrink-0">
                     <Icon
                       className={`w-4.5 h-4.5 transition-transform group-hover:scale-110 ${
-                        isActive ? 'text-indigo-400' : 'text-slate-400 group-hover:text-slate-200'
+                        isActive ? 'text-blue-400' : 'text-neutral-400 group-hover:text-neutral-200'
                       }`}
                     />
                     {collapsed && item.isGlowingAmber && (
@@ -241,19 +260,26 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
                   {!collapsed && (
                     <div className="flex-1 flex items-center justify-between overflow-hidden">
                       <span className="truncate">{isAr ? item.label : item.labelEn}</span>
-                      {typeof item.count === 'number' && item.count > 0 && (
-                        <span
-                          className={`text-[11px] font-semibold px-2 py-0.5 rounded-full transition-all ${
-                            item.isGlowingAmber
-                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.45)]'
-                              : isActive
-                              ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                              : 'bg-slate-800 text-slate-400'
-                          }`}
-                        >
-                          {item.count}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        {item.badgeText && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase">
+                            {item.badgeText}
+                          </span>
+                        )}
+                        {typeof item.count === 'number' && item.count > 0 && (
+                          <span
+                            className={`text-[11px] font-semibold px-2 py-0.5 rounded-full transition-all ${
+                              item.isGlowingAmber
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.45)]'
+                                : isActive
+                                ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                : 'bg-neutral-800 text-neutral-400'
+                            }`}
+                          >
+                            {item.count}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   )}
                 </button>

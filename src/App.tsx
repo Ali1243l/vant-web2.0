@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from './components/Header';
 import CategoryFilter, { type AvailabilityFilterType } from './components/CategoryFilter';
-import WelcomeHeroBanner from './components/WelcomeHeroBanner';
+import HeroParallax from './components/ui/HeroParallax';
 import NewsletterSection from './components/NewsletterSection';
 import Footer from './components/Footer';
 import MasonryGrid from './components/MasonryGrid';
@@ -520,18 +520,18 @@ function MainApp() {
           </div>
         )}
 
-        {/* Welcome Brand Story Banner with smooth collapse/expand animations */}
-        <WelcomeHeroBanner
+        {/* Cinematic Haute Parallax Hero */}
+        <HeroParallax
+          products={products}
           lang={lang}
           isOpen={!isBannerDismissed && (category === ALL || !category || category === 'all') && !isWishlistOnly && !isOffersOnly && !searchQuery.trim()}
-          activeCategory={category}
           onExplore={() => {
             document.getElementById('catalog-grid')?.scrollIntoView({ behavior: 'smooth' });
           }}
-          onDismiss={() => {
-            setIsBannerDismissed(true);
-          }}
-          onSelectCategory={setCategory}
+          onDismiss={() => setIsBannerDismissed(true)}
+          onSelectProduct={(p) => setSelected(p)}
+          onSelectCategory={(cat) => setCategory(cat)}
+          activeCategory={category}
         />
 
         {/* Wishlist Active Filter Banner */}

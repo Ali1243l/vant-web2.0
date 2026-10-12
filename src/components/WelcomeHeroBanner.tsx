@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { X, ArrowDown, ChevronLeft, ChevronRight, ArrowUpRight, Sparkles } from 'lucide-react';
 import type { Language } from '../types';
 import { useSiteControls } from '../context/SiteControlsContext';
@@ -155,19 +155,29 @@ export default function WelcomeHeroBanner({
   const btnText = isAr ? heroBtnControl.label_ar : heroBtnControl.label_en;
   const trendsHeadline = toWesternNumerals(isAr ? trendsTitleControl.label_ar : trendsTitleControl.label_en);
 
+  // Subtle Scroll Parallax Effect for Inner Content
+  const { scrollY } = useScroll();
+  const contentY = useTransform(scrollY, [0, 350], [0, 50]);
+  const contentOpacity = useTransform(scrollY, [0, 300], [1, 0.3]);
+
   return (
     <AnimatePresence initial={false}>
       {isOpen && (
         <motion.section
           key="welcome-hero-banner"
-          initial={{ opacity: 0, y: -8 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, height: 0, y: -8, marginBottom: 0, transition: { duration: 0.25 } }}
+          exit={{ opacity: 0, height: 0, y: -10, marginBottom: 0, transition: { duration: 0.25 } }}
+          transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
           className="w-full select-none mb-5 sm:mb-6"
           aria-label={isAr ? 'أصل التشكيلة وتريندات الموسم' : 'Collection Foundation & Featured Trends'}
         >
-          {/* Unified Haute-Couture Editorial Showcase Container - Strictly Site Primary Colors */}
-          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-black/8 dark:border-white/10 bg-white dark:bg-[#0d0f14] shadow-[0_4px_24px_rgba(0,0,0,0.03)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.45)] transition-colors duration-300">
+          {/* Unified Haute-Couture Editorial Showcase Container - Max 70vh Height, Rounded 3xl */}
+          <div className="relative overflow-hidden rounded-3xl border border-black/8 dark:border-white/10 bg-white dark:bg-[#0d0f14] shadow-[0_8px_32px_rgba(0,0,0,0.04)] dark:shadow-[0_16px_48px_rgba(0,0,0,0.5)] max-h-[70vh] flex flex-col justify-between transition-colors duration-300">
+            <motion.div
+              style={{ y: contentY, opacity: contentOpacity }}
+              className="w-full flex flex-col justify-between h-full"
+            >
 
             {/* Top Section: Brand Manifesto & Editorial Background Layer */}
             <div className="relative overflow-hidden p-4 sm:p-6 md:p-8">
@@ -366,6 +376,7 @@ export default function WelcomeHeroBanner({
             </div>
             )}
 
+            </motion.div>
           </div>
         </motion.section>
       )}

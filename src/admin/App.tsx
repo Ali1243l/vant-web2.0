@@ -19,6 +19,7 @@ import { AdminBackupView } from './AdminBackupView';
 import { AdminSecurityView } from './AdminSecurityView';
 import { AdminBannersView } from './AdminBannersView';
 import { AdminWelcomeModalView } from './AdminWelcomeModalView';
+import { WidgetsStudioView } from '../components/admin/widgets/WidgetsStudioView';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface AdminAppProps {
@@ -52,7 +53,7 @@ function MainLayout({ onClose }: AdminAppProps) {
         <aside
           className={`hidden lg:flex flex-col border-${
             isAr ? 'l' : 'r'
-          } border-slate-800 bg-slate-900/95 sticky top-0 h-screen transition-all duration-300 z-20 shrink-0 ${
+          } border-slate-800/80 bg-slate-900/95 backdrop-blur-2xl sticky top-0 h-screen transition-all duration-300 z-20 shrink-0 ${
             isSidebarCollapsed ? 'w-20' : 'w-72'
           }`}
         >
@@ -61,10 +62,10 @@ function MainLayout({ onClose }: AdminAppProps) {
           </div>
 
           {/* Collapse Toggle Footer */}
-          <div className="p-3 border-t border-slate-800 flex justify-end">
+          <div className="p-3 border-t border-slate-800/80 flex justify-end">
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer w-full flex items-center justify-center"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer w-full flex items-center justify-center"
               title={isSidebarCollapsed ? (isAr ? 'توسيع القائمة' : 'Expand Sidebar') : isAr ? 'طي القائمة' : 'Collapse Sidebar'}
             >
               {isAr ? (
@@ -85,19 +86,22 @@ function MainLayout({ onClose }: AdminAppProps) {
           />
 
           <main className="flex-1 p-4 sm:p-6 lg:p-8 xl:p-10 w-full min-w-0 overflow-y-auto">
-            {activeView === 'dashboard' && <AdminAnalyticsDashboard />}
-            {activeView === 'orders' && <OrdersManager />}
-            {activeView === 'products' && <ProductsManager />}
-            {activeView === 'sizes' && <AdminSizesView />}
-            {activeView === 'offers' && <AdminOffersManager />}
-            {activeView === 'banners' && <AdminBannersView />}
-            {activeView === 'welcome_modal' && <AdminWelcomeModalView />}
-            {activeView === 'subscribers' && <SubscribersList />}
-            {activeView === 'controls' && <AdminControlsView />}
-            {activeView === 'social' && <AdminSocialView />}
-            {activeView === 'backup' && <AdminBackupView />}
-            {activeView === 'settings' && <SettingsView />}
-            {activeView === 'security' && <AdminSecurityView />}
+            <div className="max-w-7xl mx-auto space-y-6">
+              {activeView === 'dashboard' && <AdminAnalyticsDashboard />}
+              {activeView === 'orders' && <OrdersManager />}
+              {activeView === 'products' && <ProductsManager />}
+              {activeView === 'sizes' && <AdminSizesView />}
+              {activeView === 'offers' && <AdminOffersManager />}
+              {activeView === 'banners' && <AdminBannersView />}
+              {activeView === 'welcome_modal' && <AdminWelcomeModalView />}
+              {activeView === 'subscribers' && <SubscribersList />}
+              {activeView === 'controls' && <AdminControlsView />}
+              {activeView === 'social' && <AdminSocialView />}
+              {activeView === 'backup' && <AdminBackupView />}
+              {activeView === 'settings' && <SettingsView />}
+              {activeView === 'security' && <AdminSecurityView />}
+              {activeView === 'widgets' && <WidgetsStudioView lang={isAr ? 'ar' : 'en'} />}
+            </div>
           </main>
         </div>
       </div>

@@ -6,7 +6,7 @@ import { getStoredSubscribers, addSubscriber as addStoredSubscriber, removeSubsc
 import { saveOrdersToSupabase, fetchOrdersFromSupabase, saveOffersToSupabase, fetchOffersFromSupabase } from '../lib/storage';
 import { updateSystemErrorStatus } from '../lib/analytics';
 
-export type AdminView = 'dashboard' | 'orders' | 'products' | 'sizes' | 'offers' | 'banners' | 'subscribers' | 'welcome_modal' | 'controls' | 'social' | 'backup' | 'settings' | 'security';
+export type AdminView = 'dashboard' | 'orders' | 'products' | 'sizes' | 'offers' | 'banners' | 'subscribers' | 'welcome_modal' | 'controls' | 'social' | 'backup' | 'settings' | 'security' | 'widgets';
 
 export type OrderStatus = 'pending_payment' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 export type OrderType = 'ready_to_wear' | 'bespoke';

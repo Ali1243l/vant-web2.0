@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Product, Language } from '../../types';
 import { trackEvent } from '../../lib/analytics';
+import Lens from '../ui/Lens';
+import MobileTouchZoom from '../ui/MobileTouchZoom';
 
 interface ProductDrawerGalleryProps {
   images: string[];
@@ -304,28 +306,32 @@ export const ProductDrawerGallery: React.FC<ProductDrawerGalleryProps> = ({
                   )}
 
                   {(imgSrc || product?.image_url)?.trim() ? (
-                    <img
-                      src={(imgSrc || product?.image_url)!.trim()}
-                      alt={`${displayTitle} - ${idx + 1}`}
-                      decoding="async"
-                      loading={idx === 0 || idx === activeImageIndex ? 'eager' : 'lazy'}
-                      referrerPolicy="no-referrer"
-                      draggable={false}
-                      className={`max-h-full max-w-full w-auto h-auto object-contain drop-shadow-md select-none pointer-events-none transition-opacity duration-250 ${
-                        isImageLoaded ? 'opacity-100' : 'opacity-0'
-                      }`}
-                      onError={(e) => {
-                        const target = e.currentTarget;
-                        if (product?.image_url?.trim() && target.src !== product.image_url.trim()) {
-                          target.src = product.image_url.trim();
-                        }
-                      }}
-                      onLoad={() => {
-                        if (imgSrc) {
-                          setLoadedImages((prev) => new Set(prev).add(imgSrc));
-                        }
-                      }}
-                    />
+                    <MobileTouchZoom zoomFactor={1.85} className="relative flex items-center justify-center max-h-full max-w-full w-full h-full">
+                      <Lens zoomFactor={1.5} lensSize={130} className="relative flex items-center justify-center max-h-full max-w-full">
+                        <img
+                          src={(imgSrc || product?.image_url)!.trim()}
+                          alt={`${displayTitle} - ${idx + 1}`}
+                          decoding="async"
+                          loading={idx === 0 || idx === activeImageIndex ? 'eager' : 'lazy'}
+                          referrerPolicy="no-referrer"
+                          draggable={false}
+                          className={`max-h-full max-w-full w-auto h-auto object-contain drop-shadow-md select-none transition-opacity duration-250 ${
+                            isImageLoaded ? 'opacity-100' : 'opacity-0'
+                          }`}
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            if (product?.image_url?.trim() && target.src !== product.image_url.trim()) {
+                              target.src = product.image_url.trim();
+                            }
+                          }}
+                          onLoad={() => {
+                            if (imgSrc) {
+                              setLoadedImages((prev) => new Set(prev).add(imgSrc));
+                            }
+                          }}
+                        />
+                      </Lens>
+                    </MobileTouchZoom>
                   ) : null}
                 </div>
               );

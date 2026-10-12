@@ -1,6 +1,7 @@
-import React from 'react';
-import { Search, Plus, List, LayoutGrid } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, Plus, List, LayoutGrid, SlidersHorizontal } from 'lucide-react';
 import { Button, Card, Input } from '../ui';
+import { PriceRangeFilterWidget } from '../../components/admin/widgets/PriceRangeFilterWidget';
 
 interface ProductsManagerHeaderProps {
   isAr: boolean;
@@ -21,6 +22,9 @@ interface ProductsManagerHeaderProps {
   totalUnits: number;
   activeOffersCount: number;
   outOfStockCount: number;
+  priceRange?: number[];
+  setPriceRange?: (val: number[]) => void;
+  onResetPriceRange?: () => void;
 }
 
 export const ProductsManagerHeader: React.FC<ProductsManagerHeaderProps> = ({
@@ -42,7 +46,11 @@ export const ProductsManagerHeader: React.FC<ProductsManagerHeaderProps> = ({
   totalUnits,
   activeOffersCount,
   outOfStockCount,
+  priceRange,
+  setPriceRange,
+  onResetPriceRange,
 }) => {
+  const [showPriceSlider, setShowPriceSlider] = useState(false);
   return (
     <div className="space-y-6">
       {/* Top Banner */}
@@ -148,6 +156,30 @@ export const ProductsManagerHeader: React.FC<ProductsManagerHeaderProps> = ({
             </select>
           </div>
         </div>
+
+        {/* RangeSlider Price Filter Widget Row */}
+        {priceRange && setPriceRange && (
+          <div className="pt-2 border-t border-slate-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex-1 max-w-md">
+              <PriceRangeFilterWidget
+                value={priceRange}
+                onChange={setPriceRange}
+                min={0}
+                max={500000}
+                step={5000}
+                currency="IQD"
+                lang={isAr ? 'ar' : 'en'}
+                label={isAr ? 'تصفية نطاق الأسعار (RangeSlider)' : 'Price Filter (RangeSlider)'}
+                onReset={onResetPriceRange}
+              />
+            </div>
+            <div className="text-[11px] text-slate-400 font-mono">
+              {isAr
+                ? `النطاق المحدد: من ${priceRange[0].toLocaleString()} إلى ${priceRange[1].toLocaleString()} د.ع`
+                : `Range: ${priceRange[0].toLocaleString()} - ${priceRange[1].toLocaleString()} IQD`}
+            </div>
+          </div>
+        )}
 
         {/* Quick status counters */}
         <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-slate-800/60 text-xs text-slate-400">

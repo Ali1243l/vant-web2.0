@@ -8,14 +8,28 @@ import {
   saveProductEnhancement,
   removeProductEnhancement,
 } from './constants';
+import { FALLBACK_CATALOG_PRODUCTS } from './fallbackProducts';
 
 export function useCatalogProducts() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [products, setProducts] = useState<Product[]>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem(PRODUCTS_STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      }
+    } catch {}
+    return FALLBACK_CATALOG_PRODUCTS;
+  });
+  const [loading, setLoading] = useState<boolean>(false);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [hasMore, setHasMore] = useState<boolean>(true);
-  const [totalProductsCount, setTotalProductsCount] = useState<number>(0);
-  const [currentPage, setCurrentPage] = useState<number>(0);
+  const [totalProductsCount, setTotalProductsCount] = useState<number>(() => {
+    return products.length || FALLBACK_CATALOG_PRODUCTS.length;
+  });
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [error, setError] = useState<string | null>(null);
   const [isLiveDatabase, setIsLiveDatabase] = useState<boolean>(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
@@ -75,40 +89,74 @@ export function useCatalogProducts() {
   };
 
   const loadProductsFromSupabase = useCallback(async (isSilent = false) => {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
     try {
-      if (!isSilent && !hasLoadedOnceRef.current) setLoading(true);
+      if (!isSilent && !hasLoadedOnceRef.current && products.length === 0) {
+        setLoading(true);
+      }
       setError(null);
 
-      const { data, count, error: sbError } = await supabase
-        .from('products')
-        .select('*, product_media(*)', { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range(0, PAGE_SIZE - 1);
+      let fetchedData: any[] | null = null;
+      let fetchedCount: number | null = null;
 
-      if (sbError) {
-        console.error('Supabase products fetch error:', sbError.message);
-        setError(sbError.message);
-      } else {
-        const mapped = mapSupabaseProducts(data || []);
+      // 1. Try fetching via same-origin backend proxy to avoid CORS / ad-blocker restrictions
+      try {
+        const proxyRes = await fetch('/api/products');
+        if (proxyRes.ok) {
+          const json = await proxyRes.json();
+          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+            fetchedData = json.data;
+            fetchedCount = json.count || json.data.length;
+          }
+        }
+      } catch {
+        // Fall through to direct Supabase SDK if proxy is unavailable
+      }
+
+      // 2. If proxy had no data and direct supabase client is present, query it
+      if (!fetchedData && supabase) {
+        try {
+          const { data, count, error: sbError } = await supabase
+            .from('products')
+            .select('*, product_media(*)', { count: 'exact' })
+            .order('created_at', { ascending: false })
+            .range(0, PAGE_SIZE - 1);
+
+          if (!sbError && data && data.length > 0) {
+            fetchedData = data;
+            fetchedCount = count;
+          } else if (sbError && !sbError.message.includes('Failed to fetch')) {
+            console.warn('Supabase catalog response info:', sbError.message);
+          }
+        } catch (clientErr: any) {
+          // Graceful handling of browser client network/sandbox restrictions
+          if (!clientErr?.message?.includes('Failed to fetch')) {
+            console.warn('Direct Supabase fetch fallback to local cache:', clientErr?.message);
+          }
+        }
+      }
+
+      if (fetchedData && fetchedData.length > 0) {
+        const mapped = mapSupabaseProducts(fetchedData);
         setProducts(mapped);
-        setTotalProductsCount(count || mapped.length);
+        setTotalProductsCount(fetchedCount || mapped.length);
         setCurrentPage(1);
-        setHasMore((count || mapped.length) > PAGE_SIZE);
+        setHasMore((fetchedCount || mapped.length) > PAGE_SIZE);
         setIsLiveDatabase(true);
         setLastSyncTime(new Date());
         hasLoadedOnceRef.current = true;
+      } else {
+        // Ensure fallback products are active if database is empty
+        setProducts((prev) => (prev.length > 0 ? prev : FALLBACK_CATALOG_PRODUCTS));
+        setTotalProductsCount((prev) => (prev > 0 ? prev : FALLBACK_CATALOG_PRODUCTS.length));
+        hasLoadedOnceRef.current = true;
       }
-    } catch (err: any) {
-      console.error('Unexpected error loading products from Supabase:', err);
-      setError(err?.message || 'Failed to sync with Supabase catalog');
+    } catch {
+      // Always guarantee products remain available from fallback cache
+      setProducts((prev) => (prev.length > 0 ? prev : FALLBACK_CATALOG_PRODUCTS));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [products.length]);
 
   const loadMoreProducts = useCallback(async () => {
     if (!supabase || loadingMore || !hasMore) return;
@@ -125,7 +173,9 @@ export function useCatalogProducts() {
         .range(start, end);
 
       if (sbError) {
-        console.error('Error fetching more products:', sbError.message);
+        if (!sbError.message.includes('Failed to fetch')) {
+          console.warn('Supabase pagination fetch info:', sbError.message);
+        }
       } else {
         const mapped = mapSupabaseProducts(data || []);
         setProducts((prev) => {
@@ -136,8 +186,10 @@ export function useCatalogProducts() {
         setCurrentPage((prev) => prev + 1);
         setHasMore(start + mapped.length < (count || 0));
       }
-    } catch (err) {
-      console.error('Error loading more products:', err);
+    } catch (err: any) {
+      if (!err?.message?.includes('Failed to fetch')) {
+        console.warn('Pagination fetch fallback:', err?.message);
+      }
     } finally {
       setLoadingMore(false);
     }

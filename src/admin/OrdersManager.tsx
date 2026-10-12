@@ -28,6 +28,9 @@ import {
 import { useAdminBridge, Order, OrderStatus, OrderType } from './useAdminBridge';
 import { StatusBadge } from './ui';
 import { OrderDetailsSheet } from './OrderDetailsSheet';
+import type { DateRange } from 'react-day-picker';
+import { DateRangeFilterWidget } from '../components/admin/widgets/DateRangeFilterWidget';
+import { PaginationWidget } from '../components/admin/widgets/PaginationWidget';
 
 type ViewMode = 'kanban' | 'table';
 type FilterTab = 'all' | 'bespoke' | 'ready_to_wear' | 'pending';
@@ -41,6 +44,11 @@ export const OrdersManager: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState<boolean>(false);
+
+  // VANT UI Widgets: DateRangePicker and Pagination
+  const [orderDateRange, setOrderDateRange] = useState<DateRange | undefined>(undefined);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(8);
 
   const formatPrice = (num: number) => {
     return `${new Intl.NumberFormat('en-US').format(num)} IQD`;
@@ -61,13 +69,23 @@ export const OrdersManager: React.FC = () => {
     return { total, pending, inAtelier, shipped, delivered, bespokeCount, totalRevenue };
   }, [orders]);
 
-  // Filtered orders list
+  // Filtered orders list with DateRangeFilterWidget
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
       // Tab filter
       if (activeFilter === 'bespoke' && order.type !== 'bespoke') return false;
       if (activeFilter === 'ready_to_wear' && order.type !== 'ready_to_wear') return false;
       if (activeFilter === 'pending' && order.status !== 'pending_payment') return false;
+
+      // Date Range Filter Widget
+      if (orderDateRange?.from) {
+        const orderTime = new Date(order.orderDate).getTime();
+        const fromTime = new Date(orderDateRange.from).setHours(0, 0, 0, 0);
+        if (orderTime < fromTime) return false;
+        const targetTo = orderDateRange.to || orderDateRange.from;
+        const toTime = new Date(targetTo).setHours(23, 59, 59, 999);
+        if (orderTime > toTime) return false;
+      }
 
       // Search query
       if (searchQuery.trim()) {
@@ -82,7 +100,14 @@ export const OrdersManager: React.FC = () => {
       }
       return true;
     });
-  }, [orders, activeFilter, searchQuery]);
+  }, [orders, activeFilter, searchQuery, orderDateRange]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedOrders = filteredOrders.slice(
+    (safeCurrentPage - 1) * pageSize,
+    safeCurrentPage * pageSize
+  );
 
   const handleOpenOrder = (order: Order) => {
     setSelectedOrder(order);
@@ -315,18 +340,33 @@ export const OrdersManager: React.FC = () => {
           </button>
         </div>
 
-        {/* Search Input */}
-        <div className="relative min-w-[240px] sm:max-w-xs">
-          <Search className={`absolute ${isAr ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400`} />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={isAr ? 'بحث برقم الطلب، العميل، الهاتف...' : 'Search order #, client, phone...'}
-            className={`w-full text-xs ${
-              isAr ? 'pr-9 pl-3' : 'pl-9 pr-3'
-            } py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500`}
+        {/* DateRangeFilterWidget & Search Input */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <DateRangeFilterWidget
+            value={orderDateRange}
+            onChange={(range) => {
+              setOrderDateRange(range);
+              setCurrentPage(1);
+            }}
+            lang={isAr ? 'ar' : 'en'}
+            label={isAr ? 'تاريخ الطلب' : 'Order Date'}
           />
+
+          <div className="relative min-w-[220px]">
+            <Search className={`absolute ${isAr ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400`} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder={isAr ? 'بحث برقم الطلب، العميل...' : 'Search order #, client...'}
+              className={`w-full text-xs ${
+                isAr ? 'pr-9 pl-3' : 'pl-9 pr-3'
+              } py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500`}
+            />
+          </div>
         </div>
       </div>
 
@@ -499,7 +539,7 @@ export const OrdersManager: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  filteredOrders.map((order) => {
+                  paginatedOrders.map((order) => {
                     const statusBadgeMap: Record<
                       OrderStatus,
                       { labelAr: string; labelEn: string; status: 'draft' | 'warning' | 'active' | 'success' | 'danger' }
@@ -627,6 +667,25 @@ export const OrdersManager: React.FC = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Widget for Orders Table */}
+          {filteredOrders.length > 0 && (
+            <div className="p-3 border-t border-slate-800/80 bg-slate-900/60">
+              <PaginationWidget
+                currentPage={safeCurrentPage}
+                totalItems={filteredOrders.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(newSize) => {
+                  setPageSize(newSize);
+                  setCurrentPage(1);
+                }}
+                pageSizeOptions={[6, 8, 12, 25]}
+                lang={isAr ? 'ar' : 'en'}
+                itemLabel={isAr ? 'طلب' : 'orders'}
+              />
+            </div>
+          )}
         </div>
       )}
 

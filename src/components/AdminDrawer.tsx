@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Download,
   KeyRound,
+  Layers,
 } from 'lucide-react';
 import { useSiteControls } from '../context/SiteControlsContext';
 import type { Product, Language, ProductAvailability } from '../types';
@@ -40,6 +41,7 @@ import AdminControlsTab from './admin_drawer/AdminControlsTab';
 import { type TabType, type AdminNavGroup } from './admin_drawer/types';
 import AdminSidebarNav from './admin_drawer/AdminSidebarNav';
 import AdminSubTabsBar from './admin_drawer/AdminSubTabsBar';
+import UIComponentsShowcase from './ui/UIComponentsShowcase';
 
 interface Props {
   lang?: Language;
@@ -220,6 +222,15 @@ export default function AdminDrawer({ lang = 'ar' }: Props) {
           icon: Globe,
           badge: null,
           description: isAr ? 'إنستغرام، واتساب، تيك توك، تلغرام، وباقي القنوات' : 'Brand social profiles & icons',
+        },
+        {
+          id: 'ui_components',
+          label: isAr ? 'مكونات الواجهة (UI Kit)' : 'UI Kit Components',
+          labelEn: 'UI Kit',
+          icon: Layers,
+          badge: '3 Primitives',
+          badgeColor: 'purple',
+          description: isAr ? 'معاينة تفاعلية لـ Pagination و DateRangePicker و RangeSlider' : 'Interactive Pagination, DatePicker & Slider showcase',
         },
       ],
     },
@@ -630,6 +641,13 @@ export default function AdminDrawer({ lang = 'ar' }: Props) {
               {/* TAB 6: SECURITY & PASSWORD */}
               {activeTab === "security" && (
                 <AdminSecurityTab isAr={isAr} />
+              )}
+
+              {/* TAB 7: VANT UI KIT COMPONENTS SHOWCASE */}
+              {activeTab === 'ui_components' && (
+                <div className="max-w-5xl mx-auto">
+                  <UIComponentsShowcase lang={isAr ? 'ar' : 'en'} />
+                </div>
               )}
             </main>
           </div>

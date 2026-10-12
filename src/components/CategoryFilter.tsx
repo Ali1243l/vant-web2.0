@@ -70,18 +70,33 @@ export default function CategoryFilter({
     });
   }, [active, isOffersOnly]);
 
-  // Close dropdown on outside click
+  // Close dropdown on outside click or deliberate scroll
   useEffect(() => {
+    if (!isOpen) return;
+
+    const initialScrollY = window.scrollY;
+    const openTime = Date.now();
+
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     }
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+
+    function handleScroll() {
+      // Don't close immediately on initial micro-scroll or scroll events right at opening
+      if (Date.now() - openTime < 250) return;
+      if (Math.abs(window.scrollY - initialScrollY) > 25) {
+        setIsOpen(false);
+      }
     }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll);
     };
   }, [isOpen]);
 
@@ -129,15 +144,15 @@ export default function CategoryFilter({
   const currentOption = availabilityOptions.find((o) => o.id === availability) || availabilityOptions[0];
 
   return (
-    <nav aria-label="Categories & Filters" className="pb-1.5 pt-0 sm:pb-2 sm:pt-0.5 md:pb-2 md:pt-0.5 w-full max-w-full overflow-x-clip">
+    <nav aria-label="Categories & Filters" className="pb-1.5 pt-0 sm:pb-2 sm:pt-0.5 md:pb-2 md:pt-0.5 w-full max-w-full overflow-visible">
       {/* Centered, balanced luxury bar with seamless inline filter */}
-      <div className="mx-auto flex max-w-7xl xl:max-w-[1440px] 2xl:max-w-[1536px] w-full items-center justify-center px-3 sm:px-6 md:px-8">
-        <div className="flex items-center gap-1.5 sm:gap-2 md:gap-2.5 max-w-full">
+      <div className="mx-auto flex max-w-7xl xl:max-w-[1440px] 2xl:max-w-[1536px] w-full items-center justify-center px-3 sm:px-6 md:px-8 overflow-visible">
+        <div className="flex items-center gap-1.5 sm:gap-2 md:gap-2.5 max-w-full overflow-visible">
           {/* 1. Category Tabs Track (Smooth Scroll, Perfectly Centered on Desktop) */}
           <div
             ref={tabsContainerRef}
             role="tablist"
-            className="no-scrollbar flex items-center gap-1.5 sm:gap-2 md:gap-2.5 overflow-x-auto [scroll-snap-type:x_proximity] select-none py-1 md:py-1.5"
+            className="no-scrollbar flex flex-nowrap items-center gap-1.5 sm:gap-2 md:gap-2.5 overflow-x-auto [scroll-snap-type:x_proximity] select-none py-1 md:py-1.5"
           >
             {/* Special Offers & Discounts Button */}
             {onToggleOffersOnly && offersControl.visible && (
@@ -217,18 +232,21 @@ export default function CategoryFilter({
 
           {/* 3. Availability Filter Pill (Controlled via SiteControls) */}
           {filterControl.visible && onAvailabilityChange && (
-            <div className="relative shrink-0 z-20" ref={dropdownRef}>
+            <div className={`relative shrink-0 ${isOpen ? 'z-40' : 'z-20'}`} ref={dropdownRef}>
               <button
                 type="button"
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsOpen((prev) => !prev);
+                }}
                 aria-expanded={isOpen}
                 aria-haspopup="true"
-                className={`flex shrink-0 items-center gap-1.5 md:gap-2 rounded-full px-3 py-1.5 md:h-9.5 md:px-4 lg:h-10 lg:px-4.5 text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer border ${
+                className={`flex shrink-0 items-center gap-1.5 md:gap-2 rounded-full px-3.5 py-1.5 md:h-9.5 md:px-4 lg:h-10 lg:px-4.5 text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer border shadow-2xs select-none ${
                   availability !== 'all'
-                    ? 'border-[#004ad7]/30 dark:border-[#3b82f6]/30 bg-[#004ad7]/10 dark:bg-[#3b82f6]/15 text-[#004ad7] dark:text-[#3b82f6] font-semibold'
+                    ? 'border-[#004ad7]/35 dark:border-[#3b82f6]/35 bg-[#004ad7]/10 dark:bg-[#3b82f6]/15 text-[#004ad7] dark:text-[#3b82f6] font-semibold ring-1 ring-[#004ad7]/20 dark:ring-[#3b82f6]/25'
                     : isOpen
-                    ? 'bg-black/[0.06] dark:bg-white/[0.1] text-[#15171c] dark:text-[#f3f4f6] border-black/10 dark:border-white/10'
-                    : 'bg-black/[0.035] dark:bg-white/[0.06] text-[#6b7280] dark:text-[#9ca3af] hover:text-[#15171c] dark:hover:text-[#f3f4f6] hover:bg-black/[0.06] dark:hover:bg-white/[0.1] border-black/5 dark:border-white/5'
+                    ? 'bg-black/[0.08] dark:bg-white/[0.12] text-[#15171c] dark:text-[#f3f4f6] border-black/15 dark:border-white/20 ring-1 ring-black/5 dark:ring-white/10'
+                    : 'bg-black/[0.035] dark:bg-white/[0.06] text-[#6b7280] dark:text-[#9ca3af] hover:text-[#15171c] dark:hover:text-[#f3f4f6] hover:bg-black/[0.06] dark:hover:bg-white/[0.1] border-black/8 dark:border-white/10'
                 }`}
               >
                 <SlidersHorizontal className="h-3.5 w-3.5 opacity-60" />
@@ -238,7 +256,7 @@ export default function CategoryFilter({
                 )}
                 <motion.span
                   animate={{ rotate: isOpen ? 180 : 0 }}
-                  transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                  transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
                   className="inline-flex items-center"
                 >
                   <ChevronDown className="h-3 w-3 opacity-60" />
@@ -249,12 +267,12 @@ export default function CategoryFilter({
               <AnimatePresence>
                 {isOpen && (
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: 6 }}
+                    initial={{ opacity: 0, scale: 0.98, y: 6 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 4 }}
-                    transition={{ type: 'spring', stiffness: 480, damping: 30 }}
+                    exit={{ opacity: 0, scale: 0.98, y: 6 }}
+                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                     role="menu"
-                    className="absolute z-50 mt-2 min-w-[230px] sm:min-w-[245px] md:min-w-[260px] rounded-2xl border border-black/8 dark:border-white/12 bg-white/95 dark:bg-[#12141a]/95 p-1.5 md:p-2 shadow-[0_20px_50px_rgba(0,0,0,0.14),0_6px_18px_rgba(0,0,0,0.06)] dark:shadow-[0_24px_55px_rgba(0,0,0,0.85),0_6px_20px_rgba(0,0,0,0.5)] backdrop-blur-2xl text-[#15171c] dark:text-white ltr:right-0 ltr:left-auto rtl:left-0 rtl:right-auto max-w-[calc(100vw-32px)] will-change-transform transform-gpu"
+                    className="absolute top-full mt-2 end-0 ltr:right-0 rtl:left-0 z-[100000] min-w-[240px] sm:min-w-[255px] md:min-w-[270px] rounded-2xl border border-black/10 dark:border-white/15 bg-white/95 dark:bg-[#12141a]/95 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.18),0_6px_18px_rgba(0,0,0,0.08)] dark:shadow-[0_24px_55px_rgba(0,0,0,0.9),0_6px_20px_rgba(0,0,0,0.6)] backdrop-blur-2xl text-[#15171c] dark:text-white max-w-[calc(100vw-32px)] will-change-transform transform-gpu ring-1 ring-black/5 dark:ring-white/10"
                   >
                     {/* Header */}
                     <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-black/6 dark:border-white/8 mb-1.5">

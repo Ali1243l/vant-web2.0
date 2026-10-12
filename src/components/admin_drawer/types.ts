@@ -11,7 +11,8 @@ export type TabType =
   | 'newsletter'
   | 'welcome_modal'
   | 'backup'
-  | 'security';
+  | 'security'
+  | 'ui_components';
 
 export interface AdminNavItem {
   id: TabType;
