@@ -1,6 +1,6 @@
 {
-  "summary": "Implementation plan for upgrading the Admin Dashboard layout in src/admin/ with a fixed dark glass sidebar, spacious max-w-7xl content viewport, and modular widgets integration (Pagination, DateRangePicker, RangeSlider).",
-  "updatedAt": "2026-10-12T18:02:54.380301351Z",
+  "summary": "Implementation plan for Add-to-Cart interaction (Image Drop animation + Blinkit-style Cart Counter) controlled via SiteControls enableCartAnimation flag.",
+  "updatedAt": "2026-10-12T19:01:35.397928427Z",
   "requestFeedback": true,
   "userFacing": true
 }

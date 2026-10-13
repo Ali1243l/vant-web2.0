@@ -20,7 +20,7 @@ export function WidgetsStudioView({ lang = 'ar' }: Props) {
     from: subDays(new Date(), 14),
     to: new Date(),
   });
-  const [priceRange, setPriceRange] = useState<number[]>([150, 850]);
+  const [priceRange, setPriceRange] = useState<number[]>([25000, 150000]);
 
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
@@ -33,9 +33,9 @@ export function WidgetsStudioView({ lang = 'ar' }: Props) {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-10" dir={isAr ? 'rtl' : 'ltr'}>
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl p-6 bg-gradient-to-r from-blue-900/30 via-slate-900/60 to-slate-900/30 border border-blue-500/20 backdrop-blur-xl">
+      <div className="relative overflow-hidden rounded-3xl p-6 bg-gradient-to-r from-indigo-900/30 via-slate-900/60 to-slate-900/30 border border-indigo-500/20 backdrop-blur-xl">
         <div className="flex items-center gap-3.5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-500/20">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-500/25">
             <Layers className="h-5 w-5" />
           </div>
           <div>
@@ -56,7 +56,7 @@ export function WidgetsStudioView({ lang = 'ar' }: Props) {
         <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 backdrop-blur-xl shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <div>
-              <div className="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">
+              <div className="text-xs font-mono font-bold text-indigo-400 uppercase tracking-wider">
                 01 / Widgets
               </div>
               <h3 className="text-base font-bold text-white">
@@ -113,7 +113,7 @@ export function WidgetsStudioView({ lang = 'ar' }: Props) {
         <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 backdrop-blur-xl shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <div>
-              <div className="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">
+              <div className="text-xs font-mono font-bold text-indigo-400 uppercase tracking-wider">
                 02 / Widgets
               </div>
               <h3 className="text-base font-bold text-white">
@@ -164,7 +164,7 @@ export function WidgetsStudioView({ lang = 'ar' }: Props) {
 
               <div className="text-xs font-mono text-slate-400 ps-2">
                 {isAr ? 'النطاق الفعّال:' : 'Active Window:'}{' '}
-                <span className="text-blue-400">
+                <span className="text-indigo-400">
                   {dateRange?.from?.toLocaleDateString() || 'None'} – {dateRange?.to?.toLocaleDateString() || 'None'}
                 </span>
               </div>
@@ -176,7 +176,7 @@ export function WidgetsStudioView({ lang = 'ar' }: Props) {
         <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 backdrop-blur-xl shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <div>
-              <div className="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">
+              <div className="text-xs font-mono font-bold text-indigo-400 uppercase tracking-wider">
                 03 / Widgets
               </div>
               <h3 className="text-base font-bold text-white">
@@ -184,7 +184,7 @@ export function WidgetsStudioView({ lang = 'ar' }: Props) {
               </h3>
               <p className="text-xs text-slate-400">
                 {isAr
-                  ? 'وحدة تصفية الأسعار المبنية على Radix Slider مع التلميح العائم الذكي (Tooltip).'
+                  ? 'وحدة تصفية الأسعار بالدينار العراقي المبنية على Radix Slider مع التلميح العائم الذكي (Tooltip).'
                   : 'Radix Slider price filter with animated tooltip follow-through.'}
               </p>
             </div>
@@ -194,10 +194,10 @@ export function WidgetsStudioView({ lang = 'ar' }: Props) {
               onClick={() =>
                 handleCopy(
                   'price',
-                  `<PriceRangeFilterWidget\n  value={priceRange}\n  onChange={setPriceRange}\n  min={0}\n  max={1500}\n  step={25}\n  currency="$"\n  lang="${lang}"\n/>`
+                  `<PriceRangeFilterWidget\n  value={priceRange}\n  onChange={setPriceRange}\n  min={0}\n  max={300000}\n  step={5000}\n  currency="${isAr ? 'د.ع' : 'IQD'}"\n  lang="${lang}"\n/>`
                 )
               }
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-800 hover:bg-slate-800 text-xs font-medium text-slate-300 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-slate-750 bg-slate-800/80 hover:bg-slate-700 text-xs font-bold text-slate-200 transition-colors shadow-xs cursor-pointer"
             >
               {copiedCode === 'price' ? (
                 <>
@@ -206,7 +206,7 @@ export function WidgetsStudioView({ lang = 'ar' }: Props) {
                 </>
               ) : (
                 <>
-                  <Copy className="h-3.5 w-3.5" />
+                  <Copy className="h-3.5 w-3.5 text-indigo-400" />
                   <span>{isAr ? 'نسخ الكود' : 'Copy Code'}</span>
                 </>
               )}
@@ -214,7 +214,7 @@ export function WidgetsStudioView({ lang = 'ar' }: Props) {
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-3">
-            <div className="text-[11px] font-mono text-slate-500 uppercase">
+            <div className="text-[11px] font-mono text-slate-400 uppercase">
               {isAr ? 'المعاينة الحية:' : 'Live Widget Demo:'}
             </div>
             <div className="max-w-md">
@@ -222,11 +222,11 @@ export function WidgetsStudioView({ lang = 'ar' }: Props) {
                 value={priceRange}
                 onChange={setPriceRange}
                 min={0}
-                max={1500}
-                step={25}
-                currency="$"
+                max={300000}
+                step={5000}
+                currency={isAr ? 'د.ع' : 'IQD'}
                 lang={lang}
-                onReset={() => setPriceRange([0, 1500])}
+                onReset={() => setPriceRange([0, 300000])}
               />
             </div>
           </div>

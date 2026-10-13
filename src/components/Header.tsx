@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, type ReactNode } from 'react';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
-import { Search, Sun, Moon, Globe, Heart } from 'lucide-react';
+import { Search, Sun, Moon, Globe, Heart, ShoppingCart } from 'lucide-react';
 import type { Language, Theme } from '../types';
 import { useSiteControls } from '../context/SiteControlsContext';
 import SearchOverlay from './SearchOverlay';
@@ -18,6 +18,8 @@ interface Props {
   wishlistCount?: number;
   isWishlistOnly?: boolean;
   onToggleWishlistOnly?: () => void;
+  onOpenCart?: () => void;
+  isCartOpen?: boolean;
 }
 
 export default function Header({
@@ -33,10 +35,13 @@ export default function Header({
   wishlistCount = 0,
   isWishlistOnly = false,
   onToggleWishlistOnly,
+  onOpenCart,
+  isCartOpen = false,
 }: Props) {
   const { getControl } = useSiteControls();
   const searchControl = getControl('btn_header_search');
   const wishlistControl = getControl('btn_header_wishlist');
+  const cartControl = getControl('btn_header_cart');
   const langControl = getControl('btn_header_lang');
   const themeControl = getControl('btn_header_theme');
   const logoControl = getControl('brand_kinetic_logo');
@@ -44,6 +49,42 @@ export default function Header({
   const [scrolled, setScrolled] = useState(false);
   const [showCategories, setShowCategories] = useState(true);
   const [kineticLang, setKineticLang] = useState<'en' | 'ar'>(lang);
+  const [cartCount, setCartCount] = useState<number>(() => {
+    try {
+      const stored = localStorage.getItem('vant_cart_count');
+      return stored ? parseInt(stored, 10) : 0;
+    } catch {
+      return 0;
+    }
+  });
+  const [isCartBouncing, setIsCartBouncing] = useState(false);
+
+  useEffect(() => {
+    const handleCartUpdate = (e: Event) => {
+      const customEv = e as CustomEvent;
+      if (customEv.detail && typeof customEv.detail.count === 'number') {
+        setCartCount(customEv.detail.count);
+      } else {
+        try {
+          const stored = localStorage.getItem('vant_cart_count');
+          setCartCount(stored ? parseInt(stored, 10) : 0);
+        } catch {}
+      }
+    };
+
+    const handleCartBounce = () => {
+      setIsCartBouncing(true);
+      setTimeout(() => setIsCartBouncing(false), 600);
+    };
+
+    window.addEventListener('vant-cart-update', handleCartUpdate);
+    window.addEventListener('vant-cart-bounce', handleCartBounce);
+    return () => {
+      window.removeEventListener('vant-cart-update', handleCartUpdate);
+      window.removeEventListener('vant-cart-bounce', handleCartBounce);
+    };
+  }, []);
+
   const prevScrollY = useRef(0);
 
   // Motion scroll listener for the resizable navbar effect and scroll direction
@@ -133,8 +174,8 @@ export default function Header({
                 scrolled ? 'h-11 sm:h-12' : 'h-14 sm:h-16'
               }`}
             >
-              {/* Left Actions (Search Icon, Wishlist) */}
-              <div className="flex items-center justify-start gap-1.5 sm:gap-2.5 min-w-[80px] sm:min-w-[110px] [direction:ltr]">
+              {/* Left Actions (Search Icon, Shopping Cart, Wishlist) */}
+              <div className="flex items-center justify-start gap-1.5 sm:gap-2.5 min-w-[110px] sm:min-w-[140px] [direction:ltr]">
                 {searchControl.visible && (
                   <button
                     type="button"
@@ -149,6 +190,47 @@ export default function Header({
                   </button>
                 )}
 
+                {/* 1. Dedicated Shopping Cart Icon Button */}
+                {(!cartControl || (cartControl.visible !== false && cartControl.enabled !== false)) && (
+                  <button
+                    type="button"
+                    id="header-cart-icon"
+                    onClick={onOpenCart}
+                    className={`relative flex items-center justify-center rounded-full transition-all active:scale-90 cursor-pointer ${
+                      scrolled ? 'h-8 w-8' : 'h-9 w-9'
+                    } ${
+                      isCartOpen
+                        ? 'bg-[#004ad7] text-white shadow-md shadow-[#004ad7]/30'
+                        : 'text-[#15171c]/80 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10'
+                    }`}
+                    aria-label={lang === 'ar' ? 'سلة التسوق' : 'Shopping Cart'}
+                    title={lang === 'ar' ? cartControl?.label_ar || 'سلة التسوق' : cartControl?.label_en || 'Shopping Cart'}
+                  >
+                    <motion.div
+                      animate={
+                        isCartBouncing
+                          ? { scale: [1, 1.45, 0.88, 1.2, 1], rotate: [0, -15, 12, -6, 0] }
+                          : { scale: 1, rotate: 0 }
+                      }
+                      transition={{ duration: 0.55, ease: 'easeOut' }}
+                      className="flex items-center justify-center"
+                    >
+                      <ShoppingCart className={`stroke-[1.9] transition-all ${scrolled ? 'h-4 w-4' : 'h-4.5 w-4.5'}`} />
+                    </motion.div>
+                    {cartCount > 0 && (
+                      <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        key={cartCount}
+                        className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#004ad7] dark:bg-[#3b82f6] px-1 text-[9px] font-extrabold text-white shadow-sm ring-2 ring-white dark:ring-slate-900"
+                      >
+                        {cartCount}
+                      </motion.span>
+                    )}
+                  </button>
+                )}
+
+                {/* 2. Wishlist Button */}
                 {wishlistControl.visible && onToggleWishlistOnly && (
                   <button
                     type="button"
@@ -161,6 +243,7 @@ export default function Header({
                         : 'text-[#15171c]/80 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10'
                     }`}
                     aria-label={lang === 'ar' ? wishlistControl.label_ar : wishlistControl.label_en}
+                    title={lang === 'ar' ? wishlistControl.label_ar : wishlistControl.label_en}
                   >
                     <Heart className={`stroke-[1.8] transition-all ${scrolled ? 'h-4 w-4' : 'h-4.5 w-4.5'} ${isWishlistOnly ? 'fill-current' : ''}`} />
                     {wishlistCount > 0 && (

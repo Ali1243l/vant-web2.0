@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { AnimatePresence, motion, useMotionValue, useTransform, animate } from 'framer-motion';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import type { Product, Language } from '../types';
 import { DEFAULT_WHATSAPP_PHONE } from '../lib/constants';
@@ -15,7 +15,6 @@ import ProductColorSelector from './product_drawer/ProductColorSelector';
 import ProductSizeSection from './product_drawer/ProductSizeSection';
 import ProductOrderButton from './product_drawer/ProductOrderButton';
 import ProductDetailsBadges from './product_drawer/ProductDetailsBadges';
-import ProductMobileOrderBar from './product_drawer/ProductMobileOrderBar';
 
 interface Props {
   product: Product | null;
@@ -25,14 +24,6 @@ interface Props {
 }
 
 export default function ProductDrawer({ product, loading, lang, onClose }: Props) {
-  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false));
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [slideDirection, setSlideDirection] = useState(1);
   const { getControl, formatPrice, masterSizes } = useSiteControls();
@@ -62,7 +53,6 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     return resolveProductColorVariants(product, product.currency || 'IQD');
   }, [product]);
 
-  // Determine the primary/default variant index (matches what is shown in catalog card)
   const defaultVariantIdx = useMemo(() => {
     if (!variantInfo || variantInfo.variants.length === 0) return 0;
     const preferredKey = (product as any)?.activeColorKey;
@@ -86,7 +76,6 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
   const [selectedColorIdx, setSelectedColorIdx] = useState<number | null>(defaultVariantIdx);
   const [hoverColorIdx, setHoverColorIdx] = useState<number | null>(null);
 
-  // Sync selectedColorIdx when product changes or preferred color is passed
   useEffect(() => {
     if (product && variantInfo) {
       setSelectedColorIdx(defaultVariantIdx);
@@ -95,7 +84,6 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     }
   }, [product?.id, defaultVariantIdx, variantInfo]);
 
-  // When a color is selected, hover previews another color variant smoothly.
   const effectiveColorIdx = hoverColorIdx !== null ? hoverColorIdx : selectedColorIdx;
 
   const activeVariant = useMemo(() => {
@@ -110,7 +98,6 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     );
   }, [variantInfo, effectiveColorIdx, defaultVariantIdx]);
 
-  // STRICT RULE: Each color variant strictly and exclusively displays ONLY its own images!
   const images = useMemo(() => {
     if (!product || !variantInfo) return [];
 
@@ -134,7 +121,6 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     return [];
   }, [product, effectiveColorIdx, variantInfo, defaultVariantIdx]);
 
-  // Reset product-level state when product changes
   useEffect(() => {
     if (product) {
       setSelectedSize(null);
@@ -144,7 +130,6 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     }
   }, [product?.id]);
 
-  // Heartbeat Telemetry: Fire 'engagement_heartbeat' every 10 seconds while the product drawer is open & tab is visible
   useEffect(() => {
     if (!product) return;
 
@@ -194,8 +179,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
   }, [isSoldOut, activeVariant?.sizes, product?.sizes]);
 
   const renderedSizes = useMemo(() => {
-    const prodSizes = (activeVariant?.sizes || product?.sizes || []).filter(Boolean);
-    return prodSizes;
+    return (activeVariant?.sizes || product?.sizes || []).filter(Boolean);
   }, [activeVariant?.sizes, product?.sizes]);
 
   const displayCategory = lang === 'ar' && product?.category_ar ? product.category_ar : product?.category;
@@ -364,122 +348,10 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     }
   };
 
-  // Mobile & Modal Drag Handlers
-  const dragY = useMotionValue(0);
-  const backdropOpacity = useTransform(dragY, [0, 280], [1, 0]);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const isClosingRef = useRef(false);
-
-  useEffect(() => {
-    if (product) {
-      isClosingRef.current = false;
-      if (isMobile) {
-        dragY.set(typeof window !== 'undefined' ? window.innerHeight : 650);
-        animate(dragY, 0, {
-          type: 'spring',
-          damping: 28,
-          stiffness: 340,
-          mass: 0.8,
-        });
-      } else {
-        dragY.set(0);
-      }
-    }
-  }, [product, isMobile, dragY]);
-
-  const touchStateRef = useRef<{
-    startY: number;
-    startX: number;
-    startTime: number;
-    isDragging: boolean;
-    initialScrollTop: number;
-  }>({
-    startY: 0,
-    startX: 0,
-    startTime: 0,
-    isDragging: false,
-    initialScrollTop: 0,
-  });
-
-  const onTouchStartDrag = (e: React.TouchEvent) => {
-    if (!isMobile || isClosingRef.current) return;
-    const touch = e.touches[0];
-    const initialScrollTop = scrollContainerRef.current ? scrollContainerRef.current.scrollTop : 0;
-    touchStateRef.current = {
-      startY: touch.clientY,
-      startX: touch.clientX,
-      startTime: Date.now(),
-      isDragging: true,
-      initialScrollTop,
-    };
-  };
-
-  const onTouchMoveDrag = (e: React.TouchEvent) => {
-    if (!isMobile || !touchStateRef.current.isDragging || isClosingRef.current) return;
-    const touch = e.touches[0];
-    const deltaY = touch.clientY - touchStateRef.current.startY;
-    const deltaX = touch.clientX - touchStateRef.current.startX;
-
-    if (deltaY > 0 && touchStateRef.current.initialScrollTop <= 0 && deltaY > Math.abs(deltaX) * 0.25) {
-      dragY.set(deltaY);
-    } else if (deltaY < 0 && dragY.get() > 0) {
-      dragY.set(Math.max(0, dragY.get() + deltaY * 0.15));
-    }
-  };
-
-  const onTouchEndDrag = () => {
-    if (!isMobile || !touchStateRef.current.isDragging || isClosingRef.current) return;
-    touchStateRef.current.isDragging = false;
-
-    const currentDeltaY = dragY.get();
-    const elapsedTime = Math.max(1, Date.now() - touchStateRef.current.startTime);
-    const velocity = currentDeltaY / elapsedTime;
-
-    if (currentDeltaY > 25 || velocity > 0.12) {
-      isClosingRef.current = true;
-      const targetY = typeof window !== 'undefined' ? window.innerHeight : 650;
-      animate(dragY, targetY, {
-        duration: 0.18,
-        ease: [0.22, 1, 0.36, 1],
-        onComplete: () => {
-          onClose();
-        },
-      });
-    } else {
-      animate(dragY, 0, { type: 'spring', damping: 28, stiffness: 350 });
-    }
-  };
-
-  const handleClose = useCallback(() => {
-    if (isClosingRef.current) return;
-    if (isMobile) {
-      isClosingRef.current = true;
-      const targetY = typeof window !== 'undefined' ? window.innerHeight : 650;
-      animate(dragY, targetY, {
-        duration: 0.18,
-        ease: [0.22, 1, 0.36, 1],
-        onComplete: () => {
-          onClose();
-        },
-      });
-    } else {
-      onClose();
-    }
-  }, [isMobile, dragY, onClose]);
-
-  // Keyboard navigation: ESC to close, Left/Right for gallery + Zero-Reflow Body Lock
   useEffect(() => {
     if (!product) return;
     const prevBodyOverflow = document.body.style.overflow;
-    const prevBodyPaddingRight = document.body.style.paddingRight;
-
-    if (!isMobile) {
-      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-      if (scrollbarWidth > 0) {
-        document.body.style.paddingRight = `${scrollbarWidth}px`;
-      }
-      document.body.style.overflow = 'hidden';
-    }
+    document.body.style.overflow = 'hidden';
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -497,195 +369,167 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
 
     window.addEventListener('keydown', onKeyDown);
     return () => {
-      if (!isMobile) {
-        document.body.style.overflow = prevBodyOverflow;
-        document.body.style.paddingRight = prevBodyPaddingRight;
-      }
+      document.body.style.overflow = prevBodyOverflow;
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [product, onClose, paginate, showSizeGuide, isMobile]);
+  }, [product, onClose, paginate, showSizeGuide]);
+
+  const isOpen = Boolean(product || loading);
 
   return (
     <AnimatePresence>
       {loading && !product && (
         <ProductDrawerSkeleton key="skeleton" lang={lang} onClose={onClose} />
       )}
-      {product && (
-        <div
-          key="drawer-modal-container"
-          className="fixed inset-0 z-50 flex items-end justify-center pointer-events-none md:items-center p-0 md:p-6 lg:p-8 xl:p-10"
-        >
-          {/* Backdrop with click to dismiss */}
+      {isOpen && product && (
+        <>
+          {/* 1. Backdrop (Click to close) */}
           <motion.div
             key="backdrop"
-            style={isMobile ? { opacity: backdropOpacity } : undefined}
-            className="fixed inset-0 bg-black/45 dark:bg-black/60 pointer-events-auto touch-none will-change-opacity"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
-            onClick={handleClose}
+            onClick={onClose}
+            className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-md"
           />
 
-          {/* Responsive Sheet/Modal Panel */}
-          <motion.div
-            key={`sheet-panel-${product.id}`}
-            role="dialog"
-            aria-modal="true"
-            aria-label={displayTitle}
-            style={isMobile ? { y: dragY } : undefined}
-            className="pointer-events-auto relative z-10 flex w-full flex-col overflow-hidden bg-[#f8f9fa] dark:bg-[#16191f] shadow-2xl transition-colors duration-250 
-                       rounded-t-[28px] sm:rounded-t-[32px] h-[92dvh] sm:h-[94dvh] max-h-[100dvh]
-                       md:h-[88vh] md:max-h-[820px] md:min-h-[620px] md:max-w-4xl lg:max-w-5xl xl:max-w-6xl md:rounded-[32px] md:border md:border-black/5 md:dark:border-white/10 will-change-transform"
-            initial={isMobile ? false : { opacity: 0, scale: 0.96, y: 12 }}
-            animate={isMobile ? undefined : { opacity: 1, scale: 1, y: 0 }}
-            exit={isMobile ? { opacity: 0, transition: { duration: 0.05 } } : { opacity: 0, scale: 0.96, y: 12 }}
-            transition={
-              isMobile
-                ? undefined
-                : { duration: 0.22, ease: [0.16, 1, 0.3, 1] }
-            }
-          >
-            {/* Mobile Drag to Close Zone */}
-            <div
-              className="flex flex-col shrink-0 items-center justify-center pt-2.5 pb-2 cursor-grab active:cursor-grabbing md:hidden select-none touch-none w-full"
-              onTouchStart={onTouchStartDrag}
-              onTouchMove={onTouchMoveDrag}
-              onTouchEnd={onTouchEndDrag}
-              onTouchCancel={onTouchEndDrag}
+          {/* 2. Modal Wrapper: Centered Modal on Desktop (fixed inset-0 flex items-center justify-center), Bottom Sheet on Mobile */}
+          <div className="fixed inset-0 z-[1001] flex items-end md:items-center justify-center p-0 md:p-6 lg:p-8 pointer-events-none">
+            <motion.div
+              key={`drawer-panel-${product.id}`}
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="pointer-events-auto relative z-10 flex flex-col md:flex-row w-full max-w-5xl lg:max-w-6xl h-[92vh] sm:h-[90vh] md:h-[84vh] md:max-h-[800px] bg-[#f8f9fa] dark:bg-[#0d0f12] border-t md:border border-black/10 dark:border-white/10 rounded-t-[28px] sm:rounded-t-[32px] md:rounded-[32px] overflow-y-auto md:overflow-hidden no-scrollbar shadow-2xl"
             >
-              <div className="h-1.5 w-11 rounded-full bg-black/25 dark:bg-white/30 active:bg-black/50 transition-colors" />
-              <span className="mt-1 text-[10px] font-medium text-black/40 dark:text-white/40 tracking-wider select-none">
-                {lang === 'ar' ? 'اسحب للأسفل للإغلاق' : 'Swipe down to close'}
-              </span>
-            </div>
+              {/* Mobile Top Drag Indicator */}
+              <div className="md:hidden flex items-center justify-center pt-2 pb-0.5 shrink-0 w-full select-none touch-none">
+                <div className="h-1.5 w-10 rounded-full bg-black/20 dark:bg-white/25" />
+              </div>
 
-            {/* Dedicated Close Button */}
-            <button
-              type="button"
-              onClick={handleClose}
-              className="absolute top-3.5 md:top-5 z-20 flex h-9 w-9 md:h-12 md:w-12 items-center justify-center rounded-full bg-white/85 dark:bg-[#0d0f12]/85 text-[#15171c] dark:text-white backdrop-blur-md shadow-xs border border-black/5 dark:border-white/10 transition-all hover:bg-white dark:hover:bg-[#0d0f12] active:scale-95 ltr:right-3.5 rtl:left-3.5 md:ltr:right-5 md:rtl:left-5 cursor-pointer"
-              aria-label={lang === 'ar' ? 'إغلاق' : 'Close'}
-            >
-              <X className="h-4 w-4 md:h-5 md:w-5" />
-            </button>
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={onClose}
+                className="absolute top-2.5 right-3 rtl:right-auto rtl:left-3 md:top-4.5 md:right-4.5 md:rtl:right-auto md:rtl:left-4.5 z-50 p-2 sm:p-2.5 bg-white/90 dark:bg-[#1a1e28]/90 hover:bg-white dark:hover:bg-[#1a1e28] rounded-full hover:scale-105 transition-all cursor-pointer backdrop-blur-md border border-black/6 dark:border-white/10 shadow-xs text-black dark:text-white"
+                aria-label={lang === 'ar' ? 'إغلاق' : 'Close'}
+              >
+                <X className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-black dark:text-white" />
+              </button>
 
-            {/* Responsive Layout Grid (Split screen on Desktop, Stack on Mobile) */}
-            <div
-              ref={scrollContainerRef}
-              className="grid flex-1 overflow-y-auto overscroll-contain touch-pan-y md:grid-cols-12 md:overflow-hidden md:h-full pb-20 md:pb-0"
-            >
-              {/* GALLERY SECTION (Column 1-6 on desktop) */}
-              <ProductDrawerGallery
-                images={images}
-                product={product}
-                displayTitle={displayTitle}
-                activeImageIndex={activeImageIndex}
-                setActiveImageIndex={setActiveImageIndex}
-                slideDirection={slideDirection}
-                setSlideDirection={setSlideDirection}
-                carouselNavVisible={carouselNavControl.visible}
-                lang={lang}
-                paginate={paginate}
-              />
-
-              {/* DETAILS SECTION (Column 7-12 on desktop) */}
-              <div className="flex flex-col justify-between p-4 sm:p-6 md:p-7 lg:p-8 md:col-span-6 lg:col-span-6 md:overflow-y-auto md:h-full no-scrollbar pb-6 md:pb-8">
-                <div className="space-y-4 sm:space-y-5 md:space-y-6">
-                  {/* Category, Title, Price & Status Info */}
-                  <ProductHeaderInfo
-                    displayCategory={displayCategory}
-                    statusBadgeClasses={statusBadgeClasses}
-                    statusDotClass={statusDotClass}
-                    statusBadgeLabel={statusBadgeLabel}
-                    displayTitle={displayTitle}
-                    formatPrice={formatPrice}
-                    activePrice={activePrice}
-                    product={product}
-                    activeVariant={activeVariant}
-                    lang={lang}
-                    availability={availability}
-                    statusBannerText={statusBannerText}
-                  />
-
-                  {/* Garment Colors Selector */}
-                  <ProductColorSelector
-                    variantInfo={variantInfo}
-                    product={product}
-                    lang={lang}
-                    selectedColorIdx={selectedColorIdx}
-                    setSelectedColorIdx={setSelectedColorIdx}
-                    hoverColorIdx={hoverColorIdx}
-                    setHoverColorIdx={setHoverColorIdx}
-                    defaultVariantIdx={defaultVariantIdx}
-                    onColorChange={() => {
-                      setActiveImageIndex(0);
-                    }}
-                  />
-
-                  {/* Sizing & Fit Section + Smart Guide */}
-                  <ProductSizeSection
-                    renderedSizes={renderedSizes}
-                    availableSizes={availableSizes}
-                    selectedSize={selectedSize}
-                    onSizeClick={handleSizeClick}
-                    sizeFeedback={sizeFeedback}
-                    isSoldOut={isSoldOut}
-                    lang={lang}
-                    sizeGuideControl={sizeGuideControl}
-                    showSizeGuide={showSizeGuide}
-                    setShowSizeGuide={setShowSizeGuide}
-                    masterSizes={masterSizes}
-                    bespokeControl={bespokeControl}
-                    bespokeWhatsappUrl={bespokeWhatsappUrl}
+              {/* 3. Bento Box Layout Container */}
+              <div className="flex flex-col md:flex-row w-full h-full p-2.5 sm:p-5 md:p-6 gap-2.5 sm:gap-4 md:gap-5">
+                {/* Left Box: Product Image (Bento Box 1) */}
+                <div className="w-full md:w-[48%] h-[260px] xs:h-[300px] sm:h-[380px] md:h-full rounded-[18px] sm:rounded-[22px] md:rounded-[26px] bg-black/5 dark:bg-white/5 overflow-hidden relative shrink-0">
+                  <ProductDrawerGallery
+                    images={images}
                     product={product}
                     displayTitle={displayTitle}
-                    calcHeight={calcHeight}
-                    setCalcHeight={setCalcHeight}
-                    calcWeight={calcWeight}
-                    setCalcWeight={setCalcWeight}
-                  />
-
-                  {/* Primary Conversion Action: Desktop WhatsApp Order Button */}
-                  <ProductOrderButton
-                    whatsappControl={whatsappControl}
-                    whatsappUrl={whatsappUrl}
-                    product={product}
-                    displayTitle={displayTitle}
-                    selectedSize={selectedSize}
-                    buttonLabel={buttonLabel}
+                    activeImageIndex={activeImageIndex}
+                    setActiveImageIndex={setActiveImageIndex}
+                    slideDirection={slideDirection}
+                    setSlideDirection={setSlideDirection}
+                    carouselNavVisible={carouselNavControl.visible}
                     lang={lang}
-                  />
-
-                  {/* Secondary Actions & Editorial Highlights */}
-                  <ProductDetailsBadges
-                    shareControl={shareControl}
-                    copyControl={copyControl}
-                    deliveryBadgeControl={deliveryBadgeControl}
-                    craftBadgeControl={craftBadgeControl}
-                    lang={lang}
-                    displayDescription={displayDescription}
-                    handleCopyTitle={handleCopyTitle}
-                    copiedTitle={copiedTitle}
-                    onOpenShareModal={() => setShowShareModal(true)}
+                    paginate={paginate}
                   />
                 </div>
-              </div>
-            </div>
 
-            {/* Dedicated Sticky Mobile Quick-Order Floating Bar */}
-            <ProductMobileOrderBar
-              whatsappControl={whatsappControl}
-              selectedSize={selectedSize}
-              lang={lang}
-              activePrice={activePrice}
-              formatPrice={formatPrice}
-              whatsappUrl={whatsappUrl}
-              product={product}
-              displayTitle={displayTitle}
-              buttonLabel={buttonLabel}
-            />
-          </motion.div>
+                {/* Right Column: Details & Actions */}
+                <div className="w-full md:w-[52%] flex flex-col gap-2.5 sm:gap-3.5 md:overflow-y-auto md:h-full no-scrollbar md:pr-1.5 pb-2">
+                  {/* Title & Price (Bento Box 2) */}
+                  <div className="p-3.5 sm:p-5 rounded-[18px] sm:rounded-[22px] md:rounded-[24px] bg-white dark:bg-[#16191f] border border-black/6 dark:border-white/8 shadow-xs">
+                    <ProductHeaderInfo
+                      displayCategory={displayCategory}
+                      statusBadgeClasses={statusBadgeClasses}
+                      statusDotClass={statusDotClass}
+                      statusBadgeLabel={statusBadgeLabel}
+                      displayTitle={displayTitle}
+                      formatPrice={formatPrice}
+                      activePrice={activePrice}
+                      product={product}
+                      activeVariant={activeVariant}
+                      lang={lang}
+                      availability={availability}
+                      statusBannerText={statusBannerText}
+                    />
+                  </div>
+
+                  {/* Sizes & Colors (Bento Box 3) */}
+                  <div className="p-3.5 sm:p-5 rounded-[18px] sm:rounded-[22px] md:rounded-[24px] bg-white dark:bg-[#16191f] border border-black/6 dark:border-white/8 shadow-xs flex flex-col gap-3 sm:gap-3.5">
+                    <ProductColorSelector
+                      variantInfo={variantInfo}
+                      product={product}
+                      lang={lang}
+                      selectedColorIdx={selectedColorIdx}
+                      setSelectedColorIdx={setSelectedColorIdx}
+                      hoverColorIdx={hoverColorIdx}
+                      setHoverColorIdx={setHoverColorIdx}
+                      defaultVariantIdx={defaultVariantIdx}
+                      onColorChange={() => {
+                        setActiveImageIndex(0);
+                      }}
+                    />
+
+                    {variantInfo && (variantInfo.hasMultipleColors || (Array.isArray(product?.colors) && product.colors.length > 0)) && renderedSizes.length > 0 && (
+                      <div className="h-px w-full bg-black/5 dark:bg-white/5" />
+                    )}
+
+                    <ProductSizeSection
+                      renderedSizes={renderedSizes}
+                      availableSizes={availableSizes}
+                      selectedSize={selectedSize}
+                      onSizeClick={handleSizeClick}
+                      sizeFeedback={sizeFeedback}
+                      isSoldOut={isSoldOut}
+                      lang={lang}
+                      sizeGuideControl={sizeGuideControl}
+                      showSizeGuide={showSizeGuide}
+                      setShowSizeGuide={setShowSizeGuide}
+                      masterSizes={masterSizes}
+                      bespokeControl={bespokeControl}
+                      bespokeWhatsappUrl={bespokeWhatsappUrl}
+                      product={product}
+                      displayTitle={displayTitle}
+                      calcHeight={calcHeight}
+                      setCalcHeight={setCalcHeight}
+                      calcWeight={calcWeight}
+                      setCalcWeight={setCalcWeight}
+                    />
+                  </div>
+
+                  {/* Features/Info (Bento Box 4) */}
+                  <div className="p-3.5 sm:p-5 rounded-[18px] sm:rounded-[22px] md:rounded-[24px] bg-white dark:bg-[#16191f] border border-black/6 dark:border-white/8 shadow-xs">
+                    <ProductDetailsBadges
+                      shareControl={shareControl}
+                      copyControl={copyControl}
+                      deliveryBadgeControl={deliveryBadgeControl}
+                      craftBadgeControl={craftBadgeControl}
+                      lang={lang}
+                      displayDescription={displayDescription}
+                      handleCopyTitle={handleCopyTitle}
+                      copiedTitle={copiedTitle}
+                      onOpenShareModal={() => setShowShareModal(true)}
+                    />
+                  </div>
+
+                  {/* Sticky Bottom Actions (Add to Cart & WhatsApp) */}
+                  <div className="sticky bottom-0 pt-2 pb-[calc(0.6rem+env(safe-area-inset-bottom,0px))] bg-gradient-to-t from-[#f8f9fa] dark:from-[#0d0f12] via-[#f8f9fa]/95 dark:via-[#0d0f12]/95 to-transparent mt-auto z-20">
+                    <ProductOrderButton
+                      whatsappControl={whatsappControl}
+                      whatsappUrl={whatsappUrl}
+                      product={product}
+                      displayTitle={displayTitle}
+                      selectedSize={selectedSize}
+                      buttonLabel={buttonLabel}
+                      lang={lang}
+                    />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
 
           {/* Share Modal Dialog */}
           <ShareModal
@@ -694,7 +538,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
             product={product}
             lang={lang}
           />
-        </div>
+        </>
       )}
     </AnimatePresence>
   );

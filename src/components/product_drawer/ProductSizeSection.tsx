@@ -98,16 +98,16 @@ export const ProductSizeSection: React.FC<ProductSizeSectionProps> = ({
                 trackEvent('size_guide_open', { productId: product.id, title: displayTitle });
               }
             }}
-            className="inline-flex items-center gap-1.5 md:gap-2 rounded-full px-2.5 py-1 md:h-10 md:px-4 lg:h-10.5 lg:px-4.5 bg-black/[0.03] dark:bg-white/[0.05] border border-black/8 dark:border-white/10 text-xs md:text-sm font-semibold text-[#004ad7] dark:text-[#3b82f6] hover:bg-[#004ad7]/10 dark:hover:bg-[#3b82f6]/15 cursor-pointer transition-all active:scale-95"
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-black/[0.03] dark:bg-white/[0.05] border border-black/8 dark:border-white/10 text-xs font-semibold text-[#004ad7] dark:text-[#3b82f6] hover:bg-[#004ad7]/10 dark:hover:bg-[#3b82f6]/15 cursor-pointer transition-all active:scale-95"
           >
-            <Ruler className="h-3.5 w-3.5 md:h-4 md:w-4" />
+            <Ruler className="h-3.5 w-3.5" />
             <span>{lang === 'ar' ? sizeGuideControl.label_ar : sizeGuideControl.label_en}</span>
           </button>
         )}
       </div>
 
       {/* Size Selection Grid */}
-      <ul className="flex flex-wrap gap-2 md:gap-2.5 lg:gap-3">
+      <ul className="flex flex-wrap gap-2 sm:gap-2.5">
         {renderedSizes.map((size) => {
           const isAvailable = availableSizes.has(size.toUpperCase());
           const isSelected = selectedSize === size;
@@ -117,7 +117,7 @@ export const ProductSizeSection: React.FC<ProductSizeSectionProps> = ({
               <button
                 type="button"
                 onClick={() => onSizeClick(size)}
-                className={`flex h-10 min-w-[44px] sm:min-w-[48px] px-3 sm:px-3.5 md:h-13.5 md:min-w-[60px] lg:h-14 lg:min-w-[66px] md:px-5 lg:px-6 items-center justify-center rounded-xl md:rounded-2xl border text-xs sm:text-sm md:text-[15px] lg:text-base font-bold transition-all active:scale-95 cursor-pointer ${
+                className={`flex h-10 min-w-[44px] sm:h-11 sm:min-w-[48px] md:h-11.5 md:min-w-[52px] px-3 sm:px-4 items-center justify-center rounded-xl md:rounded-2xl border text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer ${
                   isSelected
                     ? 'border-[#004ad7] bg-[#004ad7] text-white shadow-md shadow-[#004ad7]/25 ring-2 ring-[#004ad7]/30 dark:border-[#3b82f6] dark:bg-[#3b82f6]'
                     : isAvailable

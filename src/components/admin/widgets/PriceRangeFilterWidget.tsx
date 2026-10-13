@@ -20,16 +20,19 @@ export function PriceRangeFilterWidget({
   value,
   onChange,
   min = 0,
-  max = 2000,
-  step = 25,
-  currency = '$',
+  max = 500000,
+  step = 5000,
+  currency,
   lang = 'ar',
   label,
   className,
   onReset,
 }: PriceRangeFilterWidgetProps) {
   const isAr = lang === 'ar';
-  const defaultLabel = isAr ? 'تصفية الأسعار' : 'Price Filter';
+  const resolvedCurrency = (isAr && (currency === 'IQD' || currency === '$' || !currency))
+    ? 'د.ع'
+    : (currency || (isAr ? 'د.ع' : 'IQD'));
+  const defaultLabel = isAr ? 'تصفية نطاق الأسعار' : 'Price Filter';
 
   const safeVal: [number, number] = [
     typeof value?.[0] === 'number' ? value[0] : min,
@@ -48,7 +51,7 @@ export function PriceRangeFilterWidget({
   }, [safeVal[1]]);
 
   const formatPrice = (val: number) => {
-    return isAr ? `${val.toLocaleString()} ${currency}` : `${currency}${val.toLocaleString()}`;
+    return isAr ? `${val.toLocaleString()} ${resolvedCurrency}` : `${val.toLocaleString()} ${resolvedCurrency}`;
   };
 
   const commitMin = (valStr: string) => {
@@ -83,7 +86,7 @@ export function PriceRangeFilterWidget({
     >
       <div className="flex items-center justify-between text-slate-300 font-medium">
         <div className="flex items-center gap-1.5">
-          <Tag className="h-3.5 w-3.5 text-[#3b82f6]" />
+          <Tag className="h-3.5 w-3.5 text-indigo-400" />
           <span>{label || defaultLabel}</span>
         </div>
 
@@ -118,7 +121,7 @@ export function PriceRangeFilterWidget({
             }}
             className="w-full bg-transparent text-slate-200 outline-none text-end font-mono"
           />
-          <span className="text-slate-500 text-[10px]">{currency}</span>
+          <span className="text-indigo-400 font-bold text-[10.5px] shrink-0">{resolvedCurrency}</span>
         </div>
 
         <span className="text-slate-600">–</span>
@@ -138,7 +141,7 @@ export function PriceRangeFilterWidget({
             }}
             className="w-full bg-transparent text-slate-200 outline-none text-end font-mono"
           />
-          <span className="text-slate-500 text-[10px]">{currency}</span>
+          <span className="text-indigo-400 font-bold text-[10.5px] shrink-0">{resolvedCurrency}</span>
         </div>
       </div>
 

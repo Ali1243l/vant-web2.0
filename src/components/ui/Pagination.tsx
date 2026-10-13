@@ -85,7 +85,7 @@ export function Pagination({
       aria-label={isAr ? 'التنقل بين الصفحات' : 'Pagination Navigation'}
       dir={isAr ? 'rtl' : 'ltr'}
       className={cn(
-        'flex items-center justify-between sm:justify-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded-2xl bg-white/70 dark:bg-[#12141a]/80 backdrop-blur-xl border border-black/8 dark:border-white/10 shadow-xs text-xs sm:text-sm select-none transition-all',
+        'flex items-center justify-between sm:justify-center gap-1.5 sm:gap-2 p-2 sm:p-2.5 rounded-2xl bg-slate-900/90 backdrop-blur-xl border border-slate-750 text-slate-100 shadow-md select-none transition-all',
         className
       )}
     >
@@ -96,11 +96,12 @@ export function Pagination({
           onClick={() => canPrev && onPageChange(1)}
           disabled={!canPrev}
           aria-label={isAr ? 'الصفحة الأولى' : 'First page'}
+          title={isAr ? 'الصفحة الأولى' : 'First page'}
           className={cn(
-            'hidden sm:flex h-9 w-9 items-center justify-center rounded-full border border-black/5 dark:border-white/5 transition-all duration-150 active:scale-95 cursor-pointer',
+            'hidden sm:flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border transition-all duration-150 active:scale-95 cursor-pointer',
             canPrev
-              ? 'text-neutral-700 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/10 hover:text-black dark:hover:text-white'
-              : 'opacity-35 cursor-not-allowed pointer-events-none'
+              ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700 hover:border-slate-600 hover:text-white shadow-xs'
+              : 'bg-slate-900/60 border-slate-800 text-slate-600 opacity-40 cursor-not-allowed pointer-events-none'
           )}
         >
           {isAr ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
@@ -114,18 +115,18 @@ export function Pagination({
         disabled={!canPrev}
         aria-label={isAr ? 'الصفحة السابقة' : 'Previous page'}
         className={cn(
-          'flex h-8 sm:h-9 items-center gap-1 px-2.5 sm:px-3 rounded-full border border-black/6 dark:border-white/10 transition-all duration-150 active:scale-95 font-medium cursor-pointer',
+          'flex h-9 sm:h-10 items-center gap-1.5 px-3 sm:px-4 rounded-xl border transition-all duration-150 active:scale-95 font-bold text-xs sm:text-sm cursor-pointer shadow-xs',
           canPrev
-            ? 'bg-black/4 dark:bg-white/6 text-neutral-800 dark:text-neutral-200 hover:bg-black/8 dark:hover:bg-white/12 hover:text-black dark:hover:text-white'
-            : 'opacity-30 cursor-not-allowed pointer-events-none'
+            ? 'bg-slate-800 border-slate-700 text-white hover:bg-indigo-600 hover:border-indigo-500 hover:shadow-indigo-600/30'
+            : 'bg-slate-900/60 border-slate-800 text-slate-600 opacity-40 cursor-not-allowed pointer-events-none'
         )}
       >
-        {isAr ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+        {isAr ? <ChevronRight className="h-4 w-4 stroke-[2.5]" /> : <ChevronLeft className="h-4 w-4 stroke-[2.5]" />}
         <span className="hidden xs:inline">{isAr ? 'السابق' : 'Prev'}</span>
       </button>
 
       {/* Mobile Center Display (Previous/Next only + Page X of Y counter) */}
-      <div className="flex sm:hidden items-center justify-center px-3 py-1 rounded-full bg-black/4 dark:bg-white/6 border border-black/5 dark:border-white/8 text-[11px] font-semibold text-neutral-800 dark:text-neutral-200">
+      <div className="flex sm:hidden items-center justify-center px-3.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs font-bold text-white shadow-xs">
         <span>
           {isAr
             ? `صفحة ${safeCurrentPage} من ${safeTotalPages}`
@@ -134,13 +135,13 @@ export function Pagination({
       </div>
 
       {/* Desktop Number Pills Track */}
-      <div className="hidden sm:flex items-center gap-1">
+      <div className="hidden sm:flex items-center gap-1.5">
         {paginationRange.map((pageNumber, idx) => {
           if (pageNumber === 'dots-left' || pageNumber === 'dots-right') {
             return (
               <span
                 key={`${pageNumber}-${idx}`}
-                className="flex h-9 w-9 items-center justify-center text-xs text-neutral-400 dark:text-neutral-500 font-bold select-none"
+                className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center text-xs text-slate-400 font-bold select-none tracking-widest"
               >
                 •••
               </span>
@@ -159,10 +160,10 @@ export function Pagination({
               aria-current={isActive ? 'page' : undefined}
               aria-label={isAr ? `صفحة ${page}` : `Page ${page}`}
               className={cn(
-                'relative flex h-9 min-w-9 px-2 items-center justify-center rounded-full text-xs font-semibold transition-all duration-150 active:scale-95 cursor-pointer',
+                'relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 active:scale-95 cursor-pointer',
                 isActive
-                  ? 'bg-[#004ad7] text-white dark:bg-[#3b82f6] dark:text-[#12141a] font-bold shadow-xs'
-                  : 'text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/8'
+                  ? 'bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white font-black shadow-lg shadow-indigo-600/40 ring-2 ring-indigo-400/40 scale-105 z-10'
+                  : 'bg-slate-800/80 border border-slate-700/80 text-slate-200 hover:bg-slate-700 hover:border-slate-600 hover:text-white shadow-xs'
               )}
             >
               <span>{page}</span>
@@ -178,14 +179,14 @@ export function Pagination({
         disabled={!canNext}
         aria-label={isAr ? 'الصفحة التالية' : 'Next page'}
         className={cn(
-          'flex h-8 sm:h-9 items-center gap-1 px-2.5 sm:px-3 rounded-full border border-black/6 dark:border-white/10 transition-all duration-150 active:scale-95 font-medium cursor-pointer',
+          'flex h-9 sm:h-10 items-center gap-1.5 px-3 sm:px-4 rounded-xl border transition-all duration-150 active:scale-95 font-bold text-xs sm:text-sm cursor-pointer shadow-xs',
           canNext
-            ? 'bg-black/4 dark:bg-white/6 text-neutral-800 dark:text-neutral-200 hover:bg-black/8 dark:hover:bg-white/12 hover:text-black dark:hover:text-white'
-            : 'opacity-30 cursor-not-allowed pointer-events-none'
+            ? 'bg-slate-800 border-slate-700 text-white hover:bg-indigo-600 hover:border-indigo-500 hover:shadow-indigo-600/30'
+            : 'bg-slate-900/60 border-slate-800 text-slate-600 opacity-40 cursor-not-allowed pointer-events-none'
         )}
       >
         <span className="hidden xs:inline">{isAr ? 'التالي' : 'Next'}</span>
-        {isAr ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+        {isAr ? <ChevronLeft className="h-4 w-4 stroke-[2.5]" /> : <ChevronRight className="h-4 w-4 stroke-[2.5]" />}
       </button>
 
       {/* Last Page Button (Optional) */}
@@ -195,11 +196,12 @@ export function Pagination({
           onClick={() => canNext && onPageChange(safeTotalPages)}
           disabled={!canNext}
           aria-label={isAr ? 'الصفحة الأخيرة' : 'Last page'}
+          title={isAr ? 'الصفحة الأخيرة' : 'Last page'}
           className={cn(
-            'hidden sm:flex h-9 w-9 items-center justify-center rounded-full border border-black/5 dark:border-white/5 transition-all duration-150 active:scale-95 cursor-pointer',
+            'hidden sm:flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border transition-all duration-150 active:scale-95 cursor-pointer',
             canNext
-              ? 'text-neutral-700 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/10 hover:text-black dark:hover:text-white'
-              : 'opacity-35 cursor-not-allowed pointer-events-none'
+              ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700 hover:border-slate-600 hover:text-white shadow-xs'
+              : 'bg-slate-900/60 border-slate-800 text-slate-600 opacity-40 cursor-not-allowed pointer-events-none'
           )}
         >
           {isAr ? <ChevronsLeft className="h-4 w-4" /> : <ChevronsRight className="h-4 w-4" />}

@@ -230,7 +230,7 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
                   onClick={() => handleSelect(item.id)}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group text-start relative cursor-pointer ${
                     isActive
-                      ? 'bg-blue-600/15 text-blue-400 border border-blue-500/30 font-semibold shadow-xs'
+                      ? 'bg-indigo-600/15 text-indigo-300 border border-indigo-500/30 font-semibold shadow-xs'
                       : 'text-neutral-400 hover:text-white hover:bg-neutral-800/80 border border-transparent'
                   } ${collapsed ? 'justify-center px-0' : ''}`}
                   title={collapsed ? (isAr ? item.label : item.labelEn) : undefined}
@@ -239,14 +239,14 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
                     <span
                       className={`absolute inset-y-1.5 ${
                         isAr ? 'right-0 rounded-l-full' : 'left-0 rounded-r-full'
-                      } w-1 bg-blue-500`}
+                      } w-1 bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]`}
                     />
                   )}
 
                   <div className="relative shrink-0">
                     <Icon
                       className={`w-4.5 h-4.5 transition-transform group-hover:scale-110 ${
-                        isActive ? 'text-blue-400' : 'text-neutral-400 group-hover:text-neutral-200'
+                        isActive ? 'text-indigo-400' : 'text-neutral-400 group-hover:text-neutral-200'
                       }`}
                     />
                     {collapsed && item.isGlowingAmber && (
@@ -262,7 +262,7 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
                       <span className="truncate">{isAr ? item.label : item.labelEn}</span>
                       <div className="flex items-center gap-1.5">
                         {item.badgeText && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase">
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase">
                             {item.badgeText}
                           </span>
                         )}
@@ -272,7 +272,7 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
                               item.isGlowingAmber
                                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.45)]'
                                 : isActive
-                                ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
                                 : 'bg-neutral-800 text-neutral-400'
                             }`}
                           >

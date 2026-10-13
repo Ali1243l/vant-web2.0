@@ -30,12 +30,12 @@ export function DateRangeFilterWidget({
     <div
       dir={isAr ? 'rtl' : 'ltr'}
       className={cn(
-        'flex items-center gap-2.5 p-2 rounded-2xl bg-slate-900/80 border border-slate-800 backdrop-blur-xl shadow-xs select-none',
+        'relative flex items-center gap-2.5 p-2 rounded-2xl bg-slate-900/80 border border-slate-800 backdrop-blur-xl shadow-xs select-none',
         className
       )}
     >
       <div className="flex items-center gap-2 text-xs font-medium text-slate-400 ps-2 hidden sm:flex">
-        <Calendar className="h-3.5 w-3.5 text-[#3b82f6]" />
+        <Calendar className="h-3.5 w-3.5 text-indigo-400" />
         <span>{label || defaultLabel}:</span>
       </div>
 

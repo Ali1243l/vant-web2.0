@@ -37,7 +37,7 @@ export const ProductHeaderInfo: React.FC<ProductHeaderInfoProps> = ({
   const hasDiscount = Boolean(product.is_offer && originalPrice && originalPrice > activePrice);
 
   return (
-    <>
+    <div className="flex flex-col gap-2.5 sm:gap-3">
       {/* 1. Header Metadata: Category + Availability Badge */}
       <div className="flex items-center gap-2 flex-wrap ltr:pe-12 rtl:pe-12 md:ltr:pe-16 md:rtl:pe-16">
         {displayCategory && (
@@ -95,7 +95,7 @@ export const ProductHeaderInfo: React.FC<ProductHeaderInfoProps> = ({
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 };
 

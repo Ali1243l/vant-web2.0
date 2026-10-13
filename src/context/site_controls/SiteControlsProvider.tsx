@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
-import type { CurrencyType, SiteControlsContextType } from '../siteControlsTypes';
+import type { CurrencyType, SiteControlsContextType, SiteControlItem } from '../siteControlsTypes';
 import { DEFAULT_SITE_CONTROLS } from '../defaultSiteControls';
 import {
   saveSiteConfigToSupabase,
@@ -153,7 +153,23 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
       }
       if (Object.keys(resolvedControls).length > 0) {
         setControls((prev) => {
-          const merged = { ...prev, ...resolvedControls };
+          const merged: Record<string, SiteControlItem> = { ...prev };
+          Object.keys(DEFAULT_SITE_CONTROLS).forEach((key) => {
+            const def = DEFAULT_SITE_CONTROLS[key];
+            const cloudItem = resolvedControls[key] || prev[key];
+            if (cloudItem) {
+              merged[key] = {
+                ...def,
+                visible: cloudItem.visible !== undefined ? cloudItem.visible : def.visible,
+                enabled: cloudItem.enabled !== undefined ? cloudItem.enabled : def.enabled,
+                label_ar: cloudItem.label_ar || def.label_ar,
+                label_en: cloudItem.label_en || def.label_en,
+                actionValue: cloudItem.actionValue !== undefined ? cloudItem.actionValue : def.actionValue,
+              };
+            } else {
+              merged[key] = { ...def };
+            }
+          });
           try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
           } catch {}

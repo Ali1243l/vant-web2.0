@@ -2,11 +2,12 @@ import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from './components/Header';
 import CategoryFilter, { type AvailabilityFilterType } from './components/CategoryFilter';
-import HeroParallax from './components/ui/HeroParallax';
+import WelcomeHeroBanner from './components/WelcomeHeroBanner';
 import NewsletterSection from './components/NewsletterSection';
 import Footer from './components/Footer';
 import MasonryGrid from './components/MasonryGrid';
 import ProductDrawer from './components/ProductDrawer';
+import CartDrawer from './components/CartDrawer';
 import ImagePreloader from './components/ImagePreloader';
 import BackToTop from './components/BackToTop';
 import AdminDrawer from './components/AdminDrawer';
@@ -87,6 +88,7 @@ function MainApp() {
   });
   const [category, setCategory] = useState(ALL);
   const [isWishlistOnly, setIsWishlistOnly] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const [isOffersOnly, setIsOffersOnly] = useState(false);
   const [selected, setSelected] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -476,6 +478,8 @@ function MainApp() {
         wishlistCount={wishlistCount}
         isWishlistOnly={isWishlistOnly}
         onToggleWishlistOnly={() => setIsWishlistOnly((prev) => !prev)}
+        onOpenCart={() => setIsCartOpen(true)}
+        isCartOpen={isCartOpen}
       >
         {/* Seamless Category and Availability Filters */}
         <CategoryFilter
@@ -520,16 +524,14 @@ function MainApp() {
           </div>
         )}
 
-        {/* Cinematic Haute Parallax Hero */}
-        <HeroParallax
-          products={products}
+        {/* Restored & Enhanced Welcome Brand Story Banner with Trends & Quick Categories */}
+        <WelcomeHeroBanner
           lang={lang}
           isOpen={!isBannerDismissed && (category === ALL || !category || category === 'all') && !isWishlistOnly && !isOffersOnly && !searchQuery.trim()}
           onExplore={() => {
             document.getElementById('catalog-grid')?.scrollIntoView({ behavior: 'smooth' });
           }}
           onDismiss={() => setIsBannerDismissed(true)}
-          onSelectProduct={(p) => setSelected(p)}
           onSelectCategory={(cat) => setCategory(cat)}
           activeCategory={category}
         />
@@ -687,6 +689,9 @@ function MainApp() {
 
       {/* Responsive Luxury Detail Modal / Sheet */}
       <ProductDrawer product={selected} lang={lang} onClose={closeDrawer} />
+
+      {/* Dedicated Shopping Cart Drawer */}
+      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} lang={lang} />
 
       {/* Secret Admin Control Drawer (Triggered via Shift+A, typing 'admin', or footer 3-tap) */}
       <AdminDrawer lang={lang} />

@@ -24,8 +24,8 @@ export function UIComponentsShowcase({ lang = 'ar' }: Props) {
     to: new Date(),
   });
 
-  // 3. RangeSlider Demo State
-  const [priceRange, setPriceRange] = useState<number[]>([150, 750]);
+  // 3. RangeSlider Demo State (In Iraqi Dinar IQD / د.ع)
+  const [priceRange, setPriceRange] = useState<number[]>([25000, 150000]);
   const [discountPercent, setDiscountPercent] = useState<number[]>([35]);
 
   // Code copy feedback
@@ -40,19 +40,19 @@ export function UIComponentsShowcase({ lang = 'ar' }: Props) {
   return (
     <div className="space-y-6 pb-8" dir={isAr ? 'rtl' : 'ltr'}>
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl p-5 sm:p-6 bg-gradient-to-br from-[#004ad7]/10 via-[#004ad7]/5 to-transparent dark:from-[#3b82f6]/15 dark:via-[#3b82f6]/5 dark:to-transparent border border-[#004ad7]/20 dark:border-[#3b82f6]/30">
+      <div className="relative overflow-hidden rounded-3xl p-5 sm:p-6 bg-gradient-to-r from-indigo-900/30 via-slate-900/60 to-slate-900/30 border border-indigo-500/20 backdrop-blur-xl">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#004ad7] dark:bg-[#3b82f6] text-white dark:text-[#111319] shadow-md">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-md shadow-indigo-950">
             <Layers className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white">
+            <h3 className="text-base sm:text-lg font-bold text-slate-100">
               {isAr ? 'مكتبة مكونات الواجهة الموحدة (VANT UI Kit)' : 'VANT Unified UI Components'}
             </h3>
-            <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400">
+            <p className="text-xs sm:text-sm text-slate-400">
               {isAr
-                ? 'مكونات أساسية مبنية باستخدام Radix UI + Framer Motion + Tailwind CSS مع دعم كامل للشاشات المختلفة واللغتين العربية والإنجليزية.'
-                : 'Foundational primitives built with Radix UI + Framer Motion + Tailwind CSS with responsive layout and bilingual support.'}
+                ? 'مكونات أساسية مبنية ومصممة بأعلى معايير الأناقة مع دعم كامل للشاشات المختلفة واللغتين العربية والإنجليزية.'
+                : 'Foundational primitives crafted with high fidelity, responsive layout, and bilingual support.'}
             </p>
           </div>
         </div>
@@ -61,16 +61,16 @@ export function UIComponentsShowcase({ lang = 'ar' }: Props) {
       {/* Grid of 3 Components */}
       <div className="grid grid-cols-1 gap-6">
         {/* COMPONENT 1: Pagination */}
-        <div className="rounded-3xl border border-black/8 dark:border-white/10 bg-white/70 dark:bg-[#12141a]/70 p-5 sm:p-6 backdrop-blur-xl shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-black/6 dark:border-white/8 pb-3">
+        <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-5 sm:p-6 backdrop-blur-xl shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
             <div>
-              <span className="text-xs font-mono font-bold text-[#004ad7] dark:text-[#3b82f6] uppercase tracking-wider">
+              <span className="text-xs font-mono font-bold text-indigo-400 uppercase tracking-wider">
                 01 / Components
               </span>
-              <h4 className="text-base font-bold text-neutral-900 dark:text-white">
+              <h4 className="text-base font-bold text-slate-100">
                 Pagination.tsx
               </h4>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              <p className="text-xs text-slate-400">
                 {isAr
                   ? 'تصفح الصفحات بتصميم متجاوب: في الشاشات الصغيرة يعرض رقم الصفحة وأزرار التنقل فقط.'
                   : 'Responsive pagination: collapses to compact page counter & navigation on mobile.'}
@@ -85,16 +85,16 @@ export function UIComponentsShowcase({ lang = 'ar' }: Props) {
                   `<Pagination\n  currentPage={${currentPage}}\n  totalPages={${totalPages}}\n  onPageChange={setCurrentPage}\n  lang="${lang}"\n/>`
                 )
               }
-              className="inline-flex items-center gap-1.5 self-start sm:self-auto px-3 py-1.5 rounded-full border border-black/8 dark:border-white/10 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 self-start sm:self-auto px-3.5 py-1.5 rounded-full border border-slate-700 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 transition-colors shadow-xs cursor-pointer"
             >
               {copiedSnippet === 'pagination' ? (
                 <>
-                  <Check className="h-3.5 w-3.5 text-emerald-500" />
-                  <span className="text-emerald-500">{isAr ? 'تم النسخ' : 'Copied'}</span>
+                  <Check className="h-3.5 w-3.5 text-emerald-400" />
+                  <span className="text-emerald-400">{isAr ? 'تم النسخ' : 'Copied'}</span>
                 </>
               ) : (
                 <>
-                  <Copy className="h-3.5 w-3.5" />
+                  <Copy className="h-3.5 w-3.5 text-indigo-400" />
                   <span>{isAr ? 'نسخ الاستدعاء' : 'Copy Usage'}</span>
                 </>
               )}
@@ -102,8 +102,8 @@ export function UIComponentsShowcase({ lang = 'ar' }: Props) {
           </div>
 
           {/* Live Interactive Preview */}
-          <div className="p-4 sm:p-6 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 flex flex-col items-center gap-4">
-            <div className="text-xs font-mono text-neutral-500 dark:text-neutral-400">
+          <div className="p-4 sm:p-6 rounded-2xl bg-slate-950/60 border border-slate-800/80 flex flex-col items-center gap-4">
+            <div className="text-xs font-mono text-slate-400">
               {isAr ? 'معاينة حية تفاعلية:' : 'Live Interactive Preview:'}
             </div>
 
@@ -115,26 +115,26 @@ export function UIComponentsShowcase({ lang = 'ar' }: Props) {
               showFirstLast={true}
             />
 
-            <div className="text-xs text-neutral-500">
+            <div className="text-xs font-semibold text-slate-300">
               {isAr ? `الصفحة النشطة حالياً: ${currentPage}` : `Current active page: ${currentPage}`}
             </div>
           </div>
         </div>
 
         {/* COMPONENT 2: DateRangePicker */}
-        <div className="rounded-3xl border border-black/8 dark:border-white/10 bg-white/70 dark:bg-[#12141a]/70 p-5 sm:p-6 backdrop-blur-xl shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-black/6 dark:border-white/8 pb-3">
+        <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-5 sm:p-6 backdrop-blur-xl shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
             <div>
-              <span className="text-xs font-mono font-bold text-[#004ad7] dark:text-[#3b82f6] uppercase tracking-wider">
+              <span className="text-xs font-mono font-bold text-indigo-400 uppercase tracking-wider">
                 02 / Components
               </span>
-              <h4 className="text-base font-bold text-neutral-900 dark:text-white">
+              <h4 className="text-base font-bold text-slate-100">
                 DateRangePicker.tsx
               </h4>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              <p className="text-xs text-slate-400">
                 {isAr
-                  ? 'منتقي التاريخ بنظام Pop-over معزول تماماً (z-[99999] و position: absolute) مع فترات سريعة ودعم العربية.'
-                  : 'Date range picker with isolated popover (z-[99999] & absolute position) and quick presets.'}
+                  ? 'منتقي التاريخ بنظام Pop-over معزول تماماً مع فترات سريعة ودعم العربية.'
+                  : 'Date range picker with isolated popover and quick presets.'}
               </p>
             </div>
 
@@ -146,7 +146,7 @@ export function UIComponentsShowcase({ lang = 'ar' }: Props) {
                   `<DateRangePicker\n  value={dateRange}\n  onChange={setDateRange}\n  lang="${lang}"\n  showPresets={true}\n/>`
                 )
               }
-              className="inline-flex items-center gap-1.5 self-start sm:self-auto px-3 py-1.5 rounded-full border border-black/8 dark:border-white/10 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 self-start sm:self-auto px-3 py-1.5 rounded-full border border-slate-700 text-xs font-medium text-slate-300 hover:bg-slate-800 transition-colors cursor-pointer"
             >
               {copiedSnippet === 'daterangepicker' ? (
                 <>
@@ -163,8 +163,8 @@ export function UIComponentsShowcase({ lang = 'ar' }: Props) {
           </div>
 
           {/* Live Interactive Preview */}
-          <div className="p-4 sm:p-6 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 flex flex-col items-start gap-4">
-            <div className="text-xs font-mono text-neutral-500 dark:text-neutral-400">
+          <div className="p-4 sm:p-6 rounded-2xl bg-slate-950/40 border border-slate-800/60 flex flex-col items-start gap-4">
+            <div className="text-xs font-mono text-slate-400">
               {isAr ? 'معاينة حية تفاعلية:' : 'Live Interactive Preview:'}
             </div>
 
@@ -175,7 +175,7 @@ export function UIComponentsShowcase({ lang = 'ar' }: Props) {
               showPresets={true}
             />
 
-            <div className="text-xs font-mono text-neutral-500">
+            <div className="text-xs font-mono text-slate-400">
               {isAr ? 'النطاق المختار حالياً:' : 'Selected Range:'}{' '}
               {dateRange?.from?.toLocaleDateString() || 'None'} –{' '}
               {dateRange?.to?.toLocaleDateString() || 'None'}
@@ -184,19 +184,19 @@ export function UIComponentsShowcase({ lang = 'ar' }: Props) {
         </div>
 
         {/* COMPONENT 3: RangeSlider */}
-        <div className="rounded-3xl border border-black/8 dark:border-white/10 bg-white/70 dark:bg-[#12141a]/70 p-5 sm:p-6 backdrop-blur-xl shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-black/6 dark:border-white/8 pb-3">
+        <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-5 sm:p-6 backdrop-blur-xl shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
             <div>
-              <span className="text-xs font-mono font-bold text-[#004ad7] dark:text-[#3b82f6] uppercase tracking-wider">
+              <span className="text-xs font-mono font-bold text-indigo-400 uppercase tracking-wider">
                 03 / Components
               </span>
-              <h4 className="text-base font-bold text-neutral-900 dark:text-white">
+              <h4 className="text-base font-bold text-slate-100">
                 RangeSlider.tsx
               </h4>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              <p className="text-xs text-slate-400">
                 {isAr
-                  ? 'شريط تمرير مبني على Radix Slider مع تلميح متحرك (Tooltip) يطفو فوق المقبض بنعومة أثناء السحب.'
-                  : 'Radix Slider primitive with smooth Framer Motion floating tooltip following thumbs.'}
+                  ? 'شريط تمرير مع تلميح متحرك (Tooltip) يطفو فوق المقبض بنعومة أثناء السحب.'
+                  : 'Radix Slider primitive with smooth floating tooltip following thumbs.'}
               </p>
             </div>
 
@@ -205,19 +205,19 @@ export function UIComponentsShowcase({ lang = 'ar' }: Props) {
               onClick={() =>
                 copyCode(
                   'rangeslider',
-                  `<RangeSlider\n  value={priceRange}\n  onValueChange={setPriceRange}\n  min={50}\n  max={1000}\n  step={10}\n  formatValue={(v) => \`\${v} $\`}\n  label="${isAr ? 'نطاق السعر' : 'Price Range'}"\n/>`
+                  `<RangeSlider\n  value={priceRange}\n  onValueChange={setPriceRange}\n  min={10000}\n  max={250000}\n  step={5000}\n  formatValue={(v) => \`\${v.toLocaleString()} ${isAr ? 'د.ع' : 'IQD'}\`}\n  label="${isAr ? 'نطاق السعر (بالدينار العراقي)' : 'Price Range (IQD)'}"\n/>`
                 )
               }
-              className="inline-flex items-center gap-1.5 self-start sm:self-auto px-3 py-1.5 rounded-full border border-black/8 dark:border-white/10 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 self-start sm:self-auto px-3.5 py-1.5 rounded-full border border-slate-700 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 transition-colors shadow-xs cursor-pointer"
             >
               {copiedSnippet === 'rangeslider' ? (
                 <>
-                  <Check className="h-3.5 w-3.5 text-emerald-500" />
-                  <span className="text-emerald-500">{isAr ? 'تم النسخ' : 'Copied'}</span>
+                  <Check className="h-3.5 w-3.5 text-emerald-400" />
+                  <span className="text-emerald-400">{isAr ? 'تم النسخ' : 'Copied'}</span>
                 </>
               ) : (
                 <>
-                  <Copy className="h-3.5 w-3.5" />
+                  <Copy className="h-3.5 w-3.5 text-indigo-400" />
                   <span>{isAr ? 'نسخ الاستدعاء' : 'Copy Usage'}</span>
                 </>
               )}
@@ -225,20 +225,20 @@ export function UIComponentsShowcase({ lang = 'ar' }: Props) {
           </div>
 
           {/* Live Interactive Preview */}
-          <div className="p-4 sm:p-6 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 space-y-6 max-w-xl">
-            <div className="text-xs font-mono text-neutral-500 dark:text-neutral-400">
+          <div className="p-4 sm:p-6 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-6 max-w-xl">
+            <div className="text-xs font-mono text-slate-400">
               {isAr ? 'معاينة حية تفاعلية:' : 'Live Interactive Preview:'}
             </div>
 
-            {/* Example 1: Dual Thumb Range (Price) */}
+            {/* Example 1: Dual Thumb Range (Price in Iraqi Dinar) */}
             <RangeSlider
-              label={isAr ? 'تصفية نطاق السعر (Dual Handles)' : 'Price Range Filter (Dual Handles)'}
+              label={isAr ? 'تصفية نطاق السعر بالدينار العراقي (Dual Handles)' : 'Price Range Filter (Dual Handles - IQD)'}
               value={priceRange}
               onValueChange={setPriceRange}
-              min={50}
-              max={1000}
-              step={10}
-              formatValue={(val) => `${val} $`}
+              min={10000}
+              max={250000}
+              step={5000}
+              formatValue={(val) => (isAr ? `${val.toLocaleString()} د.ع` : `${val.toLocaleString()} IQD`)}
             />
 
             {/* Example 2: Single Thumb (Discount %) */}
@@ -249,7 +249,7 @@ export function UIComponentsShowcase({ lang = 'ar' }: Props) {
               min={0}
               max={100}
               step={5}
-              formatValue={(val) => `${val}%`}
+              formatValue={(val) => `%${val}`}
             />
           </div>
         </div>

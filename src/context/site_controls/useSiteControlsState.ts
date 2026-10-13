@@ -17,10 +17,24 @@ export function useSiteControlsState(
       if (typeof window !== 'undefined') {        const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
           const parsed = JSON.parse(saved);
-          return {
-            ...DEFAULT_SITE_CONTROLS,
-            ...parsed,
-          };
+          const merged: Record<string, SiteControlItem> = {};
+          Object.keys(DEFAULT_SITE_CONTROLS).forEach((key) => {
+            const def = DEFAULT_SITE_CONTROLS[key];
+            const savedItem = parsed[key];
+            if (savedItem) {
+              merged[key] = {
+                ...def,
+                visible: savedItem.visible !== undefined ? savedItem.visible : def.visible,
+                enabled: savedItem.enabled !== undefined ? savedItem.enabled : def.enabled,
+                label_ar: savedItem.label_ar || def.label_ar,
+                label_en: savedItem.label_en || def.label_en,
+                actionValue: savedItem.actionValue !== undefined ? savedItem.actionValue : def.actionValue,
+              };
+            } else {
+              merged[key] = { ...def };
+            }
+          });
+          return merged;
         }
       }
     } catch {}

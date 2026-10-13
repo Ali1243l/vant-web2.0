@@ -310,9 +310,9 @@ export const AdminAnalyticsDashboard: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       {/* VANT UI Widgets Suite Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-3xl bg-gradient-to-r from-blue-950/40 via-slate-900/70 to-slate-900/40 border border-blue-500/25 backdrop-blur-xl shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-3xl bg-gradient-to-r from-indigo-950/40 via-slate-900/70 to-slate-900/40 border border-indigo-500/25 backdrop-blur-xl shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-500/20 shrink-0">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-500/25 shrink-0">
             <Layers className="h-5 w-5" />
           </div>
           <div>
@@ -320,7 +320,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
               <span className="text-sm font-bold text-white">
                 {isAr ? 'نظام الأدوات والوحدات المعيارية المدمج' : 'VANT UI Widgets Suite'}
               </span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase">
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase">
                 {isAr ? 'مُفعّل' : 'Active'}
               </span>
             </div>
@@ -335,15 +335,15 @@ export const AdminAnalyticsDashboard: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveView('widgets')}
-          className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all cursor-pointer shadow-md shadow-blue-600/30 shrink-0"
+          className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-all cursor-pointer shadow-md shadow-indigo-600/30 shrink-0"
         >
           <Layers className="h-3.5 w-3.5" />
           <span>{isAr ? 'معاينة استوديو الأدوات (Widgets Studio)' : 'Open Widgets Studio'}</span>
         </button>
       </div>
 
-      {/* Top Header Banner with Live Refresh and Title */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      {/* Top Header Banner with Live Refresh and Title (relative z-50 ensures popover floats over tabs) */}
+      <div className="relative z-50 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
@@ -362,8 +362,8 @@ export const AdminAnalyticsDashboard: React.FC = () => {
           </p>
         </div>
 
-        {/* Top Header Actions (Organized & Spaced Logically with Live DateRangeFilterWidget) */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+        {/* Top Header Actions (relative z-50 with auto alignment) */}
+        <div className="relative z-50 flex flex-wrap items-center gap-2 sm:gap-2.5">
           {/* Live DateRangeFilterWidget directly in the dashboard toolbar */}
           {activeTab === 'overview' && (
             <DateRangeFilterWidget
@@ -371,7 +371,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
               onChange={handleDateRangeWidgetChange}
               lang={isAr ? 'ar' : 'en'}
               label={isAr ? 'تصفية الفترة' : 'Date Range'}
-              align="left"
+              align="auto"
             />
           )}
 
@@ -435,8 +435,8 @@ export const AdminAnalyticsDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Sub-Navigation Tabs Bar with Smooth Horizontal Touch Scrolling */}
-      <div className="p-1.5 rounded-2xl bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 flex items-center gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent shadow-lg shadow-black/20 w-full min-w-0 flex-nowrap touch-pan-x">
+      {/* Sub-Navigation Tabs Bar with relative z-10 */}
+      <div className="relative z-10 p-1.5 rounded-2xl bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 flex items-center gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent shadow-lg shadow-black/20 w-full min-w-0 flex-nowrap touch-pan-x">
         {tabsConfig.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -474,8 +474,9 @@ export const AdminAnalyticsDashboard: React.FC = () => {
         })}
       </div>
 
-      {/* Animated Tab Content Container with AnimatePresence */}
-      <AnimatePresence mode="wait">
+      {/* Animated Tab Content Container with relative z-0 */}
+      <div className="relative z-0">
+        <AnimatePresence mode="wait">
         {activeTab === 'overview' && (
           <OverviewTab
             stats={stats}
@@ -531,7 +532,8 @@ export const AdminAnalyticsDashboard: React.FC = () => {
             isAr={isAr}
           />
         )}
-      </AnimatePresence>
+        </AnimatePresence>
+      </div>
 
       {/* Modals */}
       <AnalyticsModals

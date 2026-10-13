@@ -19,21 +19,15 @@ import {
   Truck,
   ArrowUp,
   Heart,
-  SlidersHorizontal,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
+  ChevronUp,
   Sun,
   Moon,
-  ArrowDown,
-  Mail,
-  Instagram,
   Phone,
   Tag,
-  ExternalLink,
-  CheckCircle2,
-  AlertTriangle,
   Monitor,
+  ShoppingCart,
+  Power,
 } from 'lucide-react';
 
 interface PreviewProps {
@@ -68,12 +62,14 @@ const ControlLivePreview: React.FC<PreviewProps> = ({ item, previewTheme, previe
         <div className="flex items-center gap-2">
           <span
             className={`px-2 py-0.5 rounded-md font-mono text-[9.5px] font-bold ${
-              item.visible
+              item.visible !== false && item.enabled !== false
                 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                 : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
             }`}
           >
-            {item.visible ? (isAr ? 'معروض للزوار' : 'Visible') : (isAr ? 'مخفي ومعطل' : 'Hidden')}
+            {item.visible !== false && item.enabled !== false
+              ? isAr ? 'معروض للزوار' : 'Visible'
+              : isAr ? 'مخفي ومعطل' : 'Hidden'}
           </span>
         </div>
       </div>
@@ -81,34 +77,73 @@ const ControlLivePreview: React.FC<PreviewProps> = ({ item, previewTheme, previe
       {/* Render the Exact Live Element Mockup */}
       <div className="relative flex items-center justify-center min-h-[72px] py-2">
         {/* If control is toggled OFF, display informative translucent overlay */}
-        {!item.visible && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/75 backdrop-blur-[2px] rounded-lg border border-rose-500/30 p-2 text-center animate-in fade-in duration-200">
+        {(item.visible === false || item.enabled === false) && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-[2px] rounded-lg border border-rose-500/30 p-2 text-center animate-in fade-in duration-200">
             <div className="flex items-center gap-1.5 text-rose-400 text-xs font-bold">
               <EyeOff className="w-4 h-4" />
               <span>{isAr ? 'معطل ومخفي من واجهة الموقع' : 'Disabled & Hidden from Storefront'}</span>
             </div>
             <span className="text-[10px] text-slate-400 mt-0.5">
-              {isAr ? 'انقر على أيقونة العين بالأعلى لتفعيله فوراً' : 'Click the eye toggle above to re-enable'}
+              {isAr ? 'انقر على مفتاح التفعيل بالأعلى لإظهاره فوراً' : 'Toggle power switch to re-enable'}
             </span>
           </div>
         )}
 
         {/* Dynamic Mock Element based on control ID and Category */}
-        <div className={`transition-all duration-200 ${!item.visible ? 'opacity-35 pointer-events-none filter blur-[0.5px]' : ''}`}>
-          {/* 1. WhatsApp Product Button */}
+        <div className={`transition-all duration-200 ${(item.visible === false || item.enabled === false) ? 'opacity-35 pointer-events-none filter blur-[0.5px]' : ''}`}>
+          {/* Add to Cart Button */}
+          {item.id === 'btn_product_add_to_cart' && (
+            <button
+              type="button"
+              className="inline-flex items-center justify-center gap-2.5 px-6 py-3 rounded-2xl bg-[#004ad7] text-white font-bold text-xs sm:text-sm shadow-md shadow-[#004ad7]/30"
+            >
+              <ShoppingCart className="w-4.5 h-4.5 stroke-[2]" />
+              <span>{label || (isAr ? 'أضف للسلة' : 'Add to Cart')}</span>
+            </button>
+          )}
+
+          {/* Cart Animation & Blinkit Counter Preview */}
+          {item.id === 'enableCartAnimation' && (
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between w-48 h-10 px-2.5 rounded-xl bg-[#004ad7] text-white shadow-md">
+                <span className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center font-bold text-xs">-</span>
+                <span className="font-mono font-bold text-sm">1 {isAr ? 'بالسلة' : 'in cart'}</span>
+                <span className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center font-bold text-xs">+</span>
+              </div>
+              <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5" />
+                {isAr ? 'أنيميشن 60fps' : '60fps animation'}
+              </span>
+            </div>
+          )}
+
+          {/* Header Cart Icon */}
+          {item.id === 'btn_header_cart' && (
+            <div className="flex items-center gap-2">
+              <div className="relative flex items-center justify-center w-10 h-10 rounded-full bg-[#004ad7] text-white shadow-md">
+                <ShoppingCart className="w-5 h-5 stroke-[2]" />
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-400 px-1 text-[9px] font-extrabold text-white">
+                  3
+                </span>
+              </div>
+              <span className="text-xs text-slate-300 font-bold">{label || (isAr ? 'سلة التسوق' : 'Shopping Cart')}</span>
+            </div>
+          )}
+
+          {/* WhatsApp Product Button */}
           {item.id === 'btn_product_whatsapp' && (
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#004ad7] hover:bg-[#003db3] text-white text-xs sm:text-sm font-bold shadow-md shadow-[#004ad7]/30 transition-all cursor-pointer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl border border-[#004ad7]/30 bg-[#004ad7]/10 text-[#004ad7] dark:text-[#60a5fa] text-xs sm:text-sm font-bold shadow-sm cursor-pointer"
               >
-                <MessageCircle className="w-4 h-4 fill-white/20 stroke-white stroke-[2]" />
-                <span>{label || (isAr ? 'طلب عبر واتساب' : 'Order via WhatsApp')}</span>
+                <MessageCircle className="w-4 h-4 fill-[#004ad7]/20 stroke-[#004ad7] dark:stroke-[#60a5fa] stroke-[2]" />
+                <span>{label || (isAr ? 'استفسار عبر واتساب' : 'Inquire via WhatsApp')}</span>
               </button>
             </div>
           )}
 
-          {/* 2. Size Guide Button */}
+          {/* Size Guide Button */}
           {item.id === 'btn_product_size_guide' && (
             <button
               type="button"
@@ -121,380 +156,113 @@ const ControlLivePreview: React.FC<PreviewProps> = ({ item, previewTheme, previe
             </button>
           )}
 
-          {/* 3. Bespoke Button */}
+          {/* Bespoke Button */}
           {item.id === 'btn_product_bespoke' && (
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-1.5 text-xs font-bold shadow-xs cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>{label || (isAr ? 'طلب تفصيل خاص عبر واتساب' : 'Inquire Bespoke on WhatsApp')}</span>
             </button>
           )}
 
-          {/* 4. Share Button */}
+          {/* Share Link */}
           {item.id === 'btn_product_share' && (
             <button
               type="button"
-              className={`inline-flex items-center gap-1.5 rounded-xl border border-black/10 dark:border-white/15 px-3 py-1.5 text-xs font-semibold ${
-                isDark ? 'bg-white/[0.05] text-white' : 'bg-black/[0.03] text-slate-800'
-              }`}
+              className="p-2.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-200 text-xs font-medium flex items-center gap-1.5"
             >
-              <Share2 className="w-3.5 h-3.5 text-indigo-400" />
+              <Share2 className="w-3.5 h-3.5" />
               <span>{label || (isAr ? 'مشاركة' : 'Share')}</span>
             </button>
           )}
 
-          {/* 5. Copy Title Button */}
+          {/* Copy Title */}
           {item.id === 'btn_product_copy' && (
             <button
               type="button"
-              className={`inline-flex items-center gap-1.5 rounded-xl border border-black/10 dark:border-white/15 px-3 py-1.5 text-xs font-semibold ${
-                isDark ? 'bg-white/[0.05] text-white' : 'bg-black/[0.03] text-slate-800'
-              }`}
+              className="p-2.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-200 text-xs font-medium flex items-center gap-1.5"
             >
-              <Copy className="w-3.5 h-3.5 text-indigo-400" />
-              <span>{label || (isAr ? 'نسخ الاسم' : 'Copy Name')}</span>
+              <Copy className="w-3.5 h-3.5" />
+              <span>{label || (isAr ? 'نسخ الاسم' : 'Copy Title')}</span>
             </button>
           )}
 
-          {/* 6. Product Delivery Badge */}
+          {/* Delivery Badge */}
           {item.id === 'sec_product_delivery_badge' && (
-            <div
-              className={`flex items-start gap-2.5 rounded-xl border p-2.5 max-w-sm ${
-                isDark ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-black/[0.02] border-black/8 text-slate-900'
-              }`}
-            >
-              <Truck className="w-4 h-4 text-[#004ad7] dark:text-[#3b82f6] shrink-0 mt-0.5" />
-              <div>
-                <span className="font-bold text-xs block">{label || (isAr ? 'توصيل سريع لكافة المحافظات' : 'Nationwide Fast Delivery')}</span>
-                <span className="text-[10px] text-slate-400 block mt-0.5">
-                  {isAr ? 'خلال 3 - 5 أيام مع حق الفحص والمعاينة عند الاستلام' : 'Within 3 - 5 days with inspection guarantee'}
-                </span>
-              </div>
+            <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs">
+              <Truck className="w-4 h-4 text-indigo-400 shrink-0" />
+              <span>{label || (isAr ? 'توصيل سريع لكافة المحافظات' : 'Nationwide Fast Delivery')}</span>
             </div>
           )}
 
-          {/* 7. Product Craft Badge */}
+          {/* Craft Badge */}
           {item.id === 'sec_product_craft_badge' && (
-            <div
-              className={`flex items-start gap-2.5 rounded-xl border p-2.5 max-w-sm ${
-                isDark ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-black/[0.02] border-black/8 text-slate-900'
-              }`}
-            >
-              <Sparkles className="w-4 h-4 text-[#004ad7] dark:text-[#3b82f6] shrink-0 mt-0.5" />
-              <div>
-                <span className="font-bold text-xs block">{label || (isAr ? 'تفصيل فاخر وقصة إيطالية' : 'Luxury Italian Tailoring')}</span>
-                <span className="text-[10px] text-slate-400 block mt-0.5">
-                  {isAr ? 'حرفية يدوية بإتقان مع ضمان أصالة المظهر' : 'Handcrafted precision & authentic drop'}
-                </span>
-              </div>
+            <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs">
+              <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>{label || (isAr ? 'تفصيل فاخر وقصة إيطالية' : 'Luxury Italian Tailoring')}</span>
             </div>
           )}
 
-          {/* 8. Carousel Navigation Arrows */}
-          {item.id === 'btn_product_carousel_nav' && (
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                className={`w-9 h-9 rounded-full flex items-center justify-center border shadow-md ${
-                  isDark ? 'bg-slate-900/90 border-white/15 text-white' : 'bg-white/90 border-black/10 text-slate-800'
-                }`}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <span className="text-[11px] font-mono font-semibold text-slate-400">1 / 4</span>
-              <button
-                type="button"
-                className={`w-9 h-9 rounded-full flex items-center justify-center border shadow-md ${
-                  isDark ? 'bg-slate-900/90 border-white/15 text-white' : 'bg-white/90 border-black/10 text-slate-800'
-                }`}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-
-          {/* 9. Header Search Button */}
-          {item.id === 'btn_header_search' && (
-            <div
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-2xs ${
-                isDark ? 'bg-white/[0.05] border-white/10 text-white' : 'bg-black/[0.03] border-black/10 text-slate-800'
-              }`}
-            >
-              <Search className="w-3.5 h-3.5 text-slate-400" />
-              <span className="text-xs font-medium">{label || (isAr ? 'بحث' : 'Search')}</span>
-            </div>
-          )}
-
-          {/* 10. Header Wishlist Button */}
+          {/* Header Wishlist */}
           {item.id === 'btn_header_wishlist' && (
-            <div
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-2xs ${
-                isDark ? 'bg-white/[0.05] border-white/10 text-white' : 'bg-black/[0.03] border-black/10 text-slate-800'
-              }`}
-            >
-              <Heart className="w-3.5 h-3.5 text-[#004ad7] dark:text-[#3b82f6] fill-current" />
-              <span className="text-xs font-semibold">{label || (isAr ? 'المفضلة' : 'Wishlist')}</span>
-              <span className="w-4 h-4 rounded-full bg-[#004ad7] text-white text-[10px] font-bold flex items-center justify-center">
-                2
-              </span>
+            <div className="flex items-center gap-1.5 p-2 rounded-full bg-slate-800 text-rose-400 border border-slate-700">
+              <Heart className="w-4 h-4 fill-rose-500/30" />
+              <span className="text-xs font-bold px-1">{label || (isAr ? 'المفضلة' : 'Wishlist')}</span>
             </div>
           )}
 
-          {/* 11. Header Lang Button */}
+          {/* Header Search */}
+          {item.id === 'btn_header_search' && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-slate-200 text-xs">
+              <Search className="w-3.5 h-3.5" />
+              <span>{label || (isAr ? 'بحث' : 'Search')}</span>
+            </div>
+          )}
+
+          {/* Header Lang */}
           {item.id === 'btn_header_lang' && (
-            <div
-              className={`px-3 py-1.5 rounded-full border text-xs font-bold font-mono ${
-                isDark ? 'bg-white/[0.05] border-white/10 text-white' : 'bg-black/[0.03] border-black/10 text-slate-800'
-              }`}
-            >
+            <div className="px-3 py-1 rounded-lg bg-indigo-600 text-white font-mono text-xs font-bold">
               {label || 'EN / عربي'}
             </div>
           )}
 
-          {/* 12. Header Theme Button */}
+          {/* Header Theme */}
           {item.id === 'btn_header_theme' && (
-            <div
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold ${
-                isDark ? 'bg-white/[0.05] border-white/10 text-white' : 'bg-black/[0.03] border-black/10 text-slate-800'
-              }`}
-            >
-              <Moon className="w-3.5 h-3.5 text-amber-300" />
-              <span>{label || (isAr ? 'المظهر' : 'Theme')}</span>
+            <div className="p-2 rounded-full bg-slate-800 text-amber-400 border border-slate-700 flex items-center justify-center">
+              <Sun className="w-4 h-4" />
             </div>
           )}
 
-          {/* 13. Brand Kinetic Logo */}
-          {item.id === 'brand_kinetic_logo' && (
-            <div className="flex flex-col items-center">
-              <span className="font-extrabold tracking-widest text-lg sm:text-xl font-sans text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-cyan-300">
-                {label || 'VANT · ڤانت'}
-              </span>
-              <span className="text-[9px] uppercase tracking-[0.2em] text-slate-400 font-mono">HAUTE COUTURE</span>
-            </div>
-          )}
-
-          {/* 14. Hero Banner Container */}
-          {item.id === 'banner_hero_visible' && (
-            <div className="w-full max-w-sm rounded-xl border border-indigo-500/30 bg-gradient-to-r from-indigo-950/40 to-slate-900/60 p-3 text-center">
-              <span className="text-xs font-bold text-white block">
-                {isAr ? 'البنر الترحيبي العريض' : 'Welcome Hero Banner'}
-              </span>
-              <span className="text-[10px] text-slate-400 mt-0.5 block">
-                {isAr ? 'يظهر في أعلى الكتالوج مع الصورة والبيان' : 'Appears at the top of the collection'}
-              </span>
-            </div>
-          )}
-
-          {/* 15. Hero Banner Tag */}
-          {item.id === 'banner_hero_tag' && (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/60 border border-white/15 text-[11px] font-semibold text-white">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#004ad7]" />
-              <span>{label || (isAr ? 'ڤانت · كتالوج شتاء 2026' : 'MAISON VANT · WINTER CAPSULE 2026')}</span>
-            </div>
-          )}
-
-          {/* 16. Hero Banner Title */}
-          {item.id === 'banner_hero_title' && (
-            <h3 className="text-sm font-bold text-center text-white max-w-md line-clamp-2">
-              {label || (isAr ? 'الصياغة المعمارية للأزياء الهادئة' : 'Architectural Silhouettes')}
-            </h3>
-          )}
-
-          {/* 17. Hero Banner Subtitle */}
-          {item.id === 'banner_hero_subtitle' && (
-            <p className="text-xs text-center text-slate-300 max-w-md line-clamp-2">
-              {label || (isAr ? 'تصاميم تم تفصيلها بدقة هندسية في أرقى المعامل الإيطالية...' : 'Engineered with precision...')}
-            </p>
-          )}
-
-          {/* 18. Hero Banner Action Button */}
-          {item.id === 'banner_hero_btn' && (
-            <button
-              type="button"
-              className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-xs font-bold shadow-md cursor-pointer ${
-                isDark ? 'bg-white text-slate-900' : 'bg-slate-900 text-white'
-              }`}
-            >
-              <span>{label || (isAr ? 'تصفح كافة القطع' : 'Browse All Pieces')}</span>
-              <ArrowDown className="w-3.5 h-3.5" />
-            </button>
-          )}
-
-          {/* 19. Hero Banner Background Image */}
-          {item.id === 'banner_hero_bg' && (
-            <div className="relative w-44 h-16 rounded-lg overflow-hidden border border-white/10 shadow-sm">
-              <img
-                src={item.actionValue || 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1600&q=80'}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded bg-black/60">
-                  {isAr ? 'صورة الغلاف' : 'Cover Image'}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* 20. Trends Section Title */}
-          {item.id === 'banner_trends_title' && (
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-indigo-400" />
-              <h3 className="text-xs font-bold text-white">{label || (isAr ? 'تريند موسم 2026' : 'Featured Trends 2026')}</h3>
-              <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-mono text-[10px] font-bold">
-                5 مختارات
-              </span>
-            </div>
-          )}
-
-          {/* 21. Trends Carousel Section */}
-          {item.id === 'sec_trends_carousel' && (
-            <div className="flex items-center gap-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="w-14 h-18 rounded-lg bg-slate-800 border border-slate-700 p-1 flex flex-col justify-end text-center">
-                  <span className="text-[8px] font-bold text-white truncate">تريند {i}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* 22. Category Tabs Bar */}
-          {item.id === 'sec_category_tabs' && (
-            <div className="flex items-center gap-1.5 overflow-x-hidden">
-              <span className="px-3 py-1 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[11px] font-bold shadow-2xs">
-                {isAr ? 'الكل' : 'All'}
-              </span>
-              <span className="px-3 py-1 rounded-full bg-black/5 dark:bg-white/10 text-slate-400 text-[11px] font-medium">
-                {isAr ? 'المعاطف' : 'Outerwear'}
-              </span>
-              <span className="px-3 py-1 rounded-full bg-black/5 dark:bg-white/10 text-slate-400 text-[11px] font-medium">
-                {isAr ? 'التريكو' : 'Knitwear'}
-              </span>
-            </div>
-          )}
-
-          {/* 23. Availability Filter Dropdown */}
-          {item.id === 'btn_filter_availability' && (
-            <div
-              className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border ${
-                isDark ? 'bg-white/[0.05] border-white/10 text-white' : 'bg-black/[0.03] border-black/10 text-slate-800'
-              }`}
-            >
-              <SlidersHorizontal className="w-3 h-3 text-slate-400" />
-              <span>{label || (isAr ? 'حالة التوفر' : 'Availability')}</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              <ChevronDown className="w-3 h-3 text-slate-400" />
-            </div>
-          )}
-
-          {/* 24. Offers Filter Button */}
-          {item.id === 'btn_filter_offers' && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-xs font-bold">
-              <Tag className="w-3.5 h-3.5" />
-              <span>{label || (isAr ? 'العروضات والخصومات' : 'Offers & Discounts')}</span>
-            </div>
-          )}
-
-          {/* 25. Card Wishlist Heart */}
-          {item.id === 'card_wishlist_btn' && (
-            <div className="relative w-20 h-20 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center">
-              <button
-                type="button"
-                className="w-8 h-8 rounded-full bg-white/90 dark:bg-slate-900/90 text-rose-500 flex items-center justify-center shadow-md border border-white/20"
-              >
-                <Heart className="w-4 h-4 fill-current" />
-              </button>
-            </div>
-          )}
-
-          {/* 26. Card Status Badge */}
-          {item.id === 'card_status_badge' && (
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-full bg-[#004ad7] text-white text-[10px] font-bold shadow-xs">
-                %15-
-              </span>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
-                {label || (isAr ? 'متوفر' : 'In Stock')}
-              </span>
-            </div>
-          )}
-
-          {/* 27. Card Price Tag */}
-          {item.id === 'card_price_tag' && (
-            <div className="flex items-baseline gap-2 font-mono">
-              <span className="text-sm font-black text-[#004ad7] dark:text-[#3b82f6]">120,000 د.ع</span>
-              <span className="text-xs text-slate-400 line-through">145,000 د.ع</span>
-            </div>
-          )}
-
-          {/* 28. Card Category Label */}
-          {item.id === 'card_category_label' && (
-            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-              {label || (isAr ? 'الأزياء الرسمية · TAILORING' : 'Tailoring')}
-            </span>
-          )}
-
-          {/* 29. Card Hover Preview */}
-          {item.id === 'card_hover_preview' && (
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-300 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-              <span>{isAr ? 'تبديل الصورة التلقائي عند مرور الماوس' : 'Hover Cross-fade View'}</span>
-            </div>
-          )}
-
-          {/* 30. Floating Back to Top Button */}
+          {/* Back to Top Floating Button */}
           {item.id === 'btn_floating_back_to_top' && (
-            <button
-              type="button"
-              className={`w-10 h-10 rounded-full flex items-center justify-center border shadow-lg ${
-                isDark ? 'bg-slate-900 border-white/15 text-white' : 'bg-white border-black/10 text-slate-800'
-              }`}
-            >
-              <ArrowUp className="w-4 h-4" />
-            </button>
-          )}
-
-          {/* 31. Newsletter VIP Subscription */}
-          {item.id === 'sec_newsletter_subscription' && (
-            <div className="flex items-center gap-2 max-w-sm rounded-xl border border-slate-700 bg-slate-900/90 p-2">
-              <Mail className="w-4 h-4 text-indigo-400 shrink-0 ms-1" />
-              <span className="text-xs text-slate-400 flex-1 truncate">
-                {isAr ? 'أدخل بريدك الإلكتروني...' : 'Enter your email...'}
-              </span>
-              <button type="button" className="px-3 py-1 rounded-lg bg-indigo-600 text-white text-[11px] font-bold">
-                {label || (isAr ? 'اشتراك' : 'Join')}
-              </button>
+            <div className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-lg">
+              <ArrowUp className="w-5 h-5" />
             </div>
           )}
 
-          {/* 32. Footer Social Links */}
-          {item.id === 'footer_social_links' && (
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-slate-700 bg-slate-800 text-[11px] text-white">
-                <Instagram className="w-3 h-3 text-pink-400" />
-                <span>@vant.atelier</span>
-              </span>
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-slate-700 bg-slate-800 text-[11px] text-white">
-                <MessageCircle className="w-3 h-3 text-emerald-400" />
-                <span>WhatsApp</span>
-              </span>
-            </div>
-          )}
-
-          {/* 33. Footer Copyright */}
-          {item.id === 'footer_copyright_brand' && (
-            <span className="text-xs text-slate-400 select-none">
-              {label || (isAr ? 'ڤانت · كتالوج الأزياء الحصري © 2026' : 'VANT · Capsule Lookbook © 2026')}
-            </span>
-          )}
-
-          {/* 34. Global Contact Phone Numbers */}
-          {(item.id === 'cfg_whatsapp_phone' || item.id === 'cfg_bespoke_phone') && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 font-mono text-xs font-bold">
-              <Phone className="w-3.5 h-3.5" />
-              <span>{item.actionValue || '+964 770 000 0000'}</span>
+          {/* Fallback for other items */}
+          {![
+            'btn_product_add_to_cart',
+            'enableCartAnimation',
+            'btn_header_cart',
+            'btn_product_whatsapp',
+            'btn_product_size_guide',
+            'btn_product_bespoke',
+            'btn_product_share',
+            'btn_product_copy',
+            'sec_product_delivery_badge',
+            'sec_product_craft_badge',
+            'btn_header_wishlist',
+            'btn_header_search',
+            'btn_header_lang',
+            'btn_header_theme',
+            'btn_floating_back_to_top',
+          ].includes(item.id) && (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold">
+              <Sliders className="w-4 h-4 text-indigo-400" />
+              <span>{label}</span>
             </div>
           )}
         </div>
@@ -504,165 +272,250 @@ const ControlLivePreview: React.FC<PreviewProps> = ({ item, previewTheme, previe
 };
 
 export const AdminControlsView: React.FC = () => {
-  const { lang } = useAdminBridge();
-  const {
-    controls,
-    updateControl,
-    toggleVisibility,
-    resetAllControls,
-    resetControl,
-  } = useSiteControls();
+  const { lang: adminLang } = useAdminBridge();
+  const isAr = adminLang === 'ar';
 
-  const isAr = lang === 'ar';
-  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const { controls, updateControl, resetControl, resetAllControls } = useSiteControls();
+
   const [search, setSearch] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [previewTheme, setPreviewTheme] = useState<'dark' | 'light'>('dark');
+  const [previewLang, setPreviewLang] = useState<'ar' | 'en'>('ar');
   const [uploadingControlId, setUploadingControlId] = useState<string | null>(null);
 
-  // Global Interactive Preview toggles
-  const [previewTheme, setPreviewTheme] = useState<'dark' | 'light'>('dark');
-  const [previewLang, setPreviewLang] = useState<'ar' | 'en'>(isAr ? 'ar' : 'en');
+  // Accordion expansion state per functional feature group
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
+    cart: true,
+    whatsapp: true,
+    wishlist: false,
+    size_bespoke: false,
+    search_filter: false,
+    hero_banner: false,
+    product_info: false,
+    brand_footer: false,
+  });
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 2500);
+    setTimeout(() => {
+      setToastMessage((prev) => (prev === msg ? null : prev));
+    }, 2800);
   };
 
-  const controlsList = Object.values(controls) as SiteControlItem[];
+  const toggleCategoryExpand = (catKey: string) => {
+    setExpandedCategories((prev) => ({
+      ...prev,
+      [catKey]: !prev[catKey],
+    }));
+  };
 
-  const filteredControls = controlsList.filter((item) => {
-    if (filterCategory !== 'all' && item.category !== filterCategory) return false;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      const matchLabel =
-        (item.label_en && item.label_en.toLowerCase().includes(q)) ||
-        (item.label_ar && item.label_ar.includes(q)) ||
-        (item.name_ar && item.name_ar.includes(q)) ||
-        (item.name_en && item.name_en.toLowerCase().includes(q));
-      const matchKey = item.id.toLowerCase().includes(q);
-      return matchLabel || matchKey;
-    }
-    return true;
-  });
+  const expandAllCategories = () => {
+    setExpandedCategories({
+      cart: true,
+      whatsapp: true,
+      wishlist: true,
+      size_bespoke: true,
+      search_filter: true,
+      hero_banner: true,
+      product_info: true,
+      brand_footer: true,
+    });
+  };
 
-  const categories = [
-    { id: 'all', label: isAr ? 'كافة العناصر والأزرار' : 'All Controls & Buttons' },
-    { id: 'header', label: isAr ? 'الترويسة والتنقل' : 'Header & Navigation' },
-    { id: 'banner', label: isAr ? 'البانرات والواجهة' : 'Banners & Hero' },
-    { id: 'filter', label: isAr ? 'الفلاتر والتصنيفات' : 'Filters & Categories' },
-    { id: 'card', label: isAr ? 'كروت المنتجات' : 'Product Cards' },
-    { id: 'product', label: isAr ? 'نافذة تفاصيل القطعة والشراء' : 'Product Details & CTA' },
-    { id: 'footer', label: isAr ? 'الفوتر والأزرار العائمة' : 'Footer & Floating' },
-    { id: 'global', label: isAr ? 'أرقام وإعدادات عامة' : 'Global Settings' },
+  const collapseAllCategories = () => {
+    setExpandedCategories({
+      cart: false,
+      whatsapp: false,
+      wishlist: false,
+      size_bespoke: false,
+      search_filter: false,
+      hero_banner: false,
+      product_info: false,
+      brand_footer: false,
+    });
+  };
+
+  const getItemCategory = (item: SiteControlItem): string => {
+    const defCat = DEFAULT_SITE_CONTROLS[item.id]?.category;
+    if (defCat) return defCat;
+
+    if (item.category === 'header' || item.category === 'global' || item.category === 'footer') return 'brand_footer';
+    if (item.category === 'product' || item.category === 'card') return 'product_info';
+    if (item.category === 'banner') return 'hero_banner';
+    if (item.category === 'filter') return 'search_filter';
+
+    return item.category || 'brand_footer';
+  };
+
+  // Master group toggle logic
+  const handleMasterCategoryToggle = (categoryKey: string) => {
+    const itemsInCategory = Object.values(controls).filter((item) => {
+      return getItemCategory(item) === categoryKey;
+    });
+    const anyActive = itemsInCategory.some((item) => item.visible !== false && item.enabled !== false);
+    
+    const nextState = !anyActive;
+    
+    itemsInCategory.forEach((item) => {
+      updateControl(item.id, {
+        visible: nextState,
+        enabled: nextState,
+      });
+    });
+
+    const catInfo = CATEGORY_GROUPS.find((c) => c.key === categoryKey);
+    const catName = isAr ? catInfo?.title_ar : catInfo?.title_en;
+
+    showToast(
+      nextState
+        ? (isAr ? `✓ تم تشغيل جميع عناصر ${catName}` : `Enabled all ${catName} controls`)
+        : (isAr ? `✕ تم تعطيل جميع عناصر ${catName}` : `Disabled all ${catName} controls`)
+    );
+  };
+
+  const toggleVisibility = (id: string) => {
+    const current = controls[id];
+    const isCurrentlyVisible = current?.visible !== false && current?.enabled !== false;
+    const nextState = !isCurrentlyVisible;
+    updateControl(id, {
+      visible: nextState,
+      enabled: nextState,
+    });
+  };
+
+  const controlsList = Object.values(controls);
+
+  // FUNCTIONAL FEATURE GROUPS DEFINITIONS
+  const CATEGORY_GROUPS = [
+    {
+      key: 'cart',
+      title_ar: '1. مجموعة ميزة سلة التسوق والشراء',
+      title_en: '1. Shopping Cart & Purchasing Feature Group',
+      description_ar: 'زر أضف للسلة والعداد الحركي، أيقونة السلة بالترويسة، وأنيميشن طيران الصورة',
+      description_en: 'Add to Cart button & counter, Header Cart icon & drawer, Cart fly animation',
+      icon: ShoppingCart,
+    },
+    {
+      key: 'whatsapp',
+      title_ar: '2. مجموعة ميزة الطلب والاستفسار عبر واتساب',
+      title_en: '2. Direct WhatsApp Order & Inquiry Feature Group',
+      description_ar: 'زر الاستفسار المباشر بصفحة القطعة ورقم الواتساب الرسمي للمبيعات',
+      description_en: 'Direct WhatsApp inquiry button on product details & sales phone number',
+      icon: MessageCircle,
+    },
+    {
+      key: 'wishlist',
+      title_ar: '3. مجموعة ميزة المفضلة والقطع المحفوظة',
+      title_en: '3. Wishlist & Favorites Feature Group',
+      description_ar: 'أيقونة المفضلة بالترويسة العلويّة وأيقونات القلوب الزجاجية على كروت المعروضات',
+      description_en: 'Header wishlist icon filter & floating heart buttons on catalog product cards',
+      icon: Heart,
+    },
+    {
+      key: 'size_bespoke',
+      title_ar: '4. مجموعة دليل القياسات والتفصيل الخاص',
+      title_en: '4. Fit Guide & Bespoke Tailoring Feature Group',
+      description_ar: 'حاسبة الطول والوزن، جدول المقاسات، وزر الخياطة والتفصيل الخاص Concierge',
+      description_en: 'Smart fit recommender calculator, size guide table, & bespoke concierge button',
+      icon: Ruler,
+    },
+    {
+      key: 'search_filter',
+      title_ar: '5. مجموعة ميزة البحث والتصفية والفلترة',
+      title_en: '5. Search & Catalog Filters Feature Group',
+      description_ar: 'زر البحث بالترويسة، شريط تصنيفات الكتالوج، فلاتر حالة التوفر والعروض الخاصة',
+      description_en: 'Header search trigger, category pills bar, stock availability & offer filters',
+      icon: Search,
+    },
+    {
+      key: 'hero_banner',
+      title_ar: '6. مجموعة البنر الترحيبي وسكشن التريند',
+      title_en: '6. Welcome Hero Banner & Trends Feature Group',
+      description_ar: 'البنر الرئيسي، العناوين الترحيبية، أزرار التصفح، وشريط كروت تريند الموسم',
+      description_en: 'Main hero cover image, headline text, action CTA, and trend cards carousel',
+      icon: Sparkles,
+    },
+    {
+      key: 'product_info',
+      title_ar: '7. مجموعة معلومات وشارات المنتج والمشاركة',
+      title_en: '7. Product Badges, Shares, & Info Group',
+      description_ar: 'شارات الخصم والتوفر، السعر، المشاركة، النسخ، التوصيل السريع، ومعاينة الماوس',
+      description_en: 'Status/discount badges, price tags, share link, copy title, & delivery badges',
+      icon: Tag,
+    },
+    {
+      key: 'brand_footer',
+      title_ar: '8. مجموعة الهوية والشريط السفلي',
+      title_en: '8. Brand Identity & Footer Feature Group',
+      description_ar: 'زر اللغة، الوضع الليلي، اللوجو الحركي، العودة للأعلى، والنشرة البريدية VIP',
+      description_en: 'Language, dark/light theme, kinetic logo, back-to-top button, & VIP newsletter',
+      icon: Monitor,
+    },
   ];
 
-  const visibleCount = controlsList.filter((c) => c.visible !== false).length;
-  const hiddenCount = controlsList.length - visibleCount;
-
-  const enableAll = () => {
-    controlsList.forEach((c) => {
-      if (c.visible === false) {
-        updateControl(c.id, { visible: true, enabled: true });
-      }
-    });
-    showToast(isAr ? '✓ تم تفعيل وتشغيل كافة الأزرار والسكشنات' : 'All controls enabled');
-  };
-
-  const disableAll = () => {
-    if (window.confirm(isAr ? 'هل أنت متأكد من رغبتك بإخفاء كافة العناصر القابلة للتعطيل؟' : 'Disable all controls?')) {
-      controlsList.forEach((c) => {
-        updateControl(c.id, { visible: false });
-      });
-      showToast(isAr ? 'تم إخفاء العناصر' : 'All controls disabled');
-    }
-  };
-
   return (
-    <div className="space-y-6">
-      {/* Toast Feedback */}
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      {/* Toast Notification Floating Banner */}
       {toastMessage && (
-        <div className="fixed top-6 start-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-emerald-950 border border-emerald-500/50 text-emerald-300 rounded-xl shadow-2xl text-xs font-semibold flex items-center gap-2 animate-in fade-in">
-          <Check className="w-4 h-4 text-emerald-400" />
+        <div className="fixed bottom-6 start-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-5 py-3 rounded-2xl bg-indigo-600 text-white font-medium text-xs shadow-2xl border border-indigo-400/30 animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <Check className="w-4 h-4 text-emerald-300" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Header Banner */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 relative overflow-hidden">
-        <div className="absolute top-0 end-0 w-72 h-72 bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center text-white shrink-0 shadow-lg shadow-violet-600/30">
-              <Sliders className="w-6 h-6" />
+      {/* View Title & Master Controls Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/90 p-5 rounded-3xl border border-slate-800 shadow-xl">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              <Sliders className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-xl font-bold text-white">
-                  {isAr ? 'التحكم الديناميكي الشامل بكافة أزرار وسكشنات الموقع' : 'Dynamic Controls & Live Button Studio'}
-                </h1>
-                <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-300">
-                  {controlsList.length} {isAr ? 'عنصر تحكم' : 'controls'}
-                </span>
-                <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
-                  {visibleCount} {isAr ? 'مفعل' : 'active'}
-                </span>
-                {hiddenCount > 0 && (
-                  <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300">
-                    {hiddenCount} {isAr ? 'مخفي' : 'hidden'}
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-400 mt-1.5 max-w-2xl leading-relaxed">
-                {isAr
-                  ? 'يمكنك تشغيل أو إطفاء أي زر، سكشن، أو خيار في الموقع بضغطة زر مع معاينة حية وفورية لشكله قبل وبعد التعديل. تتزامن التغييرات فوراً مع واجهة العميل دون أي خلل.'
-                  : 'Toggle on/off and live-customize every single button, banner, and section across the boutique with instant visual previews.'}
-              </p>
-            </div>
+            <h2 className="text-lg font-black text-white tracking-tight">
+              {isAr ? 'لوحة التحكم الشاملة بمجموعات المزايا والأزرار' : 'Functional Feature Groups & Storefront Controls'}
+            </h2>
           </div>
-
-          {/* Quick Global Action Buttons */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={enableAll}
-              className="px-3 py-2 rounded-xl border border-emerald-600/30 bg-emerald-600/10 hover:bg-emerald-600/20 text-xs font-semibold text-emerald-300 transition-all flex items-center gap-1.5 cursor-pointer"
-              title={isAr ? 'تشغيل وتفعيل كافة العناصر' : 'Enable all'}
-            >
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>{isAr ? 'تشغيل الكل' : 'Enable All'}</span>
-            </button>
-
-            <button
-              onClick={disableAll}
-              className="px-3 py-2 rounded-xl border border-slate-700 bg-slate-800/60 hover:bg-slate-800 text-xs font-semibold text-slate-300 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer"
-              title={isAr ? 'إخفاء كافة العناصر' : 'Disable all'}
-            >
-              <EyeOff className="w-3.5 h-3.5" />
-              <span>{isAr ? 'إخفاء الكل' : 'Disable All'}</span>
-            </button>
-
-            <button
-              onClick={() => {
-                if (window.confirm(isAr ? 'هل أنت متأكد من استعادة كافة الأزرار والسكشنات لضبط المصنع الافتراضي؟' : 'Reset all controls to factory defaults?')) {
-                  resetAllControls();
-                  showToast(isAr ? '✓ تمت استعادة الإعدادات الافتراضية بنجاح' : 'Reset to defaults');
-                }
-              }}
-              className="px-3 py-2 rounded-xl border border-slate-700 hover:bg-slate-800 text-xs font-semibold text-slate-300 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>{isAr ? 'استعادة الافتراضي' : 'Reset Defaults'}</span>
-            </button>
-          </div>
+          <p className="text-xs text-slate-400">
+            {isAr
+              ? 'تجميع المزايا والأزرار في مجموعات وظيفية متكاملة لتعطيل الميزة بكاملها أو تخصيص زر بزر'
+              : 'Controls organized by functional feature groups to enable/disable entire features or fine-tune individual buttons'}
+          </p>
         </div>
 
-        {/* Studio Preview Mode Toolbar */}
-        <div className="mt-5 pt-4 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
-              <Monitor className="w-3.5 h-3.5 text-indigo-400" />
-              <span>{isAr ? 'نمط المعاينة الحية:' : 'Live Preview Settings:'}</span>
-            </span>
+        {/* Global Toolbar Actions */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={expandAllCategories}
+            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer transition-colors border border-slate-700"
+          >
+            {isAr ? 'توسيع كافة المجموعات' : 'Expand All'}
+          </button>
+          <button
+            type="button"
+            onClick={collapseAllCategories}
+            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer transition-colors border border-slate-700"
+          >
+            {isAr ? 'طي كافة المجموعات' : 'Collapse All'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              resetAllControls();
+              showToast(isAr ? '✓ تمت استعادة جميع الأزرار والمزايا للافتراضي' : 'Reset all controls');
+            }}
+            className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>{isAr ? 'استعادة الافتراضي' : 'Reset Defaults'}</span>
+          </button>
+        </div>
+      </div>
 
+      {/* Toolbar: Preview Settings & Quick Search */}
+      <div className="bg-slate-900/60 p-4 rounded-2xl border border-slate-800/80 space-y-3">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-slate-400 font-semibold">{isAr ? 'نمط المعاينة الحية:' : 'Live Preview:'}</span>
             {/* Dark / Light Preview Mode Switcher */}
             <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
               <button
@@ -719,257 +572,318 @@ export const AdminControlsView: React.FC = () => {
           </div>
 
           {/* Quick Search Input */}
-          <div className="relative w-full sm:w-72">
+          <div className="relative w-full sm:w-80">
             <Search className="w-4 h-4 text-slate-400 absolute start-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={isAr ? 'بحث سريع عن أي زر أو سكشن...' : 'Search controls & buttons...'}
+              placeholder={isAr ? 'بحث سريع عن أي ميزة أو زر بالاسم...' : 'Search features & buttons...'}
               className="w-full ps-9 pe-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:border-indigo-500 outline-none"
             />
           </div>
         </div>
       </div>
 
-      {/* Categories Filter Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-        {categories.map((c) => {
-          const isCurrent = filterCategory === c.id;
-          const count = c.id === 'all' ? controlsList.length : controlsList.filter((item) => item.category === c.id).length;
-          return (
-            <button
-              key={c.id}
-              onClick={() => setFilterCategory(c.id)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border flex items-center gap-2 ${
-                isCurrent
-                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/20'
-                  : 'bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800 border-slate-800'
-              }`}
-            >
-              <span>{c.label}</span>
-              <span
-                className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                  isCurrent ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
-                }`}
-              >
-                {count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      {/* ACCORDION DROPDOWN FUNCTIONAL FEATURE GROUPS */}
+      <div className="space-y-4">
+        {CATEGORY_GROUPS.map((cat) => {
+          const CatIcon = cat.icon;
+          const itemsInCategory = controlsList.filter((item) => {
+            if (getItemCategory(item) !== cat.key) return false;
+            if (!search.trim()) return true;
+            const q = search.toLowerCase();
+            return (
+              item.id.toLowerCase().includes(q) ||
+              (item.name_ar && item.name_ar.toLowerCase().includes(q)) ||
+              (item.name_en && item.name_en.toLowerCase().includes(q)) ||
+              (item.label_ar && item.label_ar.toLowerCase().includes(q)) ||
+              (item.label_en && item.label_en.toLowerCase().includes(q))
+            );
+          });
 
-      {/* Controls Grid Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {filteredControls.map((item) => {
-          const isVisible = item.visible !== false;
+          if (search.trim() && itemsInCategory.length === 0) return null;
+
+          const isExpanded = search.trim() ? true : !!expandedCategories[cat.key];
+          const activeCount = itemsInCategory.filter((i) => i.visible !== false && i.enabled !== false).length;
+          const totalCount = itemsInCategory.length;
+          const isAllActive = activeCount === totalCount && totalCount > 0;
+          const isAnyActive = activeCount > 0;
 
           return (
             <div
-              key={item.id}
-              className={`p-5 rounded-2xl border transition-all flex flex-col justify-between ${
-                isVisible
-                  ? 'bg-slate-900/90 border-slate-800 shadow-md'
-                  : 'bg-slate-950/70 border-slate-900 opacity-80'
-              }`}
+              key={cat.key}
+              className="rounded-2xl bg-slate-900/90 border border-slate-800 overflow-hidden shadow-lg transition-all"
             >
-              <div>
-                {/* Card Header: Meta + Toggle */}
-                <div className="flex items-start justify-between gap-3 mb-3.5">
-                  <div className="flex-1 min-w-0">
+              {/* Accordion Group Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-slate-900 border-b border-slate-800/80">
+                <button
+                  type="button"
+                  onClick={() => toggleCategoryExpand(cat.key)}
+                  className="flex items-center gap-3 flex-1 text-start cursor-pointer group"
+                >
+                  <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 group-hover:scale-105 transition-transform">
+                    <CatIcon className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-0.5 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[11px] font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
-                        {item.id}
-                      </span>
-                      <span className="text-[10px] text-slate-400 uppercase tracking-wider px-2 py-0.5 rounded bg-slate-800">
-                        {item.category}
-                      </span>
+                      <h3 className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors">
+                        {isAr ? cat.title_ar : cat.title_en}
+                      </h3>
                       <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                          isVisible
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                            : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                          isAllActive
+                            ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                            : isAnyActive
+                            ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                            : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
                         }`}
                       >
-                        {isVisible ? (isAr ? 'مفعل ومعروض' : 'Active') : (isAr ? 'معطل ومخفي' : 'Disabled')}
+                        {activeCount} / {totalCount} {isAr ? 'مفعل' : 'Active'}
                       </span>
                     </div>
-
-                    <h3 className="text-sm font-bold text-white mt-2 truncate">
-                      {isAr ? item.name_ar || item.label_ar : item.name_en || item.label_en}
-                    </h3>
-
-                    {item.description_ar && (
-                      <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">
-                        {isAr ? item.description_ar : item.description_en || item.description_ar}
-                      </p>
-                    )}
+                    <p className="text-[11px] text-slate-400 line-clamp-1">
+                      {isAr ? cat.description_ar : cat.description_en}
+                    </p>
                   </div>
+                </button>
 
-                  {/* Primary Power/Visibility Toggle Button */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        toggleVisibility(item.id);
-                        showToast(
-                          isVisible
-                            ? isAr
-                              ? `تم تعطيل وإخفاء: ${item.name_ar || item.id}`
-                              : `Disabled ${item.name_en || item.id}`
-                            : isAr
-                            ? `تم تشغيل وإظهار: ${item.name_ar || item.id}`
-                            : `Enabled ${item.name_en || item.id}`
-                        );
-                      }}
-                      className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 ${
-                        isVisible
-                          ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25'
-                          : 'bg-slate-800 border-slate-700 text-slate-500 hover:text-white'
-                      }`}
-                      title={
-                        isVisible
-                          ? isAr ? 'انقر للتعطيل والإخفاء من المتجر' : 'Click to disable'
-                          : isAr ? 'انقر للتشغيل والإظهار في المتجر' : 'Click to enable'
-                      }
-                    >
-                      {isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                      <span className="text-xs font-bold hidden sm:inline">
-                        {isVisible ? (isAr ? 'مفعل' : 'Active') : (isAr ? 'معطل' : 'Off')}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* LIVE INTERACTIVE PREVIEW BOX */}
-                <div className="my-3">
-                  <ControlLivePreview
-                    item={item}
-                    previewTheme={previewTheme}
-                    previewLang={previewLang}
-                  />
-                </div>
-              </div>
-
-              {/* Editable Fields Section */}
-              <div className="space-y-3 pt-3 border-t border-slate-800/80 text-xs">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="text-[11px] font-medium text-slate-400 block mb-1">
-                      {isAr ? 'النص التفاعلي بالعربية' : 'Arabic Label'}
-                    </label>
-                    <input
-                      type="text"
-                      value={item.label_ar || ''}
-                      onChange={(e) => updateControl(item.id, { label_ar: e.target.value })}
-                      placeholder="النص بالعربية..."
-                      className="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-white text-xs focus:border-indigo-500 outline-none transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-medium text-slate-400 block mb-1">
-                      {isAr ? 'النص التفاعلي بالإنجليزية' : 'English Label'}
-                    </label>
-                    <input
-                      type="text"
-                      value={item.label_en || ''}
-                      onChange={(e) => updateControl(item.id, { label_en: e.target.value })}
-                      placeholder="Label in English..."
-                      className="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-white text-xs focus:border-indigo-500 outline-none transition-colors"
-                    />
-                  </div>
-                </div>
-
-                {/* Optional Action / URL / Phone / Image Upload Field */}
-                {item.actionValue !== undefined && (
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-[11px] font-medium text-slate-400">
-                        {item.id.includes('phone')
-                          ? isAr ? 'رقم هاتف الواتساب الدولي (+964...)' : 'International Phone (+964...)'
-                          : item.id.includes('bg') || item.id.includes('image')
-                          ? isAr ? 'رابط الصورة أو رفع ملف مباشر من جهازك' : 'Image URL or Upload File'
-                          : isAr ? 'قيمة الإجراء أو الرابط المستهدف' : 'Action Target URL or Value'}
-                      </label>
-                      {(item.id.includes('bg') || item.id.includes('image') || item.id.includes('banner') || item.id.includes('logo')) && (
-                        <span className="text-[10px] text-amber-400 font-semibold flex items-center gap-1">
-                          <Upload className="w-3 h-3" />
-                          <span>{isAr ? 'رفع ملف مدعوم' : 'File upload ready'}</span>
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={item.actionValue || ''}
-                        onChange={(e) => updateControl(item.id, { actionValue: e.target.value })}
-                        placeholder={item.id.includes('phone') ? '+9647XXXXXXXXX' : '#section or https://...'}
-                        className="flex-1 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-white text-xs font-mono focus:border-indigo-500 outline-none transition-colors"
-                      />
-                      {(item.id.includes('bg') ||
-                        item.id.includes('image') ||
-                        item.id.includes('banner') ||
-                        item.id.includes('logo') ||
-                        (item.actionValue && item.actionValue.includes('http'))) && (
-                        <label className="px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 hover:text-white text-xs font-medium flex items-center gap-1.5 cursor-pointer shrink-0 transition-colors">
-                          {uploadingControlId === item.id ? (
-                            <>
-                              <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
-                              <span>{isAr ? 'رفع...' : '...'}</span>
-                            </>
-                          ) : (
-                            <>
-                              <Upload className="w-3.5 h-3.5" />
-                              <span>{isAr ? 'رفع ملف كصورة' : 'Upload'}</span>
-                            </>
-                          )}
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            disabled={uploadingControlId === item.id}
-                            onChange={async (e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                setUploadingControlId(item.id);
-                                try {
-                                  const url = await uploadImageToSupabase(file, 'controls');
-                                  if (url) {
-                                    updateControl(item.id, { actionValue: url });
-                                    showToast(isAr ? '✓ تم رفع الصورة كملف بنجاح' : 'Image uploaded successfully');
-                                  }
-                                } catch (err) {
-                                  const fallback = await fileToOptimizedDataUrl(file);
-                                  updateControl(item.id, { actionValue: fallback });
-                                  showToast(isAr ? '✓ تم حفظ الصورة كملف' : 'Image saved');
-                                } finally {
-                                  setUploadingControlId(null);
-                                }
-                              }
-                            }}
-                          />
-                        </label>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Footer Actions: Reset item to default */}
-                <div className="flex items-center justify-end pt-1">
+                {/* Master Group Action Switch & Expand Toggle */}
+                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
                   <button
                     type="button"
-                    onClick={() => {
-                      resetControl(item.id);
-                      showToast(isAr ? `تمت استعادة الزر: ${item.name_ar || item.id}` : `Reset ${item.id}`);
-                    }}
-                    className="text-[10.5px] text-slate-500 hover:text-slate-300 flex items-center gap-1 cursor-pointer transition-colors"
+                    onClick={() => handleMasterCategoryToggle(cat.key)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all border shadow-sm ${
+                      isAnyActive
+                        ? 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border-rose-500/30'
+                        : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border-emerald-500/30'
+                    }`}
                   >
-                    <RotateCcw className="w-3 h-3" />
-                    <span>{isAr ? 'استعادة هذا الزر للافتراضي' : 'Reset to default'}</span>
+                    <Power className="w-3.5 h-3.5" />
+                    <span>
+                      {isAnyActive
+                        ? isAr ? 'إيقاف هذه الميزة بالكامل' : 'Disable Entire Feature'
+                        : isAr ? 'تفعيل هذه الميزة بالكامل' : 'Enable Entire Feature'}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => toggleCategoryExpand(cat.key)}
+                    className="p-1.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer"
+                  >
+                    {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
+
+              {/* Accordion Items List Body */}
+              {isExpanded && (
+                <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4 bg-slate-950/40">
+                  {itemsInCategory.map((item) => {
+                    const isVisible = item.visible !== false && item.enabled !== false;
+
+                    return (
+                      <div
+                        key={item.id}
+                        className={`p-4 rounded-2xl border transition-all flex flex-col justify-between ${
+                          isVisible
+                            ? 'bg-slate-900/90 border-slate-800 shadow-md'
+                            : 'bg-slate-950/70 border-slate-900 opacity-80'
+                        }`}
+                      >
+                        <div>
+                          {/* Card Header: Meta + Toggle */}
+                          <div className="flex items-start justify-between gap-3 mb-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[10px] font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
+                                  {item.id}
+                                </span>
+                                <span
+                                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                                    isVisible
+                                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                                      : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                                  }`}
+                                >
+                                  {isVisible ? (isAr ? 'مفعل ومعروض' : 'Active') : (isAr ? 'معطل ومخفي' : 'Disabled')}
+                                </span>
+                              </div>
+
+                              <h3 className="text-sm font-bold text-white mt-1.5 truncate">
+                                {isAr ? item.name_ar || item.label_ar : item.name_en || item.label_en}
+                              </h3>
+
+                              {item.description_ar && (
+                                <p className="text-[11px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                                  {isAr ? item.description_ar : item.description_en || item.description_ar}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Individual Eye Toggle Button */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  toggleVisibility(item.id);
+                                  showToast(
+                                    isVisible
+                                      ? isAr
+                                        ? `تم تعطيل وإخفاء: ${item.name_ar || item.id}`
+                                        : `Disabled ${item.name_en || item.id}`
+                                      : isAr
+                                      ? `تم تشغيل وإظهار: ${item.name_ar || item.id}`
+                                      : `Enabled ${item.name_en || item.id}`
+                                  );
+                                }}
+                                className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 ${
+                                  isVisible
+                                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25'
+                                    : 'bg-slate-800 border-slate-700 text-slate-500 hover:text-white'
+                                }`}
+                                title={
+                                  isVisible
+                                    ? isAr ? 'انقر للتعطيل والإخفاء من المتجر' : 'Click to disable'
+                                    : isAr ? 'انقر للتشغيل والإظهار في المتجر' : 'Click to enable'
+                                }
+                              >
+                                {isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                                <span className="text-xs font-bold hidden sm:inline">
+                                  {isVisible ? (isAr ? 'مفعل' : 'Active') : (isAr ? 'معطل' : 'Off')}
+                                </span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* LIVE INTERACTIVE PREVIEW BOX */}
+                          <div className="my-3">
+                            <ControlLivePreview
+                              item={item}
+                              previewTheme={previewTheme}
+                              previewLang={previewLang}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Editable Fields Section */}
+                        <div className="space-y-3 pt-3 border-t border-slate-800/80 text-xs">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div>
+                              <label className="text-[11px] font-medium text-slate-400 block mb-1">
+                                {isAr ? 'النص التفاعلي بالعربية' : 'Arabic Label'}
+                              </label>
+                              <input
+                                type="text"
+                                value={item.label_ar || ''}
+                                onChange={(e) => updateControl(item.id, { label_ar: e.target.value })}
+                                placeholder="النص بالعربية..."
+                                className="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-white text-xs focus:border-indigo-500 outline-none transition-colors"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[11px] font-medium text-slate-400 block mb-1">
+                                {isAr ? 'النص التفاعلي بالإنجليزية' : 'English Label'}
+                              </label>
+                              <input
+                                type="text"
+                                value={item.label_en || ''}
+                                onChange={(e) => updateControl(item.id, { label_en: e.target.value })}
+                                placeholder="Label in English..."
+                                className="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-white text-xs focus:border-indigo-500 outline-none transition-colors"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Action Value or Upload Field */}
+                          {item.actionValue !== undefined && (
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="text-[11px] font-medium text-slate-400">
+                                  {item.id.includes('phone')
+                                    ? isAr ? 'رقم هاتف الواتساب الدولي (+964...)' : 'International Phone (+964...)'
+                                    : item.id.includes('bg') || item.id.includes('image')
+                                    ? isAr ? 'رابط الصورة أو رفع ملف مباشر' : 'Image URL or Upload File'
+                                    : isAr ? 'قيمة الإجراء أو الرابط المستهدف' : 'Action Target URL'}
+                                </label>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={item.actionValue || ''}
+                                  onChange={(e) => updateControl(item.id, { actionValue: e.target.value })}
+                                  placeholder={item.id.includes('phone') ? '+9647XXXXXXXXX' : '#section or https://...'}
+                                  className="flex-1 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-white text-xs font-mono focus:border-indigo-500 outline-none transition-colors"
+                                />
+                                {(item.id.includes('bg') ||
+                                  item.id.includes('image') ||
+                                  item.id.includes('banner') ||
+                                  item.id.includes('logo') ||
+                                  (item.actionValue && item.actionValue.includes('http'))) && (
+                                  <label className="px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 hover:text-white text-xs font-medium flex items-center gap-1.5 cursor-pointer shrink-0 transition-colors">
+                                    {uploadingControlId === item.id ? (
+                                      <>
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+                                        <span>...</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Upload className="w-3.5 h-3.5" />
+                                        <span>{isAr ? 'رفع ملف' : 'Upload'}</span>
+                                      </>
+                                    )}
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      className="hidden"
+                                      disabled={uploadingControlId === item.id}
+                                      onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                          setUploadingControlId(item.id);
+                                          try {
+                                            const url = await uploadImageToSupabase(file, 'controls');
+                                            if (url) {
+                                              updateControl(item.id, { actionValue: url });
+                                              showToast(isAr ? '✓ تم رفع الصورة كملف بنجاح' : 'Image uploaded');
+                                            }
+                                          } catch {
+                                            const fallback = await fileToOptimizedDataUrl(file);
+                                            updateControl(item.id, { actionValue: fallback });
+                                            showToast(isAr ? '✓ تم حفظ الصورة' : 'Image saved');
+                                          } finally {
+                                            setUploadingControlId(null);
+                                          }
+                                        }
+                                      }}
+                                    />
+                                  </label>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Footer Actions */}
+                          <div className="flex items-center justify-end pt-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                resetControl(item.id);
+                                showToast(isAr ? `تمت استعادة الزر: ${item.name_ar || item.id}` : `Reset ${item.id}`);
+                              }}
+                              className="text-[10.5px] text-slate-500 hover:text-slate-300 flex items-center gap-1 cursor-pointer transition-colors"
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                              <span>{isAr ? 'استعادة للافتراضي' : 'Reset to default'}</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}

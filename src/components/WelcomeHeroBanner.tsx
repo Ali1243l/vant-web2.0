@@ -4,6 +4,7 @@ import { X, ArrowDown, ChevronLeft, ChevronRight, ArrowUpRight, Sparkles } from 
 import type { Language } from '../types';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { toWesternNumerals } from '../admin/format';
+import AnimatedText from './ui/AnimatedText';
 
 interface Props {
   lang: Language;
@@ -236,14 +237,21 @@ export default function WelcomeHeroBanner({
                   <div className="pt-3.5 sm:pt-5 flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6">
                     <div className="max-w-2xl">
                       {heroTitleControl.visible && (
-                        <h2 className={`text-xl sm:text-2xl md:text-[28px] lg:text-[32px] font-bold text-[#15171c] dark:text-white leading-snug sm:leading-[1.22] ${isAr ? 'tracking-normal font-sans' : 'tracking-tight'}`}>
-                          {headlineText}
-                        </h2>
+                        <AnimatedText
+                          text={headlineText}
+                          as="h2"
+                          className={`text-xl sm:text-2xl md:text-[28px] lg:text-[32px] font-bold text-[#15171c] dark:text-white leading-snug sm:leading-[1.22] ${
+                            isAr ? 'tracking-normal font-sans' : 'tracking-tight'
+                          }`}
+                        />
                       )}
                       {heroSubtitleControl.visible && (
-                        <p className="mt-2 text-xs sm:text-sm md:text-[14.5px] text-[#15171c]/75 dark:text-white/75 leading-relaxed max-w-xl">
-                          {subtitleText}
-                        </p>
+                        <AnimatedText
+                          text={subtitleText}
+                          as="p"
+                          staggerDelay={0.02}
+                          className="mt-2 text-xs sm:text-sm md:text-[14.5px] text-[#15171c]/75 dark:text-white/75 leading-relaxed max-w-xl"
+                        />
                       )}
                     </div>
 
@@ -274,9 +282,13 @@ export default function WelcomeHeroBanner({
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#004ad7]/10 dark:bg-[#3b82f6]/15 text-[#004ad7] dark:text-[#3b82f6]">
                     <Sparkles className="h-3.5 w-3.5" />
                   </div>
-                  <h3 className={`text-xs sm:text-sm font-bold text-[#15171c] dark:text-white ${isAr ? 'tracking-normal font-sans' : 'tracking-tight uppercase'}`}>
-                    {trendsHeadline}
-                  </h3>
+                  <AnimatedText
+                    text={trendsHeadline}
+                    as="h3"
+                    className={`text-xs sm:text-sm font-bold text-[#15171c] dark:text-white ${
+                      isAr ? 'tracking-normal font-sans' : 'tracking-tight uppercase'
+                    }`}
+                  />
                   {/* Clean Monochromatic Count Pill */}
                   <span className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold text-[#15171c] dark:text-white px-2.5 py-0.5 rounded-full bg-black/5 dark:bg-white/10 border border-black/8 dark:border-white/12">
                     <span className="font-mono font-bold text-[#004ad7] dark:text-[#60a5fa] tabular-nums">

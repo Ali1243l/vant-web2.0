@@ -6,7 +6,23 @@ import type { MasterSizeItem } from "../data/sizeGuide";
 
 export interface SiteControlItem {
   id: string;
-  category: 'product' | 'header' | 'filter' | 'global' | 'banner' | 'card' | 'footer';
+  category:
+    | 'cart'
+    | 'whatsapp'
+    | 'wishlist'
+    | 'size_bespoke'
+    | 'search_filter'
+    | 'hero_banner'
+    | 'product_info'
+    | 'brand_footer'
+    | 'product'
+    | 'header'
+    | 'filter'
+    | 'global'
+    | 'banner'
+    | 'card'
+    | 'footer'
+    | string;
   name_ar: string;
   name_en: string;
   visible: boolean;
@@ -178,11 +194,15 @@ export interface SiteSettings {
   newsletter_custom_bg_to?: string;
   newsletter_glow_enabled?: boolean;
 
+  // Cart Animation & Interaction Control
+  enableCartAnimation?: boolean;
+
   updated_at?: string;
 }
 
 export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   maintenance_mode: false,
+  enableCartAnimation: true,
   loading_text_en: 'INITIALIZING ARCHIVE',
   loading_text_ar: 'جاري تحميل الأرشيف وتجهيز التشكيلة',
   maintenance_message: 'We are preparing Volume 02. Please check back later.',
