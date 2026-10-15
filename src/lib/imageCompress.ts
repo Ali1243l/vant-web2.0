@@ -1,9 +1,9 @@
 // Shrinks photos before upload. Originals from phones are often 3-6 MB; the storefront
-// only needs ~1200px WebP (about 100-250 KB). Every visitor downloads these images,
+// only needs ~900px WebP (about 80-150 KB). Every visitor downloads these images,
 // so this is what keeps bandwidth (egress) low.
 
-const MAX_SIDE = 1200;
-const QUALITY = 0.82;
+const MAX_SIDE = 900;
+const QUALITY = 0.75;
 const SKIP_BELOW_BYTES = 150 * 1024;
 const COMPRESSIBLE = ['image/jpeg', 'image/png', 'image/webp'];
 
