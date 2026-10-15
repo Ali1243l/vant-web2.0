@@ -222,7 +222,7 @@ export default function Header({
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         key={cartCount}
-                        className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#004ad7] dark:bg-[#3b82f6] px-1 text-[9px] font-extrabold text-white shadow-sm ring-2 ring-white dark:ring-slate-900"
+                        className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#004ad7] dark:bg-[#3b82f6] px-1 text-[11px] font-extrabold text-white shadow-sm ring-2 ring-white dark:ring-slate-900"
                       >
                         {cartCount}
                       </motion.span>
@@ -247,7 +247,7 @@ export default function Header({
                   >
                     <Heart className={`stroke-[1.8] transition-all ${scrolled ? 'h-4 w-4' : 'h-4.5 w-4.5'} ${isWishlistOnly ? 'fill-current' : ''}`} />
                     {wishlistCount > 0 && (
-                      <span className="absolute top-0.5 right-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#004ad7] dark:bg-[#3b82f6] px-0.5 text-[8.5px] font-bold text-white shadow-xs">
+                      <span className="absolute top-0.5 right-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#004ad7] dark:bg-[#3b82f6] px-0.5 text-[11px] font-bold text-white shadow-xs">
                         {wishlistCount}
                       </span>
                     )}

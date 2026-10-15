@@ -210,7 +210,7 @@ export default function WelcomeHeroBanner({
                   <div className="flex items-center justify-between pb-3 border-b border-black/8 dark:border-white/10">
                     <div className="flex items-center gap-2.5">
                       <span className="flex h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-[#004ad7] dark:bg-[#3b82f6]" />
-                      <span className={`text-[10.5px] sm:text-xs font-semibold text-[#15171c] dark:text-[#f3f4f6] ${isAr ? 'tracking-normal' : 'tracking-[0.16em] uppercase'}`}>
+                      <span className={`text-[11px] sm:text-xs font-semibold text-[#15171c] dark:text-[#f3f4f6] ${isAr ? 'tracking-normal' : 'tracking-[0.16em] uppercase'}`}>
                         {tagText}
                       </span>
                       <span className="hidden sm:inline text-black/20 dark:text-white/20">|</span>
@@ -290,11 +290,11 @@ export default function WelcomeHeroBanner({
                     }`}
                   />
                   {/* Clean Monochromatic Count Pill */}
-                  <span className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold text-[#15171c] dark:text-white px-2.5 py-0.5 rounded-full bg-black/5 dark:bg-white/10 border border-black/8 dark:border-white/12">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#15171c] dark:text-white px-2.5 py-0.5 rounded-full bg-black/5 dark:bg-white/10 border border-black/8 dark:border-white/12">
                     <span className="font-mono font-bold text-[#004ad7] dark:text-[#60a5fa] tabular-nums">
                       {trendsCount}
                     </span>
-                    <span className="text-[10px] text-[#15171c]/70 dark:text-white/70">
+                    <span className="text-[11px] text-[#15171c]/70 dark:text-white/70">
                       {isAr ? 'مختارات' : 'Pieces'}
                     </span>
                   </span>
@@ -364,7 +364,7 @@ export default function WelcomeHeroBanner({
                     <div className="absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-black/35 to-transparent z-[2] pointer-events-none" />
 
                     {/* Top Tag Pill - strictly Western numerals & clean text */}
-                    <div className="absolute top-2 ltr:left-2 rtl:right-2 sm:top-2.5 sm:ltr:left-2.5 sm:rtl:right-2.5 z-10 flex items-center gap-1 rounded-full bg-black/60 backdrop-blur-md px-2 py-0.5 text-[8.5px] sm:text-[9.5px] font-bold font-mono tracking-wider text-white/95 border border-white/15 shadow-xs tabular-nums">
+                    <div className="absolute top-2 ltr:left-2 rtl:right-2 sm:top-2.5 sm:ltr:left-2.5 sm:rtl:right-2.5 z-10 flex items-center gap-1 rounded-full bg-black/60 backdrop-blur-md px-2 py-0.5 text-[11px] sm:text-[11px] font-bold font-mono tracking-wider text-white/95 border border-white/15 shadow-xs tabular-nums">
                       <span>{cleanTagText(isAr ? trend.tagAr : trend.tagEn)}</span>
                     </div>
 
@@ -378,7 +378,7 @@ export default function WelcomeHeroBanner({
                       <h4 className="text-xs sm:text-[13px] font-bold tracking-tight leading-snug drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)] font-sans">
                         {cleanTagText(isAr ? trend.titleAr : trend.titleEn)}
                       </h4>
-                      <p className="mt-0.5 text-[9.5px] sm:text-[10.5px] text-white/85 line-clamp-1 leading-normal drop-shadow-[0_1px_4px_rgba(0,0,0,0.85)]">
+                      <p className="mt-0.5 text-[11px] sm:text-[11px] text-white/85 line-clamp-1 leading-normal drop-shadow-[0_1px_4px_rgba(0,0,0,0.85)]">
                         {toWesternNumerals(isAr ? trend.subtitleAr : trend.subtitleEn)}
                       </p>
                     </div>

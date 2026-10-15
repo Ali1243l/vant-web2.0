@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Check, SlidersHorizontal, LayoutGrid } from 'lucide-react';
 import type { Language } from '../types';
@@ -41,6 +42,9 @@ export default function CategoryFilter({
   const activeRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
+  // On phones the menu opens as a bottom sheet (portaled, so the blurred header cannot clip it)
+  const [isMobileSheet, setIsMobileSheet] = useState(false);
+  const sheetRef = useRef<HTMLDivElement>(null);
   const isAr = lang === 'ar';
   const tabsContainerRef = useRef<HTMLDivElement>(null);
 
@@ -78,13 +82,15 @@ export default function CategoryFilter({
     const openTime = Date.now();
 
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (dropdownRef.current && !dropdownRef.current.contains(target) && !sheetRef.current?.contains(target)) {
         setIsOpen(false);
       }
     }
 
     function handleScroll() {
       // Don't close immediately on initial micro-scroll or scroll events right at opening
+      if (isMobileSheet) return; // the bottom sheet stays open while the page scrolls behind it
       if (Date.now() - openTime < 250) return;
       if (Math.abs(window.scrollY - initialScrollY) > 25) {
         setIsOpen(false);
@@ -98,7 +104,17 @@ export default function CategoryFilter({
       document.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [isOpen]);
+  }, [isOpen, isMobileSheet]);
+
+  // Lock page scroll while the mobile sheet is open
+  useEffect(() => {
+    if (!(isOpen && isMobileSheet)) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isOpen, isMobileSheet]);
 
   const availabilityOptions: {
     id: AvailabilityFilterType;
@@ -143,137 +159,9 @@ export default function CategoryFilter({
 
   const currentOption = availabilityOptions.find((o) => o.id === availability) || availabilityOptions[0];
 
-  return (
-    <nav aria-label="Categories & Filters" className="pb-1.5 pt-0 sm:pb-2 sm:pt-0.5 md:pb-2 md:pt-0.5 w-full max-w-full overflow-visible">
-      {/* Centered, balanced luxury bar with seamless inline filter */}
-      <div className="mx-auto flex max-w-7xl xl:max-w-[1440px] 2xl:max-w-[1536px] w-full items-center justify-center px-3 sm:px-6 md:px-8 overflow-visible">
-        <div className="flex items-center gap-1.5 sm:gap-2 md:gap-2.5 max-w-full overflow-visible">
-          {/* 1. Category Tabs Track (Smooth Scroll, Perfectly Centered on Desktop) */}
-          <div
-            ref={tabsContainerRef}
-            role="tablist"
-            className="no-scrollbar flex flex-nowrap items-center gap-1.5 sm:gap-2 md:gap-2.5 overflow-x-auto [scroll-snap-type:x_proximity] select-none py-1 md:py-1.5"
-          >
-            {/* Special Offers & Discounts Button */}
-            {onToggleOffersOnly && offersControl.visible && (
-              <button
-                type="button"
-                ref={isOffersOnly ? activeRef : undefined}
-                role="tab"
-                aria-selected={isOffersOnly}
-                onClick={() => {
-                  const nextState = !isOffersOnly;
-                  onToggleOffersOnly(nextState);
-                  trackEvent('category_filter', { category: 'offers', isOffersOnly: nextState });
-                  scrollToCatalogTop();
-                }}
-                className={`relative shrink-0 snap-center whitespace-nowrap rounded-full px-3.5 py-1.5 md:h-9.5 md:px-4 lg:h-10 lg:px-4.5 flex items-center justify-center text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
-                  isOffersOnly
-                    ? 'text-white dark:text-[#15171c] font-semibold'
-                    : 'bg-black/[0.035] dark:bg-white/[0.06] text-[#6b7280] dark:text-[#9ca3af] hover:text-[#15171c] dark:hover:text-[#f3f4f6] hover:bg-black/[0.06] dark:hover:bg-white/[0.1] border border-black/5 dark:border-white/5'
-                }`}
-              >
-                {isOffersOnly && (
-                  <motion.div
-                    layoutId="activeTabPill"
-                    className="absolute inset-0 rounded-full bg-[#15171c] dark:bg-white shadow-xs ring-1 ring-black/10 dark:ring-white/20"
-                    transition={{ type: 'spring', stiffness: 480, damping: 35 }}
-                  />
-                )}
-                <span className="relative z-10">{isAr ? offersControl.label_ar : offersControl.label_en}</span>
-              </button>
-            )}
-
-            {tabsControl.visible && categories.map((c) => {
-              const isActive = c === active && !isOffersOnly;
-              const displayLabel = getLabel ? getLabel(c) : c;
-
-              return (
-                <button
-                  key={c}
-                  ref={isActive ? activeRef : undefined}
-                  role="tab"
-                  aria-selected={isActive}
-                  onClick={() => {
-                    if (onToggleOffersOnly) onToggleOffersOnly(false);
-                    const allCat = categories[0] || 'all';
-                    if (isActive && c !== allCat && c !== 'all') {
-                      onChange(allCat);
-                      trackEvent('category_filter', { category: allCat });
-                    } else {
-                      onChange(c);
-                      trackEvent('category_filter', { category: c });
-                    }
-                    scrollToCatalogTop();
-                  }}
-                  className={`relative shrink-0 snap-center whitespace-nowrap rounded-full px-3.5 py-1.5 md:h-9.5 md:px-4 lg:h-10 lg:px-4.5 flex items-center justify-center text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
-                    isActive
-                      ? 'text-white dark:text-[#15171c] font-semibold'
-                      : 'bg-black/[0.035] dark:bg-white/[0.06] text-[#6b7280] dark:text-[#9ca3af] hover:text-[#15171c] dark:hover:text-[#f3f4f6] hover:bg-black/[0.06] dark:hover:bg-white/[0.1] border border-black/5 dark:border-white/5'
-                  }`}
-                >
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeTabPill"
-                      className="absolute inset-0 rounded-full bg-[#15171c] dark:bg-white shadow-xs ring-1 ring-black/10 dark:ring-white/20"
-                      transition={{ type: 'spring', stiffness: 480, damping: 35 }}
-                    />
-                  )}
-                  <span className="relative z-10">{displayLabel}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* 2. Soft Elegant Divider */}
-          {filterControl.visible && onAvailabilityChange && (
-            <span className="h-4 md:h-5 w-px bg-black/10 dark:bg-white/12 shrink-0 mx-0.5 md:mx-1" aria-hidden="true" />
-          )}
-
-          {/* 3. Availability Filter Pill (Controlled via SiteControls) */}
-          {filterControl.visible && onAvailabilityChange && (
-            <div className={`relative shrink-0 ${isOpen ? 'z-40' : 'z-20'}`} ref={dropdownRef}>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsOpen((prev) => !prev);
-                }}
-                aria-expanded={isOpen}
-                aria-haspopup="true"
-                className={`flex shrink-0 items-center gap-1.5 md:gap-2 rounded-full px-3.5 py-1.5 md:h-9.5 md:px-4 lg:h-10 lg:px-4.5 text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer border shadow-2xs select-none ${
-                  availability !== 'all'
-                    ? 'border-[#004ad7]/35 dark:border-[#3b82f6]/35 bg-[#004ad7]/10 dark:bg-[#3b82f6]/15 text-[#004ad7] dark:text-[#3b82f6] font-semibold ring-1 ring-[#004ad7]/20 dark:ring-[#3b82f6]/25'
-                    : isOpen
-                    ? 'bg-black/[0.08] dark:bg-white/[0.12] text-[#15171c] dark:text-[#f3f4f6] border-black/15 dark:border-white/20 ring-1 ring-black/5 dark:ring-white/10'
-                    : 'bg-black/[0.035] dark:bg-white/[0.06] text-[#6b7280] dark:text-[#9ca3af] hover:text-[#15171c] dark:hover:text-[#f3f4f6] hover:bg-black/[0.06] dark:hover:bg-white/[0.1] border-black/8 dark:border-white/10'
-                }`}
-              >
-                <SlidersHorizontal className="h-3.5 w-3.5 opacity-60" />
-                <span>{isAr ? currentOption.label_ar : currentOption.label_en}</span>
-                {currentOption.dot && (
-                  <span className={`h-1.5 w-1.5 rounded-full ${currentOption.dot}`} />
-                )}
-                <motion.span
-                  animate={{ rotate: isOpen ? 180 : 0 }}
-                  transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                  className="inline-flex items-center"
-                >
-                  <ChevronDown className="h-3 w-3 opacity-60" />
-                </motion.span>
-              </button>
-
-              {/* Floating Dropdown Menu with Spring Physics & Deep Glass Blur */}
-              <AnimatePresence>
-                {isOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.98, y: 6 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.98, y: 6 }}
-                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                    role="menu"
-                    className="absolute top-full mt-2 end-0 ltr:right-0 rtl:left-0 z-[100000] min-w-[240px] sm:min-w-[255px] md:min-w-[270px] rounded-2xl border border-black/10 dark:border-white/15 bg-white/95 dark:bg-[#12141a]/95 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.18),0_6px_18px_rgba(0,0,0,0.08)] dark:shadow-[0_24px_55px_rgba(0,0,0,0.9),0_6px_20px_rgba(0,0,0,0.6)] backdrop-blur-2xl text-[#15171c] dark:text-white max-w-[calc(100vw-32px)] will-change-transform transform-gpu ring-1 ring-black/5 dark:ring-white/10"
-                  >
+  // Shared menu body (desktop dropdown and mobile bottom sheet)
+  const menuBody = (
+    <>
                     {/* Header */}
                     <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-black/6 dark:border-white/8 mb-1.5">
                       <div className="flex items-center gap-1.5 text-[11px] font-bold tracking-wider text-[#6b7280] dark:text-[#9ca3af] uppercase select-none">
@@ -284,10 +172,10 @@ export default function CategoryFilter({
                         <button
                           type="button"
                           onClick={() => {
-                            onAvailabilityChange('all');
+                            onAvailabilityChange?.('all');
                             setIsOpen(false);
                           }}
-                          className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-[#004ad7]/10 dark:bg-[#3b82f6]/15 text-[#004ad7] dark:text-[#60a5fa] hover:bg-[#004ad7]/20 transition-colors cursor-pointer"
+                          className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#004ad7]/10 dark:bg-[#3b82f6]/15 text-[#004ad7] dark:text-[#60a5fa] hover:bg-[#004ad7]/20 transition-colors cursor-pointer"
                         >
                           {isAr ? 'إعادة ضبط' : 'Reset'}
                         </button>
@@ -306,7 +194,7 @@ export default function CategoryFilter({
                             type="button"
                             role="menuitem"
                             onClick={() => {
-                              onAvailabilityChange(opt.id);
+                              onAvailabilityChange?.(opt.id);
                               trackEvent('availability_filter', { availability: opt.id });
                               setIsOpen(false);
                               scrollToCatalogTop();
@@ -348,7 +236,7 @@ export default function CategoryFilter({
                               {/* Title & Micro Subtitle */}
                               <div className="flex flex-col text-start">
                                 <span className="leading-snug">{isAr ? opt.label_ar : opt.label_en}</span>
-                                <span className="text-[10px] text-[#6b7280] dark:text-[#9ca3af] font-normal leading-tight mt-0.5">
+                                <span className="text-[11px] text-[#6b7280] dark:text-[#9ca3af] font-normal leading-tight mt-0.5">
                                   {isAr ? opt.sub_ar : opt.sub_en}
                                 </span>
                               </div>
@@ -377,9 +265,174 @@ export default function CategoryFilter({
                         );
                       })}
                     </div>
+    </>
+  );
+
+  return (
+    <nav aria-label="Categories & Filters" className="pb-1.5 pt-0 sm:pb-2 sm:pt-0.5 md:pb-2 md:pt-0.5 w-full max-w-full overflow-visible">
+      {/* Centered, balanced luxury bar with seamless inline filter */}
+      <div className="mx-auto flex max-w-7xl xl:max-w-[1440px] 2xl:max-w-[1536px] w-full items-center justify-center px-3 sm:px-6 md:px-8 overflow-visible">
+        <div className="flex items-center gap-1.5 sm:gap-2 md:gap-2.5 max-w-full overflow-visible">
+          {/* 1. Category Tabs Track (Smooth Scroll, Perfectly Centered on Desktop) */}
+          <div
+            ref={tabsContainerRef}
+            role="tablist"
+            className="no-scrollbar flex flex-nowrap items-center gap-1.5 sm:gap-2 md:gap-2.5 overflow-x-auto [scroll-snap-type:x_proximity] select-none py-1 md:py-1.5"
+          >
+            {/* Special Offers & Discounts Button */}
+            {onToggleOffersOnly && offersControl.visible && (
+              <button
+                type="button"
+                ref={isOffersOnly ? activeRef : undefined}
+                role="tab"
+                aria-selected={isOffersOnly}
+                onClick={() => {
+                  const nextState = !isOffersOnly;
+                  onToggleOffersOnly(nextState);
+                  trackEvent('category_filter', { category: 'offers', isOffersOnly: nextState });
+                  scrollToCatalogTop();
+                }}
+                className={`relative shrink-0 snap-center whitespace-nowrap rounded-full px-3.5 py-1.5 min-h-10 sm:min-h-0 md:h-9.5 md:px-4 lg:h-10 lg:px-4.5 flex items-center justify-center text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
+                  isOffersOnly
+                    ? 'text-white dark:text-[#15171c] font-semibold'
+                    : 'bg-black/[0.035] dark:bg-white/[0.06] text-[#6b7280] dark:text-[#9ca3af] hover:text-[#15171c] dark:hover:text-[#f3f4f6] hover:bg-black/[0.06] dark:hover:bg-white/[0.1] border border-black/5 dark:border-white/5'
+                }`}
+              >
+                {isOffersOnly && (
+                  <motion.div
+                    layoutId="activeTabPill"
+                    className="absolute inset-0 rounded-full bg-[#15171c] dark:bg-white shadow-xs ring-1 ring-black/10 dark:ring-white/20"
+                    transition={{ type: 'spring', stiffness: 480, damping: 35 }}
+                  />
+                )}
+                <span className="relative z-10">{isAr ? offersControl.label_ar : offersControl.label_en}</span>
+              </button>
+            )}
+
+            {tabsControl.visible && categories.map((c) => {
+              const isActive = c === active && !isOffersOnly;
+              const displayLabel = getLabel ? getLabel(c) : c;
+
+              return (
+                <button
+                  key={c}
+                  ref={isActive ? activeRef : undefined}
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => {
+                    if (onToggleOffersOnly) onToggleOffersOnly(false);
+                    const allCat = categories[0] || 'all';
+                    if (isActive && c !== allCat && c !== 'all') {
+                      onChange(allCat);
+                      trackEvent('category_filter', { category: allCat });
+                    } else {
+                      onChange(c);
+                      trackEvent('category_filter', { category: c });
+                    }
+                    scrollToCatalogTop();
+                  }}
+                  className={`relative shrink-0 snap-center whitespace-nowrap rounded-full px-3.5 py-1.5 min-h-10 sm:min-h-0 md:h-9.5 md:px-4 lg:h-10 lg:px-4.5 flex items-center justify-center text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
+                    isActive
+                      ? 'text-white dark:text-[#15171c] font-semibold'
+                      : 'bg-black/[0.035] dark:bg-white/[0.06] text-[#6b7280] dark:text-[#9ca3af] hover:text-[#15171c] dark:hover:text-[#f3f4f6] hover:bg-black/[0.06] dark:hover:bg-white/[0.1] border border-black/5 dark:border-white/5'
+                  }`}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeTabPill"
+                      className="absolute inset-0 rounded-full bg-[#15171c] dark:bg-white shadow-xs ring-1 ring-black/10 dark:ring-white/20"
+                      transition={{ type: 'spring', stiffness: 480, damping: 35 }}
+                    />
+                  )}
+                  <span className="relative z-10">{displayLabel}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* 2. Soft Elegant Divider */}
+          {filterControl.visible && onAvailabilityChange && (
+            <span className="h-4 md:h-5 w-px bg-black/10 dark:bg-white/12 shrink-0 mx-0.5 md:mx-1" aria-hidden="true" />
+          )}
+
+          {/* 3. Availability Filter Pill (Controlled via SiteControls) */}
+          {filterControl.visible && onAvailabilityChange && (
+            <div className={`relative shrink-0 ${isOpen ? 'z-40' : 'z-20'}`} ref={dropdownRef}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isOpen) setIsMobileSheet(window.matchMedia('(max-width: 639px)').matches);
+                  setIsOpen((prev) => !prev);
+                }}
+                aria-expanded={isOpen}
+                aria-haspopup="true"
+                className={`flex shrink-0 items-center gap-1.5 md:gap-2 rounded-full px-3.5 py-1.5 min-h-10 sm:min-h-0 md:h-9.5 md:px-4 lg:h-10 lg:px-4.5 text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer border shadow-2xs select-none ${
+                  availability !== 'all'
+                    ? 'border-[#004ad7]/35 dark:border-[#3b82f6]/35 bg-[#004ad7]/10 dark:bg-[#3b82f6]/15 text-[#004ad7] dark:text-[#3b82f6] font-semibold ring-1 ring-[#004ad7]/20 dark:ring-[#3b82f6]/25'
+                    : isOpen
+                    ? 'bg-black/[0.08] dark:bg-white/[0.12] text-[#15171c] dark:text-[#f3f4f6] border-black/15 dark:border-white/20 ring-1 ring-black/5 dark:ring-white/10'
+                    : 'bg-black/[0.035] dark:bg-white/[0.06] text-[#6b7280] dark:text-[#9ca3af] hover:text-[#15171c] dark:hover:text-[#f3f4f6] hover:bg-black/[0.06] dark:hover:bg-white/[0.1] border-black/8 dark:border-white/10'
+                }`}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5 opacity-60" />
+                <span>{isAr ? currentOption.label_ar : currentOption.label_en}</span>
+                {currentOption.dot && (
+                  <span className={`h-1.5 w-1.5 rounded-full ${currentOption.dot}`} />
+                )}
+                <motion.span
+                  animate={{ rotate: isOpen ? 180 : 0 }}
+                  transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                  className="inline-flex items-center"
+                >
+                  <ChevronDown className="h-3 w-3 opacity-60" />
+                </motion.span>
+              </button>
+
+              {/* Floating Dropdown Menu with Spring Physics & Deep Glass Blur */}
+              <AnimatePresence>
+                {isOpen && !isMobileSheet && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.98, y: 6 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.98, y: 6 }}
+                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                    role="menu"
+                    className="absolute top-full mt-2 end-0 ltr:right-0 rtl:left-0 z-[100000] min-w-[240px] sm:min-w-[255px] md:min-w-[270px] rounded-2xl border border-black/10 dark:border-white/15 bg-white/95 dark:bg-[#12141a]/95 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.18),0_6px_18px_rgba(0,0,0,0.08)] dark:shadow-[0_24px_55px_rgba(0,0,0,0.9),0_6px_20px_rgba(0,0,0,0.6)] backdrop-blur-2xl text-[#15171c] dark:text-white max-w-[calc(100vw-32px)] will-change-transform transform-gpu ring-1 ring-black/5 dark:ring-white/10"
+                  >
+                    {menuBody}
                   </motion.div>
                 )}
               </AnimatePresence>
+              {typeof document !== 'undefined' && createPortal(
+                <AnimatePresence>
+                  {isOpen && isMobileSheet && (
+                    <>
+                      <motion.div
+                        key="filter-backdrop"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setIsOpen(false)}
+                        className="fixed inset-0 z-[100000] bg-black/40"
+                      />
+                      <motion.div
+                        key="filter-sheet"
+                        ref={sheetRef}
+                        initial={{ y: '100%' }}
+                        animate={{ y: 0 }}
+                        exit={{ y: '100%' }}
+                        transition={{ type: 'spring', stiffness: 420, damping: 40 }}
+                        className="fixed inset-x-0 bottom-0 z-[100001] rounded-t-3xl border-t border-black/10 dark:border-white/15 bg-white dark:bg-[#16191f] p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl"
+                      >
+                        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-black/15 dark:bg-white/20" />
+                        {menuBody}
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>,
+                document.body
+              )}
             </div>
           )}
         </div>

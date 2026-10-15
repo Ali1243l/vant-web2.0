@@ -74,7 +74,7 @@ export default function MobileTabBar({
             <span className="relative">
               <ShoppingBag className="h-5 w-5" />
               {cartCount > 0 && (
-                <span className="absolute -top-1.5 -end-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#004ad7] dark:bg-[#3b82f6] px-1 text-[9px] font-extrabold text-white ring-2 ring-white dark:ring-[#0d0f12]">
+                <span className="absolute -top-1.5 -end-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#004ad7] dark:bg-[#3b82f6] px-1 text-[11px] font-extrabold text-white ring-2 ring-white dark:ring-[#0d0f12]">
                   {cartCount}
                 </span>
               )}
@@ -92,7 +92,7 @@ export default function MobileTabBar({
             <span className="relative">
               <Heart className={`h-5 w-5 ${isWishlistOnly ? 'fill-current' : ''}`} />
               {wishlistCount > 0 && (
-                <span className="absolute -top-1.5 -end-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#004ad7] dark:bg-[#3b82f6] px-1 text-[9px] font-extrabold text-white ring-2 ring-white dark:ring-[#0d0f12]">
+                <span className="absolute -top-1.5 -end-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#004ad7] dark:bg-[#3b82f6] px-1 text-[11px] font-extrabold text-white ring-2 ring-white dark:ring-[#0d0f12]">
                   {wishlistCount}
                 </span>
               )}

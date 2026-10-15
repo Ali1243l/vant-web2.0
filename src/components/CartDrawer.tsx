@@ -282,7 +282,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
                   >
                     {isAr ? 'تفريغ السلة بالكامل' : 'Clear all items'}
                   </button>
-                  <span className="text-[10.5px] text-zinc-400">
+                  <span className="text-[11px] text-zinc-400">
                     {isAr ? 'الدفع عند الاستلام داخل العراق' : 'Cash on Delivery in Iraq'}
                   </span>
                 </div>

@@ -284,7 +284,7 @@ export default function NewsletterSection({ lang }: Props) {
             {/* Column 1: Brand statement, badges & benefits (Centered on mobile, start-aligned on desktop) */}
             <div className="text-center md:text-start md:col-span-6 lg:col-span-7 space-y-2.5 sm:space-y-3">
               {/* Subtle Private Archive Badge */}
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-black/8 dark:border-white/10 bg-black/[0.03] dark:bg-white/[0.04] px-3.5 py-1 text-[10.5px] sm:text-[11px] font-semibold text-[#15171c] dark:text-[#f3f4f6]">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-black/8 dark:border-white/10 bg-black/[0.03] dark:bg-white/[0.04] px-3.5 py-1 text-[11px] sm:text-[11px] font-semibold text-[#15171c] dark:text-[#f3f4f6]">
                 <Sparkles className="h-3.5 w-3.5 text-[#004ad7] dark:text-[#3b82f6]" />
                 <span className="tracking-widest uppercase">
                   {isSubscribed
@@ -456,7 +456,7 @@ export default function NewsletterSection({ lang }: Props) {
                 </div>
               )}
 
-              <p className="mt-2.5 text-[10.5px] text-[#6b7280] dark:text-[#9ca3af] text-center md:text-start">
+              <p className="mt-2.5 text-[11px] text-[#6b7280] dark:text-[#9ca3af] text-center md:text-start">
                 {isAr
                   ? siteSettings.newsletter_privacy_ar || 'خصوصيتك محمية. يمكنك إلغاء الاشتراك وحذف حسابك في أي وقت بنقرة واحدة.'
                   : siteSettings.newsletter_privacy_en || 'Privacy guaranteed. You can unsubscribe and delete your account anytime in one click.'}
