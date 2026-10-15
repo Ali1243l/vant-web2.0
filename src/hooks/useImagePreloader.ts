@@ -36,7 +36,8 @@ export function useImagePreloader(products: Product[]) {
     // Map product IDs to their full image lists
     const productMap = new Map<string, string[]>();
     for (const p of products) {
-      const urls = [p.image_url, ...(p.images || [])].filter(Boolean);
+      // Only the cover image: preloading every gallery image downloads the whole catalog.
+      const urls = [p.image_url].filter(Boolean);
       productMap.set(String(p.id), urls);
     }
 

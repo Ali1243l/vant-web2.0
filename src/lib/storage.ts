@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { compressImageFile } from './imageCompress';
 
 export interface UploadedMediaItem {
   url: string;
@@ -203,6 +204,8 @@ export async function uploadImageToSupabase(
   customPath?: string
 ): Promise<string> {
   if (!file) throw new Error('No file provided for upload');
+  // Shrink to web size before upload (see lib/imageCompress.ts)
+  file = await compressImageFile(file);
 
   // 1. Upload directly to Supabase Storage bucket `product-images`
   if (supabase) {
