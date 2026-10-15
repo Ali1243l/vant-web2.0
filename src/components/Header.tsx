@@ -175,7 +175,7 @@ export default function Header({
               }`}
             >
               {/* Left Actions (Search Icon, Shopping Cart, Wishlist) */}
-              <div className="flex items-center justify-start gap-1.5 sm:gap-2.5 min-w-[110px] sm:min-w-[140px] [direction:ltr]">
+              <div className="hidden sm:flex items-center justify-start gap-1.5 sm:gap-2.5 min-w-[110px] sm:min-w-[140px] [direction:ltr]">
                 {searchControl.visible && (
                   <button
                     type="button"
@@ -222,7 +222,7 @@ export default function Header({
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         key={cartCount}
-                        className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#004ad7] dark:bg-[#3b82f6] px-1 text-[9px] font-extrabold text-white shadow-sm ring-2 ring-white dark:ring-slate-900"
+                        className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#004ad7] dark:bg-[#3b82f6] px-1 text-[11px] font-extrabold text-white shadow-sm ring-2 ring-white dark:ring-slate-900"
                       >
                         {cartCount}
                       </motion.span>
@@ -247,7 +247,7 @@ export default function Header({
                   >
                     <Heart className={`stroke-[1.8] transition-all ${scrolled ? 'h-4 w-4' : 'h-4.5 w-4.5'} ${isWishlistOnly ? 'fill-current' : ''}`} />
                     {wishlistCount > 0 && (
-                      <span className="absolute top-0.5 right-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#004ad7] dark:bg-[#3b82f6] px-0.5 text-[8.5px] font-bold text-white shadow-xs">
+                      <span className="absolute top-0.5 right-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#004ad7] dark:bg-[#3b82f6] px-0.5 text-[11px] font-bold text-white shadow-xs">
                         {wishlistCount}
                       </span>
                     )}
@@ -261,14 +261,14 @@ export default function Header({
                   <AnimatePresence mode="wait" initial={false}>
                     <motion.h1
                       key={kineticLang}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.2, ease: 'easeInOut' }}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
                       onClick={() => {
                         setKineticLang((prev) => (prev === 'en' ? 'ar' : 'en'));
                       }}
-                      className={`select-none transition-all duration-300 font-bold text-[#15171c] dark:text-white cursor-pointer text-center active:opacity-75 ${
+                      className={`select-none transition-all duration-300 font-[Cairo] font-black text-[#15171c] dark:text-white cursor-pointer text-center active:opacity-75 ${
                         scrolled
                           ? 'text-[15px] sm:text-[17px]'
                           : 'text-[18px] sm:text-[21px]'
@@ -291,7 +291,7 @@ export default function Header({
                   <button
                     type="button"
                     onClick={onToggleTheme}
-                    className={`relative flex items-center justify-center rounded-full text-[#15171c]/80 dark:text-white/80 transition-all hover:bg-black/5 dark:hover:bg-white/10 active:scale-90 cursor-pointer ${
+                    className={`tap-44 relative flex items-center justify-center rounded-full text-[#15171c]/80 dark:text-white/80 transition-all hover:bg-black/5 dark:hover:bg-white/10 active:scale-90 cursor-pointer ${
                       scrolled ? 'h-8 w-8' : 'h-9 w-9'
                     }`}
                     aria-label={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
@@ -328,7 +328,7 @@ export default function Header({
                   <button
                     type="button"
                     onClick={onToggleLang}
-                    className={`group flex items-center gap-1.5 rounded-full border border-black/8 dark:border-white/15 bg-white/70 dark:bg-white/10 px-2.5 text-[11px] sm:text-xs font-bold tracking-wide text-[#15171c] dark:text-white transition-all hover:bg-black/5 dark:hover:bg-white/15 active:scale-95 cursor-pointer shadow-2xs ${
+                    className={`tap-44 group flex items-center gap-1.5 rounded-full border border-black/8 dark:border-white/15 bg-white/70 dark:bg-white/10 px-2.5 text-[11px] sm:text-xs font-bold tracking-wide text-[#15171c] dark:text-white transition-all hover:bg-black/5 dark:hover:bg-white/15 active:scale-95 cursor-pointer shadow-2xs ${
                       scrolled ? 'h-7.5 sm:h-8' : 'h-8 sm:h-8.5'
                     }`}
                     aria-label={lang === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}

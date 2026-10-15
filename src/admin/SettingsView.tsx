@@ -12,13 +12,11 @@ import { NotificationsCard } from './settings/NotificationsCard';
 import { SplashPreviewModal } from './settings/SplashPreviewModal';
 
 export const SettingsView: React.FC = () => {
-  const { lang, siteSettings, updateSiteSettings, pin, setPin, setCurrentStore } = useAdminBridge();
+  const { lang, siteSettings, updateSiteSettings, setCurrentStore } = useAdminBridge();
   const isAr = lang === 'ar';
 
   // Local form state cloned from siteSettings
   const [formData, setFormData] = useState<SiteSettings>(siteSettings);
-  const [tempPin, setTempPin] = useState<string>(pin || siteSettings.pin || '1234');
-  const [showPin, setShowPin] = useState(false);
 
   // UI state
   const [isSaving, setIsSaving] = useState(false);
@@ -30,7 +28,6 @@ export const SettingsView: React.FC = () => {
   // Sync when siteSettings change externally
   useEffect(() => {
     setFormData(siteSettings);
-    if (siteSettings.pin) setTempPin(siteSettings.pin);
   }, [siteSettings]);
 
   // Handle setting updates
@@ -66,17 +63,9 @@ export const SettingsView: React.FC = () => {
     setIsSaving(true);
 
     try {
-      // Validate pin
-      const finalPin = tempPin.length === 4 ? tempPin : pin;
-      setPin(finalPin);
       setCurrentStore(formData.storeName);
 
-      const payload = {
-        ...formData,
-        pin: finalPin,
-      };
-
-      const res = await updateSiteSettings(payload);
+      const res = await updateSiteSettings(formData);
 
       showToast(
         isAr ? 'تم حفظ كافة إعدادات المتجر بنجاح' : 'All store settings saved successfully',
@@ -200,10 +189,6 @@ export const SettingsView: React.FC = () => {
           isAr={isAr}
           formData={formData}
           handleChange={handleChange}
-          tempPin={tempPin}
-          setTempPin={setTempPin}
-          showPin={showPin}
-          setShowPin={setShowPin}
         />
 
         {/* SECTION 5: NOTIFICATIONS */}

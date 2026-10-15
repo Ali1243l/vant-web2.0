@@ -76,10 +76,8 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ success: false, error: 'Invalid recipient email address' });
     }
 
-    const resendApiKey =
-      process.env.RESEND_API_KEY ||
-      process.env.VITE_RESEND_API_KEY ||
-      're_DgBbp68L_6UUeE8DRtYyyTgFMSrd7qSQo';
+    // Server-side only. Never hardcode this key: it would ship in git history.
+    const resendApiKey = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY || '';
 
     // Bulletproof HTML email with mobile image support & direct offers routing
     const htmlContent = body.html || `<!DOCTYPE html>

@@ -10,6 +10,9 @@ import {
 } from './constants';
 import { FALLBACK_CATALOG_PRODUCTS } from './fallbackProducts';
 
+// VITE_CATALOG_SOURCE=static reads src/data/catalog.json instead of Supabase.
+const STATIC_CATALOG = import.meta.env.VITE_CATALOG_SOURCE === 'static';
+
 export function useCatalogProducts() {
   const [products, setProducts] = useState<Product[]>(() => {
     try {
@@ -94,6 +97,18 @@ export function useCatalogProducts() {
         setLoading(true);
       }
       setError(null);
+
+      // Static mode (temporary, while the database is unreachable): serve the exported catalog.
+      if (STATIC_CATALOG) {
+        const rows = (await import('../../data/catalog.json')).default as any[];
+        const mapped = mapSupabaseProducts(rows);
+        setProducts(mapped.length > 0 ? mapped : FALLBACK_CATALOG_PRODUCTS);
+        setTotalProductsCount(mapped.length || FALLBACK_CATALOG_PRODUCTS.length);
+        setHasMore(false);
+        setIsLiveDatabase(false);
+        setLastSyncTime(new Date());
+        return;
+      }
 
       let fetchedData: any[] | null = null;
       let fetchedCount: number | null = null;

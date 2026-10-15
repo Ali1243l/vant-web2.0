@@ -180,7 +180,6 @@ export interface AdminSiteSettings {
   whatsappConciergeNumber: string;
   whatsappConciergeName: string;
   whatsappDefaultMsg: string;
-  pin?: string;
 }
 
 export type SiteSettings = AdminSiteSettings;
@@ -191,7 +190,6 @@ export const defaultSiteSettings: SiteSettings = {
   currency: 'IQD',
   emailAlerts: true,
   smsAlerts: false,
-  pin: '1234',
 
   maintenanceMode: false,
   maintenanceMessageAr: 'نقوم حالياً بتجهيز وإطلاق المجموعة الحصرية الجديدة. سنعود لاستقبال طلباتكم قريباً جداً.',
@@ -229,9 +227,7 @@ interface AdminContextType {
   toggleDrawer: () => void;
   isLocked: boolean;
   lock: () => void;
-  unlock: (pin: string) => boolean;
-  pin: string;
-  setPin: (pin: string) => void;
+  unlock: (password: string) => Promise<boolean>;
   lang: 'ar' | 'en';
   setLang: (lang: 'ar' | 'en') => void;
   toggleLang: () => void;
@@ -300,14 +296,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     siteControls.lockAdmin();
   }, [siteControls]);
 
-  const unlock = useCallback((enteredPin: string) => {
-    const cleanPin = String(enteredPin || '').trim();
-    return siteControls.unlockAdmin(cleanPin);
-  }, [siteControls]);
-
-  const pin = siteControls.siteSettings ? (localStorage.getItem('vant_admin_pin') || '1234') : '1234';
-  const setPin = useCallback((newPin: string) => {
-    siteControls.setAdminPin(newPin);
+  const unlock = useCallback((password: string) => {
+    return siteControls.unlockAdmin(password);
   }, [siteControls]);
 
   // Language state
@@ -823,8 +813,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       currency: siteControls.currencyCode || 'IQD',
       emailAlerts: true,
       smsAlerts: false,
-      pin: '1234',
-      maintenanceMode: !!sc.maintenance_mode,
+      maintenanceMode:!!sc.maintenance_mode,
       maintenanceMessageAr: sc.maintenance_message_ar || 'نقوم حالياً بتجهيز وإطلاق المجموعة الحصرية الجديدة. سنعود لاستقبال طلباتكم الفاخرة قريباً جداً.',
       maintenanceMessageEn: sc.maintenance_message || 'We are currently curating and preparing our new exclusive collection.',
       maintenanceEstimatedBack: 'خلال وقت قصير',
@@ -881,9 +870,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (partial.currency && (partial.currency === 'د.ع' || partial.currency === 'IQD' || partial.currency === 'USD')) {
       siteControls.setCurrencyCode(partial.currency as any);
     }
-    if (partial.pin) {
-      siteControls.setAdminPin(partial.pin);
-    }
     if (partial.heroHeadlineAr) {
       siteControls.updateControl('banner_hero_title', { label_ar: partial.heroHeadlineAr });
     }
@@ -929,8 +915,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isLocked,
         lock,
         unlock,
-        pin,
-        setPin,
         lang,
         setLang,
         toggleLang,

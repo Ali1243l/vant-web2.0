@@ -14,6 +14,15 @@ export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
+// The single admin account. Not a secret (it's public in the bundle), but the
+// real protection is the RLS policy in supabase/rls_admin.sql, not this value.
+export const ADMIN_EMAIL = (
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ADMIN_EMAIL) ||
+  'abutrabali40@gmail.com'
+)
+  .trim()
+  .toLowerCase();
+
 /**
  * Convert any Eastern Arabic (٠-٩) or Persian (۰-۹) numerals to Western Latin numerals (0-9).
  */

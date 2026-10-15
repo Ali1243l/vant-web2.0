@@ -8,7 +8,7 @@ interface Props {
   maintenanceMessageAr?: string;
   isPreview?: boolean;
   onClosePreview?: () => void;
-  onAdminUnlock: (pin: string) => boolean;
+  onAdminUnlock: (password: string) => Promise<boolean>;
   onBypass: () => void;
 }
 
@@ -24,9 +24,9 @@ export default function MaintenanceScreen({
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
 
-  const handleAdminSubmit = (e: React.FormEvent) => {
+  const handleAdminSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = onAdminUnlock(pinInput);
+    const success = await onAdminUnlock(pinInput);
     if (success) {
       setShowAdminModal(false);
       if (isPreview) {
@@ -235,14 +235,14 @@ export default function MaintenanceScreen({
               </div>
 
               <p className="text-xs text-zinc-300 leading-relaxed" dir="rtl">
-                أدخل رمز PIN الخاص بالإدارة لتجاوز شاشة الصيانة وفتح لوحة الإدارة والمتجر.
+                أدخل كلمة مرور حساب الإدارة لتجاوز شاشة الصيانة وفتح لوحة الإدارة والمتجر.
               </p>
 
               <form onSubmit={handleAdminSubmit} className="space-y-4">
                 <input
                   type="password"
-                  inputMode="numeric"
-                  placeholder="PIN (Default: 1234)"
+                  autoComplete="current-password"
+                  placeholder="Admin password"
                   value={pinInput}
                   onChange={(e) => {
                     setPinInput(e.target.value);
@@ -254,7 +254,7 @@ export default function MaintenanceScreen({
 
                 {pinError && (
                   <p className="text-center text-xs font-semibold text-rose-400" dir="rtl">
-                    رمز PIN غير صحيح. يرجى المحاولة مرة أخرى.
+                    كلمة المرور غير صحيحة. يرجى المحاولة مرة أخرى.
                   </p>
                 )}
 

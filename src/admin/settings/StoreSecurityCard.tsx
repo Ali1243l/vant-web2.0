@@ -1,5 +1,5 @@
 import React from 'react';
-import { Store, KeyRound, Eye, EyeOff, Link as LinkIcon } from 'lucide-react';
+import { Store, Link as LinkIcon } from 'lucide-react';
 import { Card, Input } from '../ui';
 import type { SiteSettings } from '../useAdminBridge';
 
@@ -7,20 +7,12 @@ interface StoreSecurityCardProps {
   isAr: boolean;
   formData: SiteSettings;
   handleChange: <K extends keyof SiteSettings>(key: K, value: SiteSettings[K]) => void;
-  tempPin: string;
-  setTempPin: (val: string) => void;
-  showPin: boolean;
-  setShowPin: (val: boolean) => void;
 }
 
 export const StoreSecurityCard: React.FC<StoreSecurityCardProps> = ({
   isAr,
   formData,
   handleChange,
-  tempPin,
-  setTempPin,
-  showPin,
-  setShowPin,
 }) => {
   return (
     <Card className="space-y-6">
@@ -58,34 +50,12 @@ export const StoreSecurityCard: React.FC<StoreSecurityCardProps> = ({
         />
       </div>
 
-      {/* Security PIN Field */}
-      <div className="pt-2 border-t border-slate-800/60 max-w-md">
-        <label className="block text-xs font-semibold text-slate-300 mb-1.5 text-start">
-          {isAr ? 'رمز PIN السري لوحة التحكم (Admin Master PIN)' : 'Admin Master PIN Passkey'}
-        </label>
-        <div className="relative">
-          <Input
-            type={showPin ? 'text' : 'password'}
-            value={tempPin}
-            onChange={(e) => setTempPin(e.target.value)}
-            placeholder="1234"
-            maxLength={6}
-            icon={KeyRound}
-          />
-          <button
-            type="button"
-            onClick={() => setShowPin(!showPin)}
-            className="absolute top-1/2 -translate-y-1/2 end-3 text-slate-400 hover:text-white p-1"
-          >
-            {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </button>
-        </div>
-        <p className="text-[11px] text-slate-500 mt-1.5 text-start">
-          {isAr
-            ? 'يستخدم هذا الرمز لإلغاء قفل لوحة التحكم فوراً عند الضغط على قفل اللوحة أو بعد فترات الخمول.'
-            : 'Protects the administrative console from unauthorized access.'}
-        </p>
-      </div>
+      {/* Admin sign-in is managed in Supabase Auth, not in the site */}
+      <p className="pt-2 border-t border-slate-800/60 max-w-md text-[11px] text-slate-500 text-start">
+        {isAr
+          ? 'كلمة مرور الإدارة تُدار من حساب Supabase Auth، ولا تُحفظ داخل الموقع.'
+          : 'The admin password is managed in Supabase Auth and is never stored in the site.'}
+      </p>
     </Card>
   );
 };
