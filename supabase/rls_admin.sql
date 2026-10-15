@@ -18,7 +18,20 @@ AS $$
   SELECT lower(coalesce(auth.jwt() ->> 'email', '')) = 'abutrabali40@gmail.com';
 $$;
 
--- 2. Drop the old open write policies (names come from schema.sql / fix_rls.sql)
+-- 2. Public read. The catalog must stay visible to every visitor. (Some projects
+--    have no SELECT policy at all, so the catalog reads as empty. Safe to re-run.)
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.product_media ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public read products" ON public.products;
+CREATE POLICY "Public read products" ON public.products
+  FOR SELECT TO anon, authenticated USING (true);
+
+DROP POLICY IF EXISTS "Public read product media" ON public.product_media;
+CREATE POLICY "Public read product media" ON public.product_media
+  FOR SELECT TO anon, authenticated USING (true);
+
+-- 3. Drop the old open write policies (names come from schema.sql / fix_rls.sql)
 DROP POLICY IF EXISTS "Allow insert for products" ON public.products;
 DROP POLICY IF EXISTS "Allow update for products" ON public.products;
 DROP POLICY IF EXISTS "Allow delete for products" ON public.products;
