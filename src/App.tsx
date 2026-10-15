@@ -10,6 +10,8 @@ import ProductDrawer from './components/ProductDrawer';
 import CartDrawer from './components/CartDrawer';
 import ImagePreloader from './components/ImagePreloader';
 import BackToTop from './components/BackToTop';
+import MobileTabBar from './components/MobileTabBar';
+import { DEFAULT_WHATSAPP_PHONE } from './lib/constants';
 import AdminDrawer from './components/AdminDrawer';
 import SplashLoader from './components/SplashLoader';
 import MaintenanceScreen from './components/MaintenanceScreen';
@@ -678,10 +680,25 @@ function MainApp() {
       {!isWishlistOnly && newsletterControl.visible && <NewsletterSection lang={lang} />}
 
       {/* Editorial footer with Instagram, Pinterest, and TikTok social links + secret triple-tap trigger */}
-      <Footer
+      <div className="pb-16 sm:pb-0">
+        <Footer
+          lang={lang}
+          isLiveDatabase={isLiveDatabase}
+          onAdminTrigger={() => setIsAdminOpen(true)}
+        />
+      </div>
+
+      {/* Mobile bottom bar: the main shopping actions, within thumb reach */}
+      <MobileTabBar
         lang={lang}
-        isLiveDatabase={isLiveDatabase}
-        onAdminTrigger={() => setIsAdminOpen(true)}
+        onHome={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        onSearch={() => setIsSearchOpen(true)}
+        onOpenCart={() => setIsCartOpen(true)}
+        onToggleWishlist={() => setIsWishlistOnly((prev) => !prev)}
+        isWishlistOnly={isWishlistOnly}
+        wishlistCount={wishlistCount}
+        whatsappUrl={`https://wa.me/${(getControl('cfg_whatsapp_phone')?.actionValue || DEFAULT_WHATSAPP_PHONE).replace(/\D/g, '')}`}
+        hidden={isCartOpen || isSearchOpen || selected !== null}
       />
 
       {/* Floating Back to Top Button */}
