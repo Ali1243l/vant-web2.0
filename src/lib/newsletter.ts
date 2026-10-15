@@ -553,7 +553,6 @@ export async function dispatchCampaignEmail(params: {
   });
 
   let emailSent = false;
-  const resendApiKey = 're_DgBbp68L_6UUeE8DRtYyyTgFMSrd7qSQo';
 
   // 2. Dispatch via Serverless Function
   try {
@@ -582,25 +581,7 @@ export async function dispatchCampaignEmail(params: {
     if (serverlessRes.ok) {
       emailSent = true;
     } else {
-      // Direct Resend API fallback
-      const directRes = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${resendApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: 'VANT Archive <onboarding@resend.dev>',
-          to: [cleanEmail],
-          subject,
-          html: customHtml,
-        }),
-      });
-
-      if (directRes.ok) {
-        emailSent = true;
-      } else {
-        // Fallback for formsubmit
+      // Fallback for formsubmit. The browser never calls Resend directly: the API key stays server-side.
         const formSubmitRes = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(cleanEmail)}`, {
           method: 'POST',
           headers: {
@@ -625,7 +606,6 @@ export async function dispatchCampaignEmail(params: {
         if (formSubmitRes.ok) {
           emailSent = true;
         }
-      }
     }
   } catch (e) {
     console.warn('Dispatch campaign error:', e);
