@@ -1,15 +1,14 @@
 import { useState, useCallback, useEffect } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import type { CurrencyType, SiteSettings } from '../siteControlsTypes';
 import { DEFAULT_SITE_SETTINGS } from '../siteControlsTypes';
-import { supabase } from '../../lib/supabase';
+import { supabase, ADMIN_EMAIL } from '../../lib/supabase';
 import { saveSiteConfigToSupabase } from '../../lib/storage';
 import { safeStorage } from '../../utils/safeStorage';
-import {
-  CURRENCY_STORAGE_KEY,
-  PIN_STORAGE_KEY,
-  SESSION_AUTH_KEY,
-  SETTINGS_STORAGE_KEY,
-} from './constants';
+import { CURRENCY_STORAGE_KEY, SETTINGS_STORAGE_KEY } from './constants';
+
+const isAdminSession = (session: Session | null): boolean =>
+  (session?.user?.email || '').trim().toLowerCase() === ADMIN_EMAIL;
 
 export function useSiteSettingsAndAdmin() {
   // Currency state
@@ -35,55 +34,40 @@ export function useSiteSettingsAndAdmin() {
     [currency]
   );
 
-  // Admin Auth
+  // Admin Auth: Supabase Auth only. No passwords or PINs live in the client.
+  // This flag only controls the admin UI; real write access is enforced by RLS.
   const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [isAdminUnlocked, setIsAdminUnlocked] = useState(() => {
-    try {
-      if (typeof window !== 'undefined') {
-        return sessionStorage.getItem(SESSION_AUTH_KEY) === 'true';
-      }
-    } catch {}
-    return false;
-  });
+  const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
 
-  const unlockAdmin = (pin: string): boolean => {
-    let currentPin = safeStorage.getItem(PIN_STORAGE_KEY) || '';
-    if (!currentPin) {
-      currentPin = '@Ali200710';
-      safeStorage.setItem(PIN_STORAGE_KEY, '@Ali200710');
-    }
-    const clean = pin.trim();
-    if (
-      clean === currentPin ||
-      clean.toLowerCase() === currentPin.toLowerCase() ||
-      clean === '@Ali200710' ||
-      clean.toLowerCase() === '@ali200710' ||
-      clean.toLowerCase() === 'ali200710' ||
-      clean === '200710' ||
-      clean.toLowerCase() === 'admin'
-    ) {
-      setIsAdminUnlocked(true);
-      try {
-        sessionStorage.setItem(SESSION_AUTH_KEY, 'true');
-      } catch {}
-      return true;
-    }
-    return false;
-  };
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data }) => setIsAdminUnlocked(isAdminSession(data.session)));
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAdminUnlocked(isAdminSession(session));
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
-  const lockAdmin = () => {
+  const unlockAdmin = useCallback(async (password: string): Promise<boolean> => {
+    if (!supabase || !password) return false;
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: ADMIN_EMAIL,
+      password,
+    });
+    if (error || !isAdminSession(data.session)) {
+      // Never keep a session for a non-admin account.
+      if (data.session) await supabase.auth.signOut();
+      return false;
+    }
+    setIsAdminUnlocked(true);
+    return true;
+  }, []);
+
+  const lockAdmin = useCallback(() => {
     setIsAdminUnlocked(false);
-    try {
-      sessionStorage.removeItem(SESSION_AUTH_KEY);
-    } catch {}
     setIsAdminOpen(false);
-  };
-
-  const setAdminPin = (newPin: string) => {
-    if (newPin && newPin.length >= 4) {
-      safeStorage.setItem(PIN_STORAGE_KEY, newPin);
-    }
-  };
+    supabase?.auth.signOut();
+  }, []);
 
   // Global Site Settings
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(() => {
@@ -223,7 +207,6 @@ export function useSiteSettingsAndAdmin() {
     isAdminUnlocked,
     unlockAdmin,
     lockAdmin,
-    setAdminPin,
     siteSettings,
     setSiteSettings,
     updateSiteSettings,

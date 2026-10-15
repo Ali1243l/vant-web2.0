@@ -343,9 +343,8 @@ export interface SiteControlsContextType {
   isAdminOpen: boolean;
   setIsAdminOpen: (open: boolean) => void;
   isAdminUnlocked: boolean;
-  unlockAdmin: (pin: string) => boolean;
+  unlockAdmin: (password: string) => Promise<boolean>;
   lockAdmin: () => void;
-  setAdminPin: (newPin: string) => void;
 
   // Global Site Settings (Maintenance Mode & Splash Preloader)
   siteSettings: SiteSettings;

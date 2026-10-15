@@ -82,7 +82,6 @@ export default function AdminDrawer({ lang = 'ar' }: Props) {
     isAdminUnlocked,
     unlockAdmin,
     lockAdmin,
-    setAdminPin,
     siteSettings,
     updateSiteSettings,
     isPreviewSplash,
@@ -359,9 +358,9 @@ export default function AdminDrawer({ lang = 'ar' }: Props) {
   const [formMaterial, setFormMaterial] = useState('');
   const [formSizes, setFormSizes] = useState<string[]>(['S', 'M', 'L', 'XL']);
 
-  const handleUnlock = (e?: React.FormEvent) => {
+  const handleUnlock = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const success = unlockAdmin(passwordInput.trim());
+    const success = await unlockAdmin(passwordInput);
     if (success) {
       setPasswordError(false);
       setPasswordInput('');
