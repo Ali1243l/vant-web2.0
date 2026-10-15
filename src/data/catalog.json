@@ -1,1 +1,333 @@
-[]
+[
+	{
+		"id": "2010c40d-9945-4a1a-bea8-2d5b03507d23",
+		"title": "تيشيرت blade runner 2049",
+		"price": 0,
+		"category": "ملابس وأزياء",
+		"description": "",
+		"material": "",
+		"sizes": [
+			"M",
+			"L",
+			"XL"
+		],
+		"colors": [],
+		"created_at": "2026-10-12T20:29:09.766107+00:00",
+		"fit_details": "",
+		"is_exclusive_drop": false,
+		"status": "AVAILABLE",
+		"product_media": [
+			{
+				"id": "adc92118-33f3-4aa9-a211-afe9dccbcc9b",
+				"product_id": "2010c40d-9945-4a1a-bea8-2d5b03507d23",
+				"media_url": "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600&q=80",
+				"display_order": 1
+			},
+			{
+				"id": "f8df0fe2-f7aa-4f39-aead-0e209faf2528",
+				"product_id": "2010c40d-9945-4a1a-bea8-2d5b03507d23",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/shirt_Black_1791836876291_wzd4h.jpg",
+				"display_order": 2
+			},
+			{
+				"id": "84fab615-8014-4a4d-b8a3-a3c4e78d9b30",
+				"product_id": "2010c40d-9945-4a1a-bea8-2d5b03507d23",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/shirt_Olive%20Green_1791836880208_iqrzl.jpg",
+				"display_order": 3
+			},
+			{
+				"id": "54794823-37f5-4038-ad11-a5d7074e4831",
+				"product_id": "2010c40d-9945-4a1a-bea8-2d5b03507d23",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/shirt_Indigo_1791836883750_5057f.jpg",
+				"display_order": 4
+			},
+			{
+				"id": "3fb4ea86-99b8-493b-85e2-fc3455db7e30",
+				"product_id": "2010c40d-9945-4a1a-bea8-2d5b03507d23",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/shirt_Dusty%20Rose%20Pink_1791836887503_5mnm1.jpg",
+				"display_order": 5
+			},
+			{
+				"id": "7091026c-45b2-4ff2-a9bc-109054eb4f54",
+				"product_id": "2010c40d-9945-4a1a-bea8-2d5b03507d23",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/shirt_Black_1791836889026_iscia.jpg",
+				"display_order": 6
+			},
+			{
+				"id": "14d2b532-c488-416f-ac41-0dbfd23353d5",
+				"product_id": "2010c40d-9945-4a1a-bea8-2d5b03507d23",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/shirt_Black_1791836890880_fn26x.jpg",
+				"display_order": 7
+			},
+			{
+				"id": "121d1935-3868-4173-a2f5-362f97983265",
+				"product_id": "2010c40d-9945-4a1a-bea8-2d5b03507d23",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/shirt_Black_1791836892116_4juqx.jpg",
+				"display_order": 8
+			},
+			{
+				"id": "ea0a4b94-128b-49bc-b31b-3c10b134750d",
+				"product_id": "2010c40d-9945-4a1a-bea8-2d5b03507d23",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/shirt_Black_1791836895686_7s50v.jpg",
+				"display_order": 9
+			},
+			{
+				"id": "bc4d2c6d-17f0-4bbf-84e5-778521559000",
+				"product_id": "2010c40d-9945-4a1a-bea8-2d5b03507d23",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/shirt_Black_1791836897640_jvzg2.jpg",
+				"display_order": 10
+			},
+			{
+				"id": "92cf13cc-e102-4d28-8066-bd020398c390",
+				"product_id": "2010c40d-9945-4a1a-bea8-2d5b03507d23",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/shirt_Khaki%20/%20Camel_1791836900942_gjiyh.jpg",
+				"display_order": 11
+			},
+			{
+				"id": "c52fcec3-4587-47fb-8490-dca9769bd72a",
+				"product_id": "2010c40d-9945-4a1a-bea8-2d5b03507d23",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/shirt_Light%20Grey_1791836902883_eqbd1.jpg",
+				"display_order": 12
+			},
+			{
+				"id": "95601ecf-6d45-4fc8-a8fa-0af0ad3df518",
+				"product_id": "2010c40d-9945-4a1a-bea8-2d5b03507d23",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/shirt_Black_1791836905116_0t759.jpg",
+				"display_order": 13
+			}
+		]
+	},
+	{
+		"id": "97f73de3-5978-4271-9d99-031d722999c0",
+		"title": "Blade Runner 2049 T-Shirt",
+		"price": 0,
+		"category": "ملابس وأزياء",
+		"description": "",
+		"material": "صوف كشميري إيطالي نقي",
+		"sizes": [
+			"M",
+			"L",
+			"XL"
+		],
+		"colors": [],
+		"created_at": "2026-10-08T22:34:17.992609+00:00",
+		"fit_details": "",
+		"is_exclusive_drop": false,
+		"status": "AVAILABLE",
+		"product_media": [
+			{
+				"id": "e6671551-2dc0-41ca-a21b-1508aad009fb",
+				"product_id": "97f73de3-5978-4271-9d99-031d722999c0",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/shirt_Khaki%20/%20Camel_1791500134844_lfyi1.png",
+				"display_order": 1
+			},
+			{
+				"id": "b91fd6f4-64c6-4390-90d6-036df749a9d3",
+				"product_id": "97f73de3-5978-4271-9d99-031d722999c0",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/shirt_Black_1791500137735_5btnj.png",
+				"display_order": 2
+			},
+			{
+				"id": "44592109-31ed-4f3c-a89c-96f29dd06268",
+				"product_id": "97f73de3-5978-4271-9d99-031d722999c0",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/shirt_Dusty%20Rose%20Pink_1791500140084_vvir0.png",
+				"display_order": 3
+			},
+			{
+				"id": "bd423c94-980a-4f0a-b65e-eebecae8237f",
+				"product_id": "97f73de3-5978-4271-9d99-031d722999c0",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/shirt_Dark%20Charcoal_1791500143332_atvq0.png",
+				"display_order": 4
+			},
+			{
+				"id": "b6a196a8-38d2-4887-842e-9903e287a431",
+				"product_id": "97f73de3-5978-4271-9d99-031d722999c0",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/shirt_Olive%20Green_1791500146254_89bbo.png",
+				"display_order": 5
+			},
+			{
+				"id": "8264ef94-3d4b-44f3-8645-774cced188d6",
+				"product_id": "97f73de3-5978-4271-9d99-031d722999c0",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/shirt_Black_1791500149379_b4niw.png",
+				"display_order": 6
+			},
+			{
+				"id": "6c401b6c-d285-403d-b777-4c335291d4e4",
+				"product_id": "97f73de3-5978-4271-9d99-031d722999c0",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/shirt_Dark%20Charcoal_1791500150528_jkryq.png",
+				"display_order": 7
+			},
+			{
+				"id": "69fe23bd-84f1-43b3-ad80-1e9ba9825800",
+				"product_id": "97f73de3-5978-4271-9d99-031d722999c0",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/shirt_Light%20Grey_1791500152557_i6ei0.png",
+				"display_order": 8
+			}
+		]
+	},
+	{
+		"id": "29313ed3-db72-4fa8-b219-7e897188c207",
+		"title": "Blade Runner 2049 T-Shirt",
+		"price": 20000,
+		"category": "ملابس وأزياء",
+		"description": "",
+		"material": "",
+		"sizes": [
+			"M",
+			"L",
+			"XL"
+		],
+		"colors": [],
+		"created_at": "2026-10-08T22:18:35.107103+00:00",
+		"fit_details": "",
+		"is_exclusive_drop": false,
+		"status": "AVAILABLE",
+		"product_media": [
+			{
+				"id": "a56ae1e8-5e55-4253-a851-6b77beca8698",
+				"product_id": "29313ed3-db72-4fa8-b219-7e897188c207",
+				"media_url": "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600&q=80",
+				"display_order": 1
+			}
+		]
+	},
+	{
+		"id": "5ac0ce3f-3022-4b9c-9abb-fd439ff49791",
+		"title": "Pubg",
+		"price": 5000,
+		"category": "Outerwear",
+		"description": "",
+		"material": "",
+		"sizes": [
+			"S",
+			"M",
+			"L",
+			"XL"
+		],
+		"colors": [],
+		"created_at": "2026-10-03T01:58:00.199605+00:00",
+		"fit_details": "",
+		"is_exclusive_drop": false,
+		"status": "AVAILABLE",
+		"product_media": [
+			{
+				"id": "a260e67b-1888-44f0-b94b-5eb5a9e5f491",
+				"product_id": "5ac0ce3f-3022-4b9c-9abb-fd439ff49791",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/1790993050438_4rdq8.png",
+				"display_order": 1
+			},
+			{
+				"id": "ec17c2b8-3d0c-4802-9473-554dcbfad88e",
+				"product_id": "5ac0ce3f-3022-4b9c-9abb-fd439ff49791",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/screenshot_12.png",
+				"display_order": 2
+			},
+			{
+				"id": "50cb9d77-150c-477b-8ab0-d839626aeabb",
+				"product_id": "5ac0ce3f-3022-4b9c-9abb-fd439ff49791",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/screenshot_21.png",
+				"display_order": 3
+			}
+		]
+	},
+	{
+		"id": "99a52a44-f9e2-48a5-b492-8e0fd1120ae4",
+		"title": "a",
+		"price": 20000,
+		"category": "T-Shirts",
+		"description": "a",
+		"material": "a",
+		"sizes": [
+			"S",
+			"M",
+			"L",
+			"XL"
+		],
+		"colors": [
+			"Black",
+			"Cobalt Blue"
+		],
+		"created_at": "2026-10-01T02:21:16.040151+00:00",
+		"fit_details": "a",
+		"is_exclusive_drop": true,
+		"status": "SOLD_OUT",
+		"product_media": [
+			{
+				"id": "8692a7ea-37fe-4db3-8ddc-2e73e33f22ea",
+				"product_id": "99a52a44-f9e2-48a5-b492-8e0fd1120ae4",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/0.8010202618311112.jpg",
+				"display_order": 1
+			},
+			{
+				"id": "2b2ee4e8-30cd-4785-922d-542dd6ad3489",
+				"product_id": "99a52a44-f9e2-48a5-b492-8e0fd1120ae4",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/0.5577454270383838.jpg",
+				"display_order": 2
+			},
+			{
+				"id": "05292467-0207-479e-a10f-67b9a3ba8c8f",
+				"product_id": "99a52a44-f9e2-48a5-b492-8e0fd1120ae4",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/0.3208158398750277.jpg",
+				"display_order": 3
+			}
+		]
+	},
+	{
+		"id": "fec127cf-0b92-40f3-9345-13f0f2610493",
+		"title": "ش",
+		"price": 1,
+		"category": "T-Shirts",
+		"description": "ش",
+		"material": "ش",
+		"sizes": [
+			"S",
+			"M",
+			"L",
+			"XL"
+		],
+		"colors": [
+			"Black",
+			"Cobalt Blue"
+		],
+		"created_at": "2026-10-01T02:09:05.636202+00:00",
+		"fit_details": "ش",
+		"is_exclusive_drop": true,
+		"status": "AVAILABLE",
+		"product_media": [
+			{
+				"id": "44051957-12e5-4dd4-838f-e94d56e9f13b",
+				"product_id": "fec127cf-0b92-40f3-9345-13f0f2610493",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/0.9235862759957201.jpg",
+				"display_order": 1
+			}
+		]
+	},
+	{
+		"id": "9ee0dd39-a42b-496e-a53e-c067226e22ff",
+		"title": "تيشيرت",
+		"price": 20,
+		"category": "T-Shirts",
+		"description": "ش",
+		"material": "ي",
+		"sizes": [
+			"M",
+			"L",
+			"XL"
+		],
+		"colors": [
+			"Black"
+		],
+		"created_at": "2026-10-01T01:58:49.926916+00:00",
+		"fit_details": "س",
+		"is_exclusive_drop": false,
+		"status": "COMING_SOON",
+		"product_media": [
+			{
+				"id": "173a99f1-afba-42f9-81a8-9a5584f0d374",
+				"product_id": "9ee0dd39-a42b-496e-a53e-c067226e22ff",
+				"media_url": "https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/0.47228702106930487.jpg",
+				"display_order": 1
+			}
+		]
+	}
+]
