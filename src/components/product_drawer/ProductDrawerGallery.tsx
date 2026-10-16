@@ -240,7 +240,8 @@ export const ProductDrawerGallery: React.FC<ProductDrawerGalleryProps> = ({
   // Phones get a native scroll-snap carousel: the finger drives the scroll directly, so swiping is smooth
   const isPhone = useIsPhone();
   const mobileTrackRef = useRef<HTMLDivElement>(null);
-  const scrollingFromIndexRef = useRef(false);
+  // Set when the index changed because the finger scrolled the track; the track must not be scrolled back then
+  const indexFromScrollRef = useRef(false);
   // One stable frame height per product (first photo), so the page doesn't jump between slides
   const firstRatio = (images[0] && imageRatios[images[0]]) || activeRatio || 0.75;
   const mobileRatio = Math.min(1.25, Math.max(0.72, firstRatio));
@@ -248,22 +249,19 @@ export const ProductDrawerGallery: React.FC<ProductDrawerGalleryProps> = ({
   useEffect(() => {
     const track = mobileTrackRef.current;
     if (!isPhone || !track) return;
-    const target = activeImageIndex * track.clientWidth;
-    if (Math.abs(track.scrollLeft - target) > 2) {
-      scrollingFromIndexRef.current = true;
-      track.scrollTo({ left: target, behavior: 'smooth' });
+    if (indexFromScrollRef.current) {
+      indexFromScrollRef.current = false;
+      return;
     }
+    track.scrollTo({ left: activeImageIndex * track.clientWidth, behavior: 'smooth' });
   }, [activeImageIndex, isPhone]);
 
   const onMobileScroll = () => {
     const track = mobileTrackRef.current;
     if (!track || !track.clientWidth) return;
     const idx = Math.round(track.scrollLeft / track.clientWidth);
-    if (scrollingFromIndexRef.current) {
-      if (idx === activeImageIndex) scrollingFromIndexRef.current = false;
-      return;
-    }
     if (idx !== activeImageIndex && idx >= 0 && idx < images.length) {
+      indexFromScrollRef.current = true;
       setSlideDirection(idx > activeImageIndex ? 1 : -1);
       setActiveImageIndex(idx);
     }

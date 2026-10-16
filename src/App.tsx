@@ -115,6 +115,12 @@ function MainApp() {
   });
   const [category, setCategory] = useState(ALL);
   const [isWishlistOnly, setIsWishlistOnly] = useState(false);
+  // Entering or leaving the wishlist swaps the whole grid; start at the top instead of deep in an empty page
+  const wishlistViewMounted = useRef(false);
+  useEffect(() => {
+    if (wishlistViewMounted.current) window.scrollTo({ top: 0 });
+    wishlistViewMounted.current = true;
+  }, [isWishlistOnly]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isOffersOnly, setIsOffersOnly] = useState(false);
   const [selected, setSelected] = useState<Product | null>(null);
@@ -618,16 +624,15 @@ function MainApp() {
 
         {/* Wishlist Active Filter Banner */}
         {isWishlistOnly && (
-          <div className="mb-5 flex items-center justify-between rounded-2xl border border-[#004ad7]/20 dark:border-[#3b82f6]/30 bg-[#004ad7]/8 dark:bg-[#3b82f6]/10 px-4 py-3 text-xs sm:text-sm">
-            <div className="flex items-center gap-2 text-[#004ad7] dark:text-[#3b82f6] font-medium">
-              <Heart className="h-4 w-4 fill-current" />
-              <span>
-                {lang === 'ar'
-                  ? `خزانتك الخاصة المنسقة (${visible.length} قطعة محفوظة)`
-                  : `Curated Archive (${visible.length} saved pieces)`}
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-x-3 gap-y-2.5 rounded-2xl border border-[#004ad7]/20 dark:border-[#3b82f6]/30 bg-[#004ad7]/8 dark:bg-[#3b82f6]/10 px-4 py-3 text-xs sm:text-sm">
+            <div className="flex min-w-0 items-center gap-2 text-[#004ad7] dark:text-[#3b82f6] font-semibold">
+              <Heart className="h-4 w-4 shrink-0 fill-current" />
+              <span>{lang === 'ar' ? 'مفضلتي' : 'My wishlist'}</span>
+              <span className="rounded-full bg-[#004ad7]/12 dark:bg-[#3b82f6]/20 px-2 py-0.5 text-[11px] font-bold tabular-nums">
+                {lang === 'ar' ? `${visible.length} قطعة` : `${visible.length} pieces`}
               </span>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex shrink-0 items-center gap-3">
               {wishlist.length > 0 && (
                 <button
                   type="button"
@@ -641,9 +646,9 @@ function MainApp() {
               <button
                 type="button"
                 onClick={() => setIsWishlistOnly(false)}
-                className="text-xs font-semibold text-[#004ad7] dark:text-[#3b82f6] hover:underline cursor-pointer"
+                className="whitespace-nowrap text-xs font-semibold text-[#004ad7] dark:text-[#3b82f6] hover:underline cursor-pointer"
               >
-                {lang === 'ar' ? 'عرض التشكيلة الكاملة' : 'View All Pieces'}
+                {lang === 'ar' ? 'كل القطع' : 'All pieces'}
               </button>
             </div>
           </div>

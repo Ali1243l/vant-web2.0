@@ -62,6 +62,7 @@ export const MobileTouchZoom: React.FC<MobileTouchZoomProps> = ({ children, zoom
   const onTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 2) {
       pinch.current = { dist: distance(e.touches), scale: scale.get() };
+      setZoomed(true);
       e.stopPropagation();
       return;
     }
@@ -109,12 +110,13 @@ export const MobileTouchZoom: React.FC<MobileTouchZoomProps> = ({ children, zoom
     }
   };
 
-  // While zoomed or pinching, the finger belongs to the image: no page scroll, no browser zoom
+  // While zoomed or pinching, the finger belongs to the image. Only attached then: a blocking
+  // touch listener on every slide would make the browser wait on JS for each swipe frame
   useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
+    if (!el || !zoomed) return;
     const block = (e: TouchEvent) => {
-      if ((zoomed || e.touches.length > 1) && e.cancelable) e.preventDefault();
+      if (e.cancelable) e.preventDefault();
     };
     el.addEventListener('touchmove', block, { passive: false });
     return () => el.removeEventListener('touchmove', block);
