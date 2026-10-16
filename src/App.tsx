@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from './components/Header';
 import CategoryFilter, { type AvailabilityFilterType } from './components/CategoryFilter';
@@ -10,7 +10,6 @@ import ProductDrawer from './components/ProductDrawer';
 import CartDrawer from './components/CartDrawer';
 import ImagePreloader from './components/ImagePreloader';
 import BackToTop from './components/BackToTop';
-import AdminDrawer from './components/AdminDrawer';
 import SplashLoader from './components/SplashLoader';
 import MaintenanceScreen from './components/MaintenanceScreen';
 import { SiteControlsProvider, useSiteControls } from './context/SiteControlsContext';
@@ -20,6 +19,9 @@ import { useWishlist } from './hooks/useWishlist';
 import { productMatchesQuery } from './lib/search';
 import { Heart, Loader2, Check, X, Sparkles, Gift, Percent, Tag, ArrowUpDown, LayoutGrid, Grid2X2 } from 'lucide-react';
 import type { Product, Language, Theme } from './types';
+
+// Admin (charts, newsletter studio, etc.) is a separate chunk so shoppers never download it
+const AdminDrawer = lazy(() => import('./components/AdminDrawer'));
 
 const ALL = 'All';
 
@@ -36,6 +38,7 @@ const CATEGORY_TRANSLATIONS: Record<string, { en: string; ar: string }> = {
 
 function MainApp() {
   const {
+    isAdminOpen,
     setIsAdminOpen,
     siteSettings,
     isInitialSplashLoading,
@@ -48,6 +51,9 @@ function MainApp() {
     getControl,
   } = useSiteControls();
   const newsletterControl = getControl('sec_newsletter_subscription');
+  // Mount the admin chunk on first open and keep it mounted so its close animation still plays
+  const [adminRequested, setAdminRequested] = useState(false);
+  if (isAdminOpen && !adminRequested) setAdminRequested(true);
   const {
     products,
     loading,
@@ -411,7 +417,11 @@ function MainApp() {
             onAdminUnlock={unlockAdmin}
             onBypass={() => setIsAdminOpen(true)}
           />
-          <AdminDrawer lang={lang} />
+          {adminRequested && (
+            <Suspense fallback={null}>
+              <AdminDrawer lang={lang} />
+            </Suspense>
+          )}
         </>
       ) : (
         <div
@@ -694,7 +704,11 @@ function MainApp() {
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} lang={lang} />
 
       {/* Secret Admin Control Drawer (Triggered via Shift+A, typing 'admin', or footer 3-tap) */}
-      <AdminDrawer lang={lang} />
+      {adminRequested && (
+            <Suspense fallback={null}>
+              <AdminDrawer lang={lang} />
+            </Suspense>
+          )}
     </div>
     )}
     </>
