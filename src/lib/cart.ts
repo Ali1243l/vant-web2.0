@@ -50,6 +50,45 @@ export function addToCart(line: Omit<CartItem, 'id' | 'key' | 'quantity'>) {
   window.dispatchEvent(new CustomEvent('vant-cart-bounce'));
 }
 
+export interface PastOrder {
+  id: string;
+  date: string;
+  items: CartItem[];
+  total: number;
+}
+
+const ORDERS_KEY = 'vant_past_orders';
+
+/** Orders sent from this device, newest first (kept locally; the shop's record is the WhatsApp chat) */
+export function readOrders(): PastOrder[] {
+  try {
+    const raw = localStorage.getItem(ORDERS_KEY);
+    const orders: PastOrder[] = raw ? JSON.parse(raw) : [];
+    return Array.isArray(orders) ? orders.filter((o) => o && Array.isArray(o.items)) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveOrder(items: CartItem[]) {
+  const order: PastOrder = { id: `VNT-${Date.now().toString(36).toUpperCase()}`, date: new Date().toISOString(), items, total: cartTotal(items) };
+  try {
+    localStorage.setItem(ORDERS_KEY, JSON.stringify([order, ...readOrders()].slice(0, 20)));
+  } catch {}
+  return order;
+}
+
+/** Puts a past order's lines back in the cart, merging with what is already there */
+export function reorder(order: PastOrder) {
+  const items = readCart();
+  for (const line of order.items) {
+    const existing = items.find((i) => i.key === line.key);
+    if (existing) existing.quantity += line.quantity;
+    else items.push({ ...line });
+  }
+  writeCart(items);
+}
+
 export const cartTotal = (items: CartItem[]) => items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
 export function useCartCount() {

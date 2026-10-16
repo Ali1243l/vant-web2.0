@@ -19,7 +19,7 @@ import { useProducts } from './hooks/useProducts';
 import { useWishlist } from './hooks/useWishlist';
 import { productMatchesQuery } from './lib/search';
 import { CATEGORY_TRANSLATIONS } from './lib/constants';
-import { Heart, Loader2, Check, X, Sparkles, Gift, Percent, Tag, ArrowUpDown, LayoutGrid, Grid2X2 } from 'lucide-react';
+import { Heart, Loader2, Check, X, Sparkles, Gift, Percent, Tag, ArrowUpDown, LayoutGrid, Grid2X2, Share2 } from 'lucide-react';
 import type { Product, Language, Theme } from './types';
 
 // Admin (charts, newsletter studio, etc.) is a separate chunk so shoppers never download it
@@ -61,6 +61,32 @@ function MainApp() {
     loadMore,
   } = useProducts();
   const { wishlist, wishlistCount, isWishlisted, toggleWishlist } = useWishlist();
+
+  // ?wishlist=id1,id2 opens a list someone shared; the viewer can save it into their own wishlist
+  const [sharedWishlist, setSharedWishlist] = useState<string[] | null>(() => {
+    const raw = new URLSearchParams(window.location.search).get('wishlist');
+    return raw ? raw.split(',').filter(Boolean) : null;
+  });
+  const [wishlistLinkCopied, setWishlistLinkCopied] = useState(false);
+  const closeSharedWishlist = () => {
+    setSharedWishlist(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('wishlist');
+    window.history.replaceState(window.history.state, '', url);
+  };
+  const shareWishlist = async () => {
+    const url = new URL(window.location.origin + window.location.pathname);
+    url.searchParams.set('wishlist', wishlist.join(','));
+    const link = url.toString();
+    try {
+      if (navigator.share) return await navigator.share({ title: 'VANT', url: link });
+      await navigator.clipboard.writeText(link);
+      setWishlistLinkCopied(true);
+      setTimeout(() => setWishlistLinkCopied(false), 2000);
+    } catch {
+      // Share sheet dismissed
+    }
+  };
 
   const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
 
@@ -304,6 +330,7 @@ function MainApp() {
         return false;
       }
       // 1. Wishlist Only Filter
+      if (sharedWishlist) return sharedWishlist.includes(String(p.id));
       if (isWishlistOnly && !isWishlisted(p.id)) {
         return false;
       }
@@ -336,7 +363,7 @@ function MainApp() {
     }
     // Default: 'newest' (products are ordered in natural chronological order, latest first)
     return filtered;
-  }, [products, isOffersOnly, category, wishlist, isWishlistOnly, availabilityFilter, searchQuery, catalogSort]);
+  }, [products, isOffersOnly, category, wishlist, isWishlistOnly, availabilityFilter, searchQuery, catalogSort, sharedWishlist]);
 
   // Smoothly scroll window back to the top of the collection whenever category, offers, or availability changes
   const isFirstMountRef = useRef(true);
@@ -372,7 +399,9 @@ function MainApp() {
     const url = new URL(window.location.href);
     if (url.searchParams.get('item') === String(p.id)) return;
     url.searchParams.set('item', String(p.id));
-    window.history.pushState({ vantItem: p.id }, '', url);
+    // Switching items inside an open drawer (related pieces) replaces the entry, so one Back still closes it
+    const sameDrawer = window.history.state?.vantItem !== undefined;
+    window.history[sameDrawer ? 'replaceState' : 'pushState']({ vantItem: p.id }, '', url);
   }, []);
 
   const closeDrawer = useCallback(() => {
@@ -385,6 +414,11 @@ function MainApp() {
       window.history.replaceState(null, '', url);
     }
   }, []);
+
+  const relatedProducts = useMemo(
+    () => (selected ? products.filter((p) => p.category === selected.category && p.id !== selected.id).slice(0, 8) : []),
+    [selected, products]
+  );
 
   const findItemFromUrl = useCallback(() => {
     const id = new URL(window.location.href).searchParams.get('item');
@@ -593,13 +627,55 @@ function MainApp() {
                   : `Curated Archive (${visible.length} saved pieces)`}
               </span>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsWishlistOnly(false)}
-              className="text-xs font-semibold text-[#004ad7] dark:text-[#3b82f6] hover:underline cursor-pointer"
-            >
-              {lang === 'ar' ? 'عرض التشكيلة الكاملة' : 'View All Pieces'}
-            </button>
+            <div className="flex items-center gap-3">
+              {wishlist.length > 0 && (
+                <button
+                  type="button"
+                  onClick={shareWishlist}
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-[#004ad7] dark:bg-[#3b82f6] px-3 text-xs font-semibold text-white cursor-pointer"
+                >
+                  {wishlistLinkCopied ? <Check className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
+                  <span>{wishlistLinkCopied ? (lang === 'ar' ? 'تم نسخ الرابط' : 'Link copied') : lang === 'ar' ? 'مشاركة' : 'Share'}</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsWishlistOnly(false)}
+                className="text-xs font-semibold text-[#004ad7] dark:text-[#3b82f6] hover:underline cursor-pointer"
+              >
+                {lang === 'ar' ? 'عرض التشكيلة الكاملة' : 'View All Pieces'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {sharedWishlist && (
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[#004ad7]/20 dark:border-[#3b82f6]/30 bg-[#004ad7]/8 dark:bg-[#3b82f6]/10 px-4 py-3 text-xs sm:text-sm">
+            <div className="flex items-center gap-2 text-[#004ad7] dark:text-[#3b82f6] font-medium">
+              <Share2 className="h-4 w-4" />
+              <span>{lang === 'ar' ? `مفضلة شاركها معك صديق (${visible.length} قطعة)` : `A friend's wishlist (${visible.length} pieces)`}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  sharedWishlist.filter((id) => !isWishlisted(id)).forEach(toggleWishlist);
+                  closeSharedWishlist();
+                  setIsWishlistOnly(true);
+                }}
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-[#004ad7] dark:bg-[#3b82f6] px-3 text-xs font-semibold text-white cursor-pointer"
+              >
+                <Heart className="h-3.5 w-3.5" />
+                <span>{lang === 'ar' ? 'احفظها بمفضلتي' : 'Save to my wishlist'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={closeSharedWishlist}
+                className="text-xs font-semibold text-[#004ad7] dark:text-[#3b82f6] hover:underline cursor-pointer"
+              >
+                {lang === 'ar' ? 'عرض التشكيلة الكاملة' : 'View All Pieces'}
+              </button>
+            </div>
           </div>
         )}
 
@@ -749,7 +825,13 @@ function MainApp() {
       />
 
       {/* Responsive Luxury Detail Modal / Sheet */}
-      <ProductDrawer product={selected} lang={lang} onClose={closeDrawer} />
+      <ProductDrawer
+        product={selected}
+        lang={lang}
+        onClose={closeDrawer}
+        related={relatedProducts}
+        onSelectRelated={openProduct}
+      />
 
       {/* Dedicated Shopping Cart Drawer */}
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} lang={lang} />

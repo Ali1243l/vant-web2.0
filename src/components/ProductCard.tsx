@@ -6,6 +6,7 @@ import { useSiteControls } from '../context/SiteControlsContext';
 import { resolveProductColorVariants } from '../lib/productVariants';
 import { CATEGORY_TRANSLATIONS } from '../lib/constants';
 import { addToCart } from '../lib/cart';
+import { cardImageUrl } from '../lib/utils';
 
 interface Props {
   product: Product;
@@ -53,6 +54,7 @@ export default React.memo(function ProductCard({
   const cardHoverControl = getControl('card_hover_preview');
   const [loaded, setLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [useOriginalImage, setUseOriginalImage] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [naturalRatio, setNaturalRatio] = useState<number | null>(null);
   const [isPickingSize, setIsPickingSize] = useState(false);
@@ -227,7 +229,7 @@ export default React.memo(function ProductCard({
             <div className="relative h-full w-full overflow-hidden">
               {/* Primary Image with seamless opacity cross-fade on lazy load finish & smooth hover transition */}
               <img
-                src={primaryImage.trim()}
+                src={useOriginalImage ? primaryImage.trim() : cardImageUrl(primaryImage.trim())}
                 alt={displayTitle}
                 width={width ?? undefined}
                 height={height ?? undefined}
@@ -241,7 +243,7 @@ export default React.memo(function ProductCard({
                     setNaturalRatio(target.naturalWidth / target.naturalHeight);
                   }
                 }}
-                onError={() => setImgError(true)}
+                onError={() => (useOriginalImage ? setImgError(true) : setUseOriginalImage(true))}
                 className={`h-full w-full object-cover object-center transition-opacity duration-300 ${
                   availability === 'sold_out' ? 'saturate-[85%]' : ''
                 } ${
@@ -256,7 +258,10 @@ export default React.memo(function ProductCard({
               {/* Secondary Image on Hover (Luxury Crossfade Transition) */}
               {cardHoverControl.visible && Boolean(secondaryImage?.trim()) ? (
                 <img
-                  src={secondaryImage!.trim()}
+                  src={cardImageUrl(secondaryImage!.trim())}
+                  onError={(e) => {
+                    if (e.currentTarget.src !== secondaryImage!.trim()) e.currentTarget.src = secondaryImage!.trim();
+                  }}
                   alt={`${displayTitle} - 2`}
                   loading="lazy"
                   decoding="async"

@@ -8,6 +8,7 @@ import ProductDrawerSkeleton from './ProductDrawerSkeleton';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { trackEvent } from '../lib/analytics';
 import { resolveProductColorVariants } from '../lib/productVariants';
+import { cardImageUrl } from '../lib/utils';
 
 import ProductDrawerGallery from './product_drawer/ProductDrawerGallery';
 import ProductHeaderInfo from './product_drawer/ProductHeaderInfo';
@@ -21,9 +22,12 @@ interface Props {
   loading?: boolean;
   lang: Language;
   onClose: () => void;
+  /** Same-category pieces shown under the details */
+  related?: Product[];
+  onSelectRelated?: (p: Product) => void;
 }
 
-export default function ProductDrawer({ product, loading, lang, onClose }: Props) {
+export default function ProductDrawer({ product, loading, lang, onClose, related = [], onSelectRelated }: Props) {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [slideDirection, setSlideDirection] = useState(1);
   const { getControl, formatPrice, masterSizes } = useSiteControls();
@@ -490,7 +494,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
               {/* 3. Bento Box Layout Container */}
               <div className="flex flex-col md:flex-row w-full h-full p-2.5 sm:p-5 md:p-6 gap-2.5 sm:gap-4 md:gap-5">
                 {/* Left Box: Product Image (Bento Box 1) */}
-                <div className="w-full md:w-[48%] h-[260px] xs:h-[300px] sm:h-[380px] md:h-full rounded-[18px] sm:rounded-[22px] md:rounded-[26px] bg-black/5 dark:bg-white/5 overflow-hidden relative shrink-0">
+                <div className="w-full md:w-[48%] md:h-full rounded-[18px] sm:rounded-[22px] md:rounded-[26px] md:bg-black/5 md:dark:bg-white/5 overflow-hidden relative shrink-0">
                   <ProductDrawerGallery
                     images={images}
                     product={product}
@@ -582,6 +586,40 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                       onOpenShareModal={() => setShowShareModal(true)}
                     />
                   </div>
+
+                  {related.length > 0 && onSelectRelated && (
+                    <section className="mt-3 rounded-[18px] sm:rounded-[22px] border border-black/5 dark:border-white/10 bg-white dark:bg-[#14171c] p-3.5 sm:p-4">
+                      <h3 className="mb-2.5 text-sm font-bold text-[#15171c] dark:text-white">{lang === 'ar' ? 'قطع مشابهة' : 'You may also like'}</h3>
+                      <div className="no-scrollbar -mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1">
+                        {related.map((r) => (
+                          <button
+                            key={r.id}
+                            type="button"
+                            onClick={() => onSelectRelated(r)}
+                            className="w-28 sm:w-32 shrink-0 text-start cursor-pointer group"
+                          >
+                            <div className="aspect-[3/4] overflow-hidden rounded-xl bg-black/5 dark:bg-white/5">
+                              {r.image_url?.trim() && (
+                                <img
+                                  src={cardImageUrl(r.image_url.trim(), 300)}
+                                  alt=""
+                                  loading="lazy"
+                                  onError={(e) => {
+                                    if (e.currentTarget.src !== r.image_url.trim()) e.currentTarget.src = r.image_url.trim();
+                                  }}
+                                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                />
+                              )}
+                            </div>
+                            <p className="mt-1.5 line-clamp-1 text-xs font-semibold text-[#15171c] dark:text-white">
+                              {lang === 'ar' && r.title_ar ? r.title_ar : r.title}
+                            </p>
+                            <p className="font-mono text-xs font-bold text-[#004ad7] dark:text-[#3b82f6]">{formatPrice(r.price)}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  )}
 
                   {/* Sticky Bottom Actions (Add to Cart & WhatsApp) */}
                   <div className="sticky bottom-0 pt-2 pb-[calc(0.6rem+env(safe-area-inset-bottom,0px))] bg-gradient-to-t from-[#f8f9fa] dark:from-[#0d0f12] via-[#f8f9fa]/95 dark:via-[#0d0f12]/95 to-transparent mt-auto z-20">

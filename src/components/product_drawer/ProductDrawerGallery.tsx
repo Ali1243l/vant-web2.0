@@ -19,6 +19,17 @@ interface ProductDrawerGalleryProps {
   paginate: (direction: number) => void;
 }
 
+function useIsPhone() {
+  const [isPhone, setIsPhone] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const onChange = () => setIsPhone(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return isPhone;
+}
+
 export const ProductDrawerGallery: React.FC<ProductDrawerGalleryProps> = ({
   images,
   product,
@@ -225,6 +236,129 @@ export const ProductDrawerGallery: React.FC<ProductDrawerGalleryProps> = ({
       setCarouselDragOffset(0);
     }
   };
+
+  // Phones get a native scroll-snap carousel: the finger drives the scroll directly, so swiping is smooth
+  const isPhone = useIsPhone();
+  const mobileTrackRef = useRef<HTMLDivElement>(null);
+  const scrollingFromIndexRef = useRef(false);
+  // One stable frame height per product (first photo), so the page doesn't jump between slides
+  const firstRatio = (images[0] && imageRatios[images[0]]) || activeRatio || 0.75;
+  const mobileRatio = Math.min(1.25, Math.max(0.72, firstRatio));
+
+  useEffect(() => {
+    const track = mobileTrackRef.current;
+    if (!isPhone || !track) return;
+    const target = activeImageIndex * track.clientWidth;
+    if (Math.abs(track.scrollLeft - target) > 2) {
+      scrollingFromIndexRef.current = true;
+      track.scrollTo({ left: target, behavior: 'smooth' });
+    }
+  }, [activeImageIndex, isPhone]);
+
+  const onMobileScroll = () => {
+    const track = mobileTrackRef.current;
+    if (!track || !track.clientWidth) return;
+    const idx = Math.round(track.scrollLeft / track.clientWidth);
+    if (scrollingFromIndexRef.current) {
+      if (idx === activeImageIndex) scrollingFromIndexRef.current = false;
+      return;
+    }
+    if (idx !== activeImageIndex && idx >= 0 && idx < images.length) {
+      setSlideDirection(idx > activeImageIndex ? 1 : -1);
+      setActiveImageIndex(idx);
+    }
+  };
+
+  if (isPhone) {
+    return (
+      <div dir="ltr" className="relative w-full [direction:ltr]">
+        <div
+          className="relative w-full overflow-hidden rounded-[18px] bg-gradient-to-b from-black/[0.03] to-black/[0.07] dark:from-white/[0.02] dark:to-white/[0.05]"
+          style={{ aspectRatio: `${mobileRatio}` }}
+        >
+          {images.length === 0 ? (
+            <div className="flex h-full w-full flex-col items-center justify-center text-[#15171c]/40 dark:text-white/40">
+              <span className="text-xs tracking-widest uppercase font-medium">VANT · ڤانت</span>
+            </div>
+          ) : (
+            <div
+              ref={mobileTrackRef}
+              onScroll={onMobileScroll}
+              className="no-scrollbar flex h-full w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain"
+            >
+              {images.map((imgSrc, idx) => {
+                const src = (imgSrc || product?.image_url || '').trim();
+                return (
+                  <div key={idx} className="relative h-full w-full shrink-0 snap-center snap-always">
+                    {!loadedImages.has(imgSrc) && (
+                      <div className="absolute inset-0 overflow-hidden bg-neutral-200/70 dark:bg-neutral-800/50">
+                        <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/50 dark:via-white/10 to-transparent" />
+                      </div>
+                    )}
+                    {src && (
+                      <MobileTouchZoom zoomFactor={2.2} className="h-full w-full">
+                        <img
+                          src={src}
+                          alt={`${displayTitle} - ${idx + 1}`}
+                          decoding="async"
+                          loading={idx <= 1 ? 'eager' : 'lazy'}
+                          referrerPolicy="no-referrer"
+                          draggable={false}
+                          onLoad={() => imgSrc && setLoadedImages((prev) => new Set(prev).add(imgSrc))}
+                          className="h-full w-full object-contain select-none"
+                        />
+                      </MobileTouchZoom>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {images.length > 1 && (
+            <>
+              <div className="pointer-events-none absolute top-3 right-3 z-20 rounded-full bg-black/55 px-2.5 py-0.5 text-[11px] font-mono font-semibold text-white">
+                {activeImageIndex + 1} / {images.length}
+              </div>
+              <div className="pointer-events-none absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5">
+                {images.map((_, i) => (
+                  <span
+                    key={i}
+                    className={`block h-1.5 rounded-full transition-all duration-300 ${
+                      i === activeImageIndex ? 'w-5 bg-[#004ad7] dark:bg-[#3b82f6]' : 'w-1.5 bg-black/25 dark:bg-white/40'
+                    }`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Thumbnails: same order as the slides, tap to jump */}
+        {images.length > 1 && (
+          <div className="no-scrollbar mt-2.5 flex gap-2 overflow-x-auto px-0.5 pb-0.5 [&>*:first-child]:ms-auto [&>*:last-child]:me-auto">
+            {images.map((img, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => {
+                  setSlideDirection(idx > activeImageIndex ? 1 : -1);
+                  setActiveImageIndex(idx);
+                }}
+                aria-label={`View image ${idx + 1}`}
+                aria-current={idx === activeImageIndex}
+                className={`h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${
+                  idx === activeImageIndex ? 'border-[#004ad7] dark:border-[#3b82f6]' : 'border-transparent opacity-60'
+                }`}
+              >
+                {img?.trim() && <img src={img.trim()} alt="" loading="lazy" className="h-full w-full object-cover" />}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   const onCarouselWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     if (images.length <= 1) return;

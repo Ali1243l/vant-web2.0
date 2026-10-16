@@ -132,7 +132,7 @@ export const MobileTouchZoom: React.FC<MobileTouchZoomProps> = ({ children, zoom
       onPointerMove={(e) => zoomed && e.stopPropagation()}
       onPointerUp={(e) => zoomed && e.stopPropagation()}
       className={`relative overflow-hidden select-none ${className}`}
-      style={{ touchAction: zoomed ? 'none' : 'pan-y' }}
+      style={{ touchAction: zoomed ? 'none' : 'pan-x pan-y' }}
     >
       <motion.div style={{ scale, x, y }} className="w-full h-full origin-center flex items-center justify-center will-change-transform">
         {children}

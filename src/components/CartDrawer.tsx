@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, ShoppingBag, X, Plus, Minus, Trash2, MessageCircle, ArrowRight, ArrowLeft } from 'lucide-react';
+import { ShoppingCart, ShoppingBag, X, Plus, Minus, Trash2, MessageCircle, ArrowRight, ArrowLeft, History, RotateCcw, CheckCircle2 } from 'lucide-react';
 import type { Language } from '../types';
 import { DEFAULT_WHATSAPP_PHONE } from '../lib/constants';
 import { useSiteControls } from '../context/SiteControlsContext';
-import { readCart, writeCart, cartTotal, type CartItem } from '../lib/cart';
+import { readCart, writeCart, cartTotal, readOrders, saveOrder, reorder, type CartItem, type PastOrder } from '../lib/cart';
 
 const IRAQ_CITIES: [string, string][] = [
   ['بغداد', 'Baghdad'], ['البصرة', 'Basra'], ['نينوى', 'Nineveh'], ['أربيل', 'Erbil'], ['النجف', 'Najaf'],
@@ -47,6 +47,16 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [step, setStep] = useState<'cart' | 'details'>('cart');
   const [details, setDetails] = useState<CustomerDetails>(readDetails);
+  const [view, setView] = useState<'cart' | 'orders'>('cart');
+  const [orders, setOrders] = useState<PastOrder[]>(readOrders);
+  const [justOrdered, setJustOrdered] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setView('cart');
+      setJustOrdered(false);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen || cartItems.length === 0) setStep('cart');
@@ -177,6 +187,24 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
                 </div>
               </div>
 
+              <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setOrders(readOrders());
+                  setJustOrdered(false);
+                  setView((v) => (v === 'orders' ? 'cart' : 'orders'));
+                }}
+                aria-pressed={view === 'orders'}
+                className={`flex h-11 items-center gap-1.5 rounded-full px-3.5 text-xs font-bold transition-all cursor-pointer ${
+                  view === 'orders'
+                    ? 'bg-[#004ad7] text-white'
+                    : 'bg-black/5 dark:bg-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-black/10 dark:hover:bg-white/20'
+                }`}
+              >
+                <History className="h-4 w-4" />
+                <span>{isAr ? 'طلباتي' : 'My orders'}</span>
+              </button>
               <button
                 type="button"
                 onClick={onClose}
@@ -186,11 +214,65 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
               >
                 <X className="h-5 w-5" />
               </button>
+              </div>
             </div>
 
             {/* Item List */}
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-              {step === 'details' && cartItems.length > 0 ? (
+              {view === 'orders' ? (
+                <div className="space-y-3">
+                  {justOrdered && (
+                    <div className="flex items-start gap-2.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-sm text-emerald-800 dark:text-emerald-300">
+                      <CheckCircle2 className="h-5 w-5 shrink-0" />
+                      <span>
+                        {isAr
+                          ? 'انفتح واتساب برسالة طلبك. إذا ما وصلت الرسالة، اضغط "إعادة الطلب" حتى ترجع القطع للسلة.'
+                          : 'WhatsApp opened with your order. If it did not send, tap "Order again" to put the items back.'}
+                      </span>
+                    </div>
+                  )}
+                  {orders.length === 0 ? (
+                    <p className="py-12 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                      {isAr ? 'ما عندك طلبات سابقة على هذا الجهاز.' : 'No past orders on this device yet.'}
+                    </p>
+                  ) : (
+                    orders.map((order) => (
+                      <div key={order.id} className="rounded-2xl border border-black/8 dark:border-white/10 bg-zinc-50/60 dark:bg-[#181b26] p-3.5">
+                        <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+                          <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200">{order.id}</span>
+                          <span>{new Date(order.date).toLocaleDateString(isAr ? 'ar-IQ' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                        </div>
+                        <ul className="mt-2 space-y-1 text-sm">
+                          {order.items.map((item) => (
+                            <li key={item.key} className="flex justify-between gap-2">
+                              <span className="truncate">
+                                {item.title}
+                                {item.size && <span className="text-zinc-500"> · {item.size}</span>}
+                              </span>
+                              <span className="shrink-0 font-mono text-zinc-500">×{item.quantity}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        <div className="mt-3 flex items-center justify-between">
+                          <span className="font-mono text-sm font-extrabold text-[#004ad7] dark:text-[#60a5fa]">{formatPrice(order.total)}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              reorder(order);
+                              setJustOrdered(false);
+                              setView('cart');
+                            }}
+                            className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-[#004ad7] dark:bg-[#3b82f6] px-4 text-xs font-bold text-white hover:opacity-90 cursor-pointer"
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            <span>{isAr ? 'إعادة الطلب' : 'Order again'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              ) : step === 'details' && cartItems.length > 0 ? (
                 <form
                   id="checkout-details-form"
                   className="space-y-3.5"
@@ -200,6 +282,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
                       localStorage.setItem(DETAILS_KEY, JSON.stringify(details));
                     } catch {}
                     window.open(generateWhatsAppUrl(), '_blank', 'noopener,noreferrer');
+                    // The cart moves to "My orders", where one tap puts it back if the chat never went out
+                    saveOrder(cartItems);
+                    writeCart([]);
+                    setOrders(readOrders());
+                    setJustOrdered(true);
+                    setView('orders');
                   }}
                 >
                   <button
@@ -369,7 +457,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
             </div>
 
             {/* Drawer Footer */}
-            {cartItems.length > 0 && (
+            {cartItems.length > 0 && view === 'cart' && (
               <div className="border-t border-black/8 dark:border-white/10 px-5 py-4 bg-zinc-50/80 dark:bg-[#161922] space-y-3">
                 <div className="flex items-center justify-between text-xs sm:text-sm">
                   <span className="font-semibold text-zinc-600 dark:text-zinc-400">
