@@ -223,7 +223,7 @@ export default function WelcomeHeroBanner({
                     <button
                       type="button"
                       onClick={onDismiss}
-                      className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full text-[#15171c]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/10 hover:text-[#15171c] dark:hover:text-white transition-all active:scale-90 cursor-pointer"
+                      className="relative before:absolute before:-inset-2 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full text-[#15171c]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/10 hover:text-[#15171c] dark:hover:text-white transition-all active:scale-90 cursor-pointer"
                       aria-label={isAr ? 'إخفاء الواجهة' : 'Dismiss intro'}
                       title={isAr ? 'إخفاء' : 'Dismiss'}
                     >

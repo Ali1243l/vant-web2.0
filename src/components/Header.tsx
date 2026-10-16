@@ -180,8 +180,8 @@ export default function Header({
                   <button
                     type="button"
                     onClick={() => onToggleSearch(true)}
-                    className={`flex items-center justify-center rounded-full text-[#15171c]/80 dark:text-white/80 transition-all hover:bg-black/5 dark:hover:bg-white/10 active:scale-95 cursor-pointer ${
-                      scrolled ? 'h-8 w-8' : 'h-9 w-9'
+                    className={`relative flex items-center justify-center rounded-full text-[#15171c]/80 dark:text-white/80 transition-all hover:bg-black/5 dark:hover:bg-white/10 active:scale-95 cursor-pointer ${
+                      'h-9 w-9 before:absolute before:-inset-1'
                     }`}
                     aria-label={lang === 'ar' ? 'فتح شريط البحث' : 'Open search'}
                     title={lang === 'ar' ? searchControl.label_ar : searchControl.label_en}
@@ -197,7 +197,7 @@ export default function Header({
                     id="header-cart-icon"
                     onClick={onOpenCart}
                     className={`relative flex items-center justify-center rounded-full transition-all active:scale-90 cursor-pointer ${
-                      scrolled ? 'h-8 w-8' : 'h-9 w-9'
+                      'h-9 w-9 before:absolute before:-inset-1'
                     } ${
                       isCartOpen
                         ? 'bg-[#004ad7] text-white shadow-md shadow-[#004ad7]/30'
@@ -236,7 +236,7 @@ export default function Header({
                     type="button"
                     onClick={onToggleWishlistOnly}
                     className={`relative flex items-center justify-center rounded-full transition-all active:scale-90 cursor-pointer ${
-                      scrolled ? 'h-8 w-8' : 'h-9 w-9'
+                      'h-9 w-9 before:absolute before:-inset-1'
                     } ${
                       isWishlistOnly
                         ? 'bg-[#004ad7]/15 dark:bg-[#3b82f6]/20 text-[#004ad7] dark:text-[#3b82f6]'
@@ -292,7 +292,7 @@ export default function Header({
                     type="button"
                     onClick={onToggleTheme}
                     className={`relative flex items-center justify-center rounded-full text-[#15171c]/80 dark:text-white/80 transition-all hover:bg-black/5 dark:hover:bg-white/10 active:scale-90 cursor-pointer ${
-                      scrolled ? 'h-8 w-8' : 'h-9 w-9'
+                      'h-9 w-9 before:absolute before:-inset-1'
                     }`}
                     aria-label={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
                   >
@@ -328,7 +328,7 @@ export default function Header({
                   <button
                     type="button"
                     onClick={onToggleLang}
-                    className={`group flex items-center gap-1.5 rounded-full border border-black/8 dark:border-white/15 bg-white/70 dark:bg-white/10 px-2.5 text-[11px] sm:text-xs font-bold tracking-wide text-[#15171c] dark:text-white transition-all hover:bg-black/5 dark:hover:bg-white/15 active:scale-95 cursor-pointer shadow-2xs ${
+                    className={`group relative before:absolute before:-inset-1.5 flex items-center gap-1.5 rounded-full border border-black/8 dark:border-white/15 bg-white/70 dark:bg-white/10 px-2.5 text-[11px] sm:text-xs font-bold tracking-wide text-[#15171c] dark:text-white transition-all hover:bg-black/5 dark:hover:bg-white/15 active:scale-95 cursor-pointer shadow-2xs ${
                       scrolled ? 'h-7.5 sm:h-8' : 'h-8 sm:h-8.5'
                     }`}
                     aria-label={lang === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}

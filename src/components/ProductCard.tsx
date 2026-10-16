@@ -297,7 +297,7 @@ export default React.memo(function ProductCard({
             <button
               type="button"
               onClick={handleHeartClick}
-              className={`absolute top-2.5 sm:top-3 ltr:right-2.5 rtl:left-2.5 ltr:sm:right-3 rtl:sm:left-3 z-20 flex h-8 w-8 sm:h-8.5 sm:w-8.5 md:h-10 md:w-10 lg:h-11 lg:w-11 items-center justify-center rounded-full transition-all duration-200 cursor-pointer backdrop-blur-md active:scale-90 hover:scale-105 group/heart ${
+              className={`absolute top-2.5 sm:top-3 ltr:right-2.5 rtl:left-2.5 ltr:sm:right-3 rtl:sm:left-3 z-20 flex h-9 w-9 before:absolute before:-inset-1 md:h-10 md:w-10 lg:h-11 lg:w-11 items-center justify-center rounded-full transition-all duration-200 cursor-pointer backdrop-blur-md active:scale-90 hover:scale-105 group/heart ${
                 isWishlisted
                   ? 'bg-[#004ad7] dark:bg-[#3b82f6] text-white shadow-md shadow-[#004ad7]/25 border border-[#004ad7]/40 dark:border-[#3b82f6]/50'
                   : 'bg-white/90 dark:bg-[#12141a]/90 text-neutral-600 dark:text-neutral-300 hover:text-[#004ad7] dark:hover:text-[#3b82f6] hover:bg-white dark:hover:bg-[#181a22] border border-black/8 dark:border-white/12 shadow-2xs'
@@ -342,12 +342,12 @@ export default React.memo(function ProductCard({
 
           {/* 3. Price - Bold, distinct signature blue */}
           {cardPriceControl.visible && (
-            <div className="flex items-baseline gap-2 pt-0.5 rtl:justify-start ltr:justify-start">
-              <span className="font-mono font-black text-sm sm:text-base md:text-[17px] lg:text-lg text-[#004ad7] dark:text-[#3b82f6] tabular-nums tracking-tight">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 pt-0.5 rtl:justify-start ltr:justify-start">
+              <span className="font-mono font-black text-sm sm:text-base md:text-[17px] lg:text-lg text-[#004ad7] dark:text-[#3b82f6] tabular-nums tracking-tight whitespace-nowrap">
                 {formatPrice(activeVariant.price)}
               </span>
               {product.is_offer && product.original_price && product.original_price > activeVariant.price && (
-                <span className="text-[11px] sm:text-xs md:text-[13px] text-black/35 dark:text-white/35 line-through tabular-nums font-mono">
+                <span className="text-[11px] sm:text-xs md:text-[13px] text-black/35 dark:text-white/35 line-through tabular-nums font-mono whitespace-nowrap">
                   {formatPrice(product.original_price)}
                 </span>
               )}

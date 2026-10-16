@@ -152,7 +152,7 @@ export default function CategoryFilter({
           <div
             ref={tabsContainerRef}
             role="tablist"
-            className="no-scrollbar flex flex-nowrap items-center gap-1.5 sm:gap-2 md:gap-2.5 overflow-x-auto [scroll-snap-type:x_proximity] select-none py-1 md:py-1.5"
+            className="no-scrollbar flex flex-nowrap items-center gap-1.5 sm:gap-2 md:gap-2.5 overflow-x-auto [scroll-snap-type:x_proximity] select-none py-1 md:py-1.5 max-md:px-3 max-md:[mask-image:linear-gradient(to_right,transparent,black_20px,black_calc(100%-20px),transparent)]"
           >
             {/* Special Offers & Discounts Button */}
             {onToggleOffersOnly && offersControl.visible && (
@@ -167,7 +167,7 @@ export default function CategoryFilter({
                   trackEvent('category_filter', { category: 'offers', isOffersOnly: nextState });
                   scrollToCatalogTop();
                 }}
-                className={`relative shrink-0 snap-center whitespace-nowrap rounded-full px-3.5 py-1.5 md:h-9.5 md:px-4 lg:h-10 lg:px-4.5 flex items-center justify-center text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
+                className={`relative shrink-0 snap-center whitespace-nowrap rounded-full h-10 px-3.5 md:px-4 lg:h-10 lg:px-4.5 flex items-center justify-center text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
                   isOffersOnly
                     ? 'text-white dark:text-[#15171c] font-semibold'
                     : 'bg-black/[0.035] dark:bg-white/[0.06] text-[#6b7280] dark:text-[#9ca3af] hover:text-[#15171c] dark:hover:text-[#f3f4f6] hover:bg-black/[0.06] dark:hover:bg-white/[0.1] border border-black/5 dark:border-white/5'
@@ -206,7 +206,7 @@ export default function CategoryFilter({
                     }
                     scrollToCatalogTop();
                   }}
-                  className={`relative shrink-0 snap-center whitespace-nowrap rounded-full px-3.5 py-1.5 md:h-9.5 md:px-4 lg:h-10 lg:px-4.5 flex items-center justify-center text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
+                  className={`relative shrink-0 snap-center whitespace-nowrap rounded-full h-10 px-3.5 md:px-4 lg:h-10 lg:px-4.5 flex items-center justify-center text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
                     isActive
                       ? 'text-white dark:text-[#15171c] font-semibold'
                       : 'bg-black/[0.035] dark:bg-white/[0.06] text-[#6b7280] dark:text-[#9ca3af] hover:text-[#15171c] dark:hover:text-[#f3f4f6] hover:bg-black/[0.06] dark:hover:bg-white/[0.1] border border-black/5 dark:border-white/5'
@@ -241,7 +241,7 @@ export default function CategoryFilter({
                 }}
                 aria-expanded={isOpen}
                 aria-haspopup="true"
-                className={`flex shrink-0 items-center gap-1.5 md:gap-2 rounded-full px-3.5 py-1.5 md:h-9.5 md:px-4 lg:h-10 lg:px-4.5 text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer border shadow-2xs select-none ${
+                className={`flex shrink-0 items-center gap-1.5 md:gap-2 rounded-full h-10 px-3.5 md:px-4 lg:h-10 lg:px-4.5 text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer border shadow-2xs select-none ${
                   availability !== 'all'
                     ? 'border-[#004ad7]/35 dark:border-[#3b82f6]/35 bg-[#004ad7]/10 dark:bg-[#3b82f6]/15 text-[#004ad7] dark:text-[#3b82f6] font-semibold ring-1 ring-[#004ad7]/20 dark:ring-[#3b82f6]/25'
                     : isOpen

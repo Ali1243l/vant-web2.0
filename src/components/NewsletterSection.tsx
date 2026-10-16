@@ -382,7 +382,7 @@ export default function NewsletterSection({ lang }: Props) {
                           : siteSettings.newsletter_input_placeholder_en || 'Enter your email address here...'
                       }
                       aria-label={isAr ? 'عنوان البريد الإلكتروني' : 'Email address'}
-                      className="w-full min-w-0 bg-transparent px-2.5 py-1.5 md:px-3.5 md:py-2 text-xs sm:text-[13px] md:text-sm text-[#15171c] dark:text-white placeholder-[#6b7280] dark:placeholder-white/50 outline-none disabled:opacity-50"
+                      className="w-full min-w-0 bg-transparent px-2.5 py-3 md:px-3.5 text-xs sm:text-[13px] md:text-sm text-[#15171c] dark:text-white placeholder-[#6b7280] dark:placeholder-white/50 outline-none disabled:opacity-50"
                     />
 
                     <button
