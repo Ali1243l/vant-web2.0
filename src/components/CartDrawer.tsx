@@ -4,6 +4,7 @@ import { ShoppingCart, ShoppingBag, X, Plus, Minus, Trash2, MessageCircle, Arrow
 import type { Language } from '../types';
 import { DEFAULT_WHATSAPP_PHONE } from '../lib/constants';
 import { useSiteControls } from '../context/SiteControlsContext';
+import { submitStoreOrder } from '../lib/storage';
 import { readCart, writeCart, cartTotal, readOrders, saveOrder, reorder, type CartItem, type PastOrder } from '../lib/cart';
 
 const IRAQ_CITIES: [string, string][] = [
@@ -117,12 +118,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
   const totalPrice = cartTotal(cartItems);
   const totalCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
-  const generateWhatsAppUrl = () => {
+  const generateWhatsAppUrl = (orderId: string) => {
     if (cartItems.length === 0) return '#';
     const cleanPhone = whatsappPhone.replace(/\D/g, '');
     let text = isAr
-      ? `مرحباً، أود طلب المشتريات التالية من التشكيلة:\n\n`
-      : `Hello, I would like to order the following items from the collection:\n\n`;
+      ? `مرحباً، أود طلب المشتريات التالية من التشكيلة (رقم الطلب ${orderId}):\n\n`
+      : `Hello, I would like to order the following items from the collection (order ${orderId}):\n\n`;
 
     cartItems.forEach((item, idx) => {
       const subtotal = item.price * item.quantity;
@@ -281,9 +282,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
                     try {
                       localStorage.setItem(DETAILS_KEY, JSON.stringify(details));
                     } catch {}
-                    window.open(generateWhatsAppUrl(), '_blank', 'noopener,noreferrer');
                     // The cart moves to "My orders", where one tap puts it back if the chat never went out
-                    saveOrder(cartItems);
+                    const order = saveOrder(cartItems);
+                    window.open(generateWhatsAppUrl(order.id), '_blank', 'noopener,noreferrer');
+                    submitStoreOrder(order, details);
                     writeCart([]);
                     setOrders(readOrders());
                     setJustOrdered(true);

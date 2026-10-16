@@ -163,7 +163,7 @@ export default React.memo(function ProductCard({
 
   // Calculate discount percentage if offer
   const discountPct =
-    product.is_offer && product.original_price && product.original_price > product.price
+    product.is_offer && availability !== 'sold_out' && product.original_price && product.original_price > product.price
       ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
       : null;
 
@@ -171,7 +171,7 @@ export default React.memo(function ProductCard({
   let statusBadge = null;
   if (availability === 'sold_out') {
     statusBadge = {
-      text: isAr ? 'العرض منتهي' : 'Sold Out',
+      text: isAr ? 'نفدت الكمية' : 'Sold Out',
       classes: 'bg-black/75 dark:bg-black/85 text-white/80 border-white/10',
       dot: 'bg-neutral-400',
     };
@@ -245,7 +245,7 @@ export default React.memo(function ProductCard({
                 }}
                 onError={() => (useOriginalImage ? setImgError(true) : setUseOriginalImage(true))}
                 className={`h-full w-full object-cover object-center transition-opacity duration-300 ${
-                  availability === 'sold_out' ? 'saturate-[85%]' : ''
+                  availability === 'sold_out' ? 'grayscale-[70%] brightness-95' : ''
                 } ${
                   loaded
                     ? isHovered && secondaryImage

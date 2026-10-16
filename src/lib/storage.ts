@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import type { PastOrder } from './cart';
 
 export interface UploadedMediaItem {
   url: string;
@@ -433,19 +434,9 @@ export async function saveOrdersToSupabase(orders: any[]): Promise<boolean> {
         timeline: Array.isArray(ord.timeline) ? ord.timeline : [],
         created_at: ord.orderDate || ord.created_at || new Date().toISOString(),
       }));
-      await supabase.from('orders').upsert(dbRows, { onConflict: 'id' });
-    }
-
-    const payload = JSON.stringify(orders, null, 2);
-    const blob = new Blob([payload], { type: 'application/json' });
-    const { error } = await supabase.storage.from('product-images').upload('config/orders.json', blob, {
-      contentType: 'application/json',
-      cacheControl: '0',
-      upsert: true,
-    });
-    if (!error) {
-      console.log('✓ Orders permanently synced to Supabase Cloud');
-      return true;
+      // Orders hold customer phones and addresses, so they live only in the RLS-protected table, never in public storage
+      const { error } = await supabase.from('orders').upsert(dbRows, { onConflict: 'id' });
+      return !error;
     }
   } catch (err) {
     console.warn('Failed to save orders to Supabase:', err);
@@ -454,7 +445,7 @@ export async function saveOrdersToSupabase(orders: any[]): Promise<boolean> {
 }
 
 /**
- * Loads latest orders from Supabase SQL table `orders` with fallback to Supabase Storage
+ * Loads latest orders from the Supabase SQL table `orders`
  */
 export async function fetchOrdersFromSupabase(): Promise<any[] | null> {
   if (!supabase) return null;
@@ -488,17 +479,6 @@ export async function fetchOrdersFromSupabase(): Promise<any[] | null> {
       }));
     }
 
-    // Fallback to storage file if database table returns empty or error
-    const { data: pubData } = supabase.storage.from('product-images').getPublicUrl('config/orders.json');
-    if (pubData?.publicUrl) {
-      const response = await fetch(`${pubData.publicUrl}?t=${Date.now()}`, { cache: 'no-store' });
-      if (response.ok) {
-        const json = await response.json();
-        if (Array.isArray(json)) {
-          return json;
-        }
-      }
-    }
   } catch (err) {
     console.warn('Failed to fetch orders from Supabase:', err);
   }
@@ -660,4 +640,50 @@ export function isImageFile(file: File): boolean {
   if (file.type && file.type.startsWith('image/')) return true;
   const ext = file.name.split('.').pop()?.toLowerCase();
   return ['jpg', 'jpeg', 'png', 'webp', 'avif', 'gif', 'heic', 'heif', 'bmp', 'svg'].includes(ext || '');
+}
+
+/**
+ * Sends a storefront checkout to the `orders` table so it shows in the admin panel.
+ * WhatsApp stays the primary channel, so a failure here never blocks the customer.
+ */
+export async function submitStoreOrder(
+  order: PastOrder,
+  customer: { name: string; phone: string; city: string; address: string; notes: string }
+): Promise<boolean> {
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from('orders').insert({
+      id: order.id,
+      customer_name: customer.name.trim(),
+      customer_phone: customer.phone.trim(),
+      customer_email: '',
+      shipping_address: `${customer.city} - ${customer.address.trim()}`,
+      items: order.items.map((i) => ({
+        productId: String(i.productId ?? ''),
+        name: i.title,
+        nameEn: i.title,
+        imageUrl: i.image,
+        price: i.price,
+        quantity: i.quantity,
+        selectedSize: i.size || '',
+        fabricOption: i.color || undefined,
+      })),
+      total_price: order.total,
+      status: 'pending_payment',
+      type: 'ready_to_wear',
+      timeline: [
+        {
+          status: 'pending_payment',
+          title: 'طلب جديد من المتجر عبر واتساب',
+          titleEn: 'New store order via WhatsApp',
+          timestamp: order.date,
+          note: customer.notes.trim() || undefined,
+        },
+      ],
+      created_at: order.date,
+    });
+    return !error;
+  } catch {
+    return false;
+  }
 }

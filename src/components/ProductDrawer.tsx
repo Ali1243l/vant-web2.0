@@ -8,7 +8,7 @@ import ProductDrawerSkeleton from './ProductDrawerSkeleton';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { trackEvent } from '../lib/analytics';
 import { resolveProductColorVariants } from '../lib/productVariants';
-import { cardImageUrl } from '../lib/utils';
+import ProductStrip from './ProductStrip';
 
 import ProductDrawerGallery from './product_drawer/ProductDrawerGallery';
 import ProductHeaderInfo from './product_drawer/ProductHeaderInfo';
@@ -198,14 +198,14 @@ export default function ProductDrawer({ product, loading, lang, onClose, related
 
   switch (availability) {
     case 'sold_out':
-      statusBadgeLabel = lang === 'ar' ? 'العرض منتهي' : 'Sold Out';
+      statusBadgeLabel = lang === 'ar' ? 'نفدت الكمية' : 'Sold Out';
       statusBadgeClasses =
         'bg-black/75 dark:bg-black/85 text-white/70 dark:text-white/60 border-white/10 shadow-2xs';
       statusDotClass = 'bg-neutral-400 dark:bg-neutral-500';
       statusBannerText =
         lang === 'ar'
-          ? 'العرض منتهي — نعتذر، نفدت الكمية والمقاسات بالكامل. يمكنك اختيار مقاسك بالأسفل لطلب إعادة توفيره.'
-          : 'Sold Out — All sizes and allocations are currently exhausted. Select your size below to request a restock.';
+          ? 'نفدت الكمية — اختر مقاسك واضغط "بلغني من يتوفر" حتى نخبرك أول ما ترجع.'
+          : 'Sold Out — pick your size and tap "Notify me" to hear as soon as it is back.';
       buttonLabel = selectedSize
         ? lang === 'ar'
           ? `طلب إعادة توفير مقاس (${selectedSize}) عبر واتساب`
@@ -350,7 +350,7 @@ export default function ProductDrawer({ product, loading, lang, onClose, related
     if (isSoldOut) {
       setSizeFeedback(
         lang === 'ar'
-          ? `المقاس (${size}) منتهي حالياً ضمن هذا العرض — تم تحديده لطلب إعادة توفيره عبر واتساب بالأسفل`
+          ? `المقاس (${size}) خالص حالياً — اضغط "بلغني من يتوفر" بالأسفل`
           : `Size (${size}) is sold out — selected for restock request via WhatsApp below`
       );
     } else if (availableSizes.has(size.toUpperCase())) {
@@ -587,38 +587,14 @@ export default function ProductDrawer({ product, loading, lang, onClose, related
                     />
                   </div>
 
-                  {related.length > 0 && onSelectRelated && (
-                    <section className="mt-3 rounded-[18px] sm:rounded-[22px] border border-black/5 dark:border-white/10 bg-white dark:bg-[#14171c] p-3.5 sm:p-4">
-                      <h3 className="mb-2.5 text-sm font-bold text-[#15171c] dark:text-white">{lang === 'ar' ? 'قطع مشابهة' : 'You may also like'}</h3>
-                      <div className="no-scrollbar -mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1">
-                        {related.map((r) => (
-                          <button
-                            key={r.id}
-                            type="button"
-                            onClick={() => onSelectRelated(r)}
-                            className="w-28 sm:w-32 shrink-0 text-start cursor-pointer group"
-                          >
-                            <div className="aspect-[3/4] overflow-hidden rounded-xl bg-black/5 dark:bg-white/5">
-                              {r.image_url?.trim() && (
-                                <img
-                                  src={cardImageUrl(r.image_url.trim(), 300)}
-                                  alt=""
-                                  loading="lazy"
-                                  onError={(e) => {
-                                    if (e.currentTarget.src !== r.image_url.trim()) e.currentTarget.src = r.image_url.trim();
-                                  }}
-                                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                />
-                              )}
-                            </div>
-                            <p className="mt-1.5 line-clamp-1 text-xs font-semibold text-[#15171c] dark:text-white">
-                              {lang === 'ar' && r.title_ar ? r.title_ar : r.title}
-                            </p>
-                            <p className="font-mono text-xs font-bold text-[#004ad7] dark:text-[#3b82f6]">{formatPrice(r.price)}</p>
-                          </button>
-                        ))}
-                      </div>
-                    </section>
+                  {onSelectRelated && (
+                    <ProductStrip
+                      className="mt-3"
+                      title={lang === 'ar' ? 'قطع مشابهة' : 'You may also like'}
+                      products={related}
+                      lang={lang}
+                      onSelect={onSelectRelated}
+                    />
                   )}
 
                   {/* Sticky Bottom Actions (Add to Cart & WhatsApp) */}
@@ -635,6 +611,7 @@ export default function ProductDrawer({ product, loading, lang, onClose, related
                       colorLabel={activeVariant && variantInfo?.hasMultipleColors ? (lang === 'ar' ? activeVariant.colorNameAr : activeVariant.colorNameEn) : undefined}
                       image={images[0]}
                       canAddToCart={canAddToCart}
+                      availability={availability}
                     />
                   </div>
                 </div>

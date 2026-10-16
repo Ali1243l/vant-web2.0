@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/",
+      "has": [
+        { "type": "query", "key": "item" },
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(whatsapp|facebookexternalhit|facebot|instagram|telegrambot|twitterbot|slackbot|discordbot|linkedinbot|snapchat|pinterest|skypeuripreview|viber|applebot|googlebot|bingbot).*"
+        }
+      ],
+      "destination": "/api/product-preview"
+    }
+  ]
+}

@@ -148,7 +148,7 @@ export default function CategoryFilter({
     },
     {
       id: 'sold_out',
-      label_ar: 'العرض منتهي',
+      label_ar: 'نفدت الكمية',
       label_en: 'Sold Out',
       sub_ar: 'قطع غير متوفرة حالياً',
       sub_en: 'Currently archived',

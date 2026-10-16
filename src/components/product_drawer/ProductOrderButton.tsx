@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { MessageCircle, ShoppingCart } from 'lucide-react';
-import type { Product, Language } from '../../types';
+import { MessageCircle, ShoppingCart, BellRing, Check } from 'lucide-react';
+import type { Product, Language, ProductAvailability } from '../../types';
 import { trackEvent } from '../../lib/analytics';
 import Spinner from '../ui/Spinner';
 import CartInteractionWrapper from './CartInteractionWrapper';
@@ -22,7 +22,18 @@ interface ProductOrderButtonProps {
   colorLabel?: string;
   image?: string;
   canAddToCart: () => boolean;
+  availability?: ProductAvailability;
 }
+
+const RESTOCK_KEY = 'vant_restock_requests';
+const readRestockRequests = (): string[] => {
+  try {
+    const list = JSON.parse(localStorage.getItem(RESTOCK_KEY) || '[]');
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+};
 
 export const ProductOrderButton: React.FC<ProductOrderButtonProps> = ({
   whatsappControl,
@@ -35,8 +46,11 @@ export const ProductOrderButton: React.FC<ProductOrderButtonProps> = ({
   colorLabel,
   image,
   canAddToCart,
+  availability,
 }) => {
   const [isOrdering, setIsOrdering] = useState(false);
+  const restockKey = `${product?.id ?? ''}|${selectedSize ?? ''}`;
+  const [restockRequests, setRestockRequests] = useState(readRestockRequests);
 
   const isAr = lang === 'ar';
 
@@ -73,6 +87,47 @@ export const ProductOrderButton: React.FC<ProductOrderButtonProps> = ({
   const cartButtonText = selectedSize
     ? `${isAr ? 'أضف للسلة' : 'Add to Cart'} (${selectedSize})`
     : isAr ? 'أضف للسلة' : 'Add to Cart';
+
+  // Sold-out and upcoming pieces can't go in the cart; the main button asks the shop to tell the customer instead
+  if (availability === 'sold_out' || availability === 'coming_soon') {
+    const isSoldOut = availability === 'sold_out';
+    const requested = restockRequests.includes(restockKey);
+    const label = requested
+      ? isAr ? 'سجلنا طلبك، راح نبلغك' : "You're on the list"
+      : isSoldOut
+      ? isAr ? `بلغني من يتوفر${selectedSize ? ` (${selectedSize})` : ''}` : `Notify me when back${selectedSize ? ` (${selectedSize})` : ''}`
+      : isAr ? `احجز قبل النزول${selectedSize ? ` (${selectedSize})` : ''}` : `Reserve before launch${selectedSize ? ` (${selectedSize})` : ''}`;
+    return (
+      <div className="pt-1 w-full">
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => {
+            handleInquiryClick();
+            const next = [...new Set([...restockRequests, restockKey])];
+            setRestockRequests(next);
+            try {
+              localStorage.setItem(RESTOCK_KEY, JSON.stringify(next));
+            } catch {}
+          }}
+          className={`flex h-11.5 sm:h-12 md:h-13 w-full items-center justify-center gap-2 rounded-xl md:rounded-2xl text-xs sm:text-sm md:text-base font-bold tracking-wide transition-all active:scale-[0.98] cursor-pointer ${
+            requested
+              ? 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+              : 'bg-[#15171c] dark:bg-white text-white dark:text-[#15171c] shadow-md'
+          }`}
+        >
+          {requested ? <Check className="h-4.5 w-4.5 shrink-0" /> : <BellRing className="h-4.5 w-4.5 shrink-0" />}
+          <span className="truncate">{label}</span>
+        </a>
+        {!requested && (
+          <p className="mt-2 text-center text-[11px] text-[#6b7280] dark:text-[#9ca3af]">
+            {isAr ? 'نرسل طلبك على واتساب ونبلغك أول ما ترجع القطعة.' : 'We send your request on WhatsApp and message you as soon as it is back.'}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="pt-1 flex flex-row md:flex-col items-center gap-2 md:gap-2.5 w-full">

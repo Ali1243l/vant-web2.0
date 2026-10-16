@@ -8,6 +8,7 @@ import Footer from './components/Footer';
 import MasonryGrid from './components/MasonryGrid';
 import ProductDrawer from './components/ProductDrawer';
 import CartDrawer from './components/CartDrawer';
+import ProductStrip from './components/ProductStrip';
 import MobileBottomNav from './components/MobileBottomNav';
 import ImagePreloader from './components/ImagePreloader';
 import BackToTop from './components/BackToTop';
@@ -19,7 +20,7 @@ import { useProducts } from './hooks/useProducts';
 import { useWishlist } from './hooks/useWishlist';
 import { productMatchesQuery } from './lib/search';
 import { CATEGORY_TRANSLATIONS } from './lib/constants';
-import { Heart, Loader2, Check, X, Sparkles, Gift, Percent, Tag, ArrowUpDown, LayoutGrid, Grid2X2, Share2 } from 'lucide-react';
+import { Heart, Loader2, Check, X, Gift, Tag, LayoutGrid, RectangleVertical, Share2 } from 'lucide-react';
 import type { Product, Language, Theme } from './types';
 
 // Admin (charts, newsletter studio, etc.) is a separate chunk so shoppers never download it
@@ -68,6 +69,24 @@ function MainApp() {
     return raw ? raw.split(',').filter(Boolean) : null;
   });
   const [wishlistLinkCopied, setWishlistLinkCopied] = useState(false);
+  const [recentIds, setRecentIds] = useState<string[]>(() => {
+    try {
+      const list = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+      return Array.isArray(list) ? list.map(String) : [];
+    } catch {
+      return [];
+    }
+  });
+  const recentProducts = useMemo(
+    () => recentIds.map((id) => products.find((p) => String(p.id) === id)).filter((p): p is Product => Boolean(p)),
+    [recentIds, products]
+  );
+  const clearRecent = () => {
+    setRecentIds([]);
+    try {
+      localStorage.removeItem(RECENT_KEY);
+    } catch {}
+  };
   const closeSharedWishlist = () => {
     setSharedWishlist(null);
     const url = new URL(window.location.href);
@@ -129,7 +148,19 @@ function MainApp() {
   const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilterType>('all');
   const [isBannerDismissed, setIsBannerDismissed] = useState(false);
   const [catalogSort, setCatalogSort] = useState<CatalogSort>('newest');
-  const [gridLayout, setGridLayout] = useState<'grid-4' | 'grid-2'>('grid-4');
+  const [gridLayout, setGridLayout] = useState<'grid-4' | 'grid-2'>(() => {
+    try {
+      return localStorage.getItem('vant_grid_layout') === 'grid-2' ? 'grid-2' : 'grid-4';
+    } catch {
+      return 'grid-4';
+    }
+  });
+  const changeGridLayout = (layout: 'grid-4' | 'grid-2') => {
+    setGridLayout(layout);
+    try {
+      localStorage.setItem('vant_grid_layout', layout);
+    } catch {}
+  };
 
   // Clear any old sessionStorage flag on mount so the banner returns fresh and re-opens on refresh
   useEffect(() => {
@@ -402,6 +433,13 @@ function MainApp() {
   // Each open product gets its own ?item=<id> URL: shared links open it, and the phone back button closes it
   const openProduct = useCallback((p: Product) => {
     setSelected(p);
+    setRecentIds((prev) => {
+      const next = [String(p.id), ...prev.filter((id) => id !== String(p.id))].slice(0, 12);
+      try {
+        localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
     const url = new URL(window.location.href);
     if (url.searchParams.get('item') === String(p.id)) return;
     url.searchParams.set('item', String(p.id));
@@ -654,6 +692,22 @@ function MainApp() {
           </div>
         )}
 
+        {!isWishlistOnly && !sharedWishlist && !searchQuery.trim() && recentProducts.length >= 2 && (
+          <ProductStrip
+            className="mb-5"
+            compact
+            title={lang === 'ar' ? 'شاهدتها مؤخراً' : 'Recently viewed'}
+            products={recentProducts}
+            lang={lang}
+            onSelect={openProduct}
+            action={
+              <button type="button" onClick={clearRecent} className="min-h-8 rounded-full px-3 text-xs font-semibold text-[#15171c]/70 dark:text-white/70 bg-black/[0.04] dark:bg-white/[0.08] hover:text-[#004ad7] cursor-pointer">
+                {lang === 'ar' ? 'مسح' : 'Clear'}
+              </button>
+            }
+          />
+        )}
+
         {sharedWishlist && (
           <div className="mb-5 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[#004ad7]/20 dark:border-[#3b82f6]/30 bg-[#004ad7]/8 dark:bg-[#3b82f6]/10 px-4 py-3 text-xs sm:text-sm">
             <div className="flex items-center gap-2 text-[#004ad7] dark:text-[#3b82f6] font-medium">
@@ -739,6 +793,41 @@ function MainApp() {
           </div>
         ) : (
           <div id="catalog-grid" className="w-full">
+            {!loading && !isWishlistOnly && !sharedWishlist && (
+              <div className="mb-1 flex items-center justify-between gap-3 px-0.5">
+                <p className="text-sm font-bold text-[#15171c] dark:text-white">
+                  {searchQuery.trim()
+                    ? lang === 'ar' ? `نتائج "${searchQuery.trim()}"` : `Results for "${searchQuery.trim()}"`
+                    : category !== ALL
+                    ? (lang === 'ar' && products.find((p) => p.category === category)?.category_ar) || category
+                    : lang === 'ar' ? 'كل القطع' : 'All pieces'}
+                  <span className="ms-2 text-xs font-medium text-[#6b7280] dark:text-[#9ca3af]">
+                    {lang === 'ar' ? `${visible.length} قطعة` : `${visible.length} pieces`}
+                  </span>
+                </p>
+                <div role="group" aria-label={lang === 'ar' ? 'طريقة العرض' : 'View'} className="flex items-center gap-0.5 rounded-full bg-black/[0.04] dark:bg-white/[0.06] p-0.5">
+                  {([
+                    ['grid-4', LayoutGrid, lang === 'ar' ? 'عرض شبكي' : 'Grid view'],
+                    ['grid-2', RectangleVertical, lang === 'ar' ? 'عرض كبير' : 'Large view'],
+                  ] as const).map(([value, Icon, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => changeGridLayout(value)}
+                      aria-label={label}
+                      aria-pressed={gridLayout === value}
+                      className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors cursor-pointer ${
+                        gridLayout === value
+                          ? 'bg-white dark:bg-[#20242c] text-[#004ad7] dark:text-[#60a5fa] shadow-sm'
+                          : 'text-[#15171c]/50 dark:text-white/50 hover:text-[#15171c] dark:hover:text-white'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <MasonryGrid
               products={visible}
               loading={loading}
@@ -852,6 +941,8 @@ function MainApp() {
     </>
   );
 }
+
+const RECENT_KEY = 'vant_recently_viewed';
 
 export default function App() {
   return (
