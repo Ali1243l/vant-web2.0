@@ -19,6 +19,7 @@ import {
   X,
   ExternalLink,
   Layers,
+  Menu,
 } from 'lucide-react';
 import { useAdminBridge, AdminView } from './useAdminBridge';
 import { Button } from './ui';
@@ -53,6 +54,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
     isCloudSynced,
     refreshProducts,
     syncAllToSupabaseCloud,
+    setIsDrawerOpen,
   } = useAdminBridge();
 
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -166,7 +168,15 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
 
       {/* Left section: Category Pill + View Title */}
       <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-        <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-lg text-[10.5px] font-mono font-bold uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700/60">
+        <button
+          type="button"
+          onClick={() => setIsDrawerOpen(true)}
+          className="lg:hidden -ms-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-200 hover:bg-slate-800 transition-colors cursor-pointer"
+          aria-label={isAr ? 'فتح القائمة' : 'Open menu'}
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+        <span className="hidden xl:inline-flex items-center px-2 py-0.5 rounded-lg text-[10.5px] font-mono font-bold uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700/60">
           {isAr
             ? (activeView === 'products' || activeView === 'sizes' || activeView === 'banners' || activeView === 'welcome_modal'
                 ? 'المشاريع'
@@ -198,7 +208,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
         <button
           type="button"
           onClick={() => setActiveView('widgets')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-xs ${
+          className={`hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-xs ${
             activeView === 'widgets'
               ? 'bg-blue-600/25 text-blue-300 border-blue-500/50 shadow-[0_0_12px_rgba(59,130,246,0.3)]'
               : 'bg-neutral-800/80 hover:bg-neutral-700 text-neutral-200 border-neutral-700 hover:border-blue-500/40'
@@ -322,7 +332,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             size="sm"
             onClick={onOpenProductSheet}
             leftIcon={<Plus className="w-4 h-4" />}
-            className="hidden sm:inline-flex shadow-sm shadow-indigo-900/50"
+            className="max-md:!hidden shadow-sm shadow-indigo-900/50"
           >
             {isAr ? 'منتج جديد' : 'New Product'}
           </Button>
@@ -333,7 +343,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             size="sm"
             onClick={handleNewOfferClick}
             leftIcon={<Plus className="w-4 h-4" />}
-            className="hidden sm:inline-flex shadow-sm shadow-indigo-900/50"
+            className="max-md:!hidden shadow-sm shadow-indigo-900/50"
           >
             {isAr ? 'كود جديد' : 'New Offer'}
           </Button>

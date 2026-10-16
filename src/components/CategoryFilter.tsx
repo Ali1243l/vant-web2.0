@@ -253,7 +253,7 @@ export default function CategoryFilter({
                 }}
                 aria-expanded={isOpen}
                 aria-haspopup="true"
-                className={`flex shrink-0 items-center gap-1.5 md:gap-2 rounded-full h-10 px-3.5 md:px-4 lg:h-10 lg:px-4.5 text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer border shadow-2xs select-none ${
+                className={`flex shrink-0 items-center justify-center gap-1.5 md:gap-2 rounded-full h-10 max-md:w-10 max-md:px-0 px-3.5 md:px-4 lg:h-10 lg:px-4.5 text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer border shadow-2xs select-none ${
                   availability !== 'all' || sort !== 'newest'
                     ? 'border-[#004ad7]/35 dark:border-[#3b82f6]/35 bg-[#004ad7]/10 dark:bg-[#3b82f6]/15 text-[#004ad7] dark:text-[#3b82f6] font-semibold ring-1 ring-[#004ad7]/20 dark:ring-[#3b82f6]/25'
                     : isOpen
@@ -261,15 +261,16 @@ export default function CategoryFilter({
                     : 'bg-black/[0.035] dark:bg-white/[0.06] text-[#6b7280] dark:text-[#9ca3af] hover:text-[#15171c] dark:hover:text-[#f3f4f6] hover:bg-black/[0.06] dark:hover:bg-white/[0.1] border-black/8 dark:border-white/10'
                 }`}
               >
-                <SlidersHorizontal className="h-3.5 w-3.5 opacity-60" />
-                <span>{isAr ? currentOption.label_ar : currentOption.label_en}</span>
+                <SlidersHorizontal className="h-4 w-4 md:h-3.5 md:w-3.5 opacity-70 md:opacity-60" />
+                {/* Icon-only on phones so the category chips get the width */}
+                <span className="max-md:sr-only">{isAr ? currentOption.label_ar : currentOption.label_en}</span>
                 {currentOption.dot && (
                   <span className={`h-1.5 w-1.5 rounded-full ${currentOption.dot}`} />
                 )}
                 <motion.span
                   animate={{ rotate: isOpen ? 180 : 0 }}
                   transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                  className="inline-flex items-center"
+                  className="inline-flex items-center max-md:hidden"
                 >
                   <ChevronDown className="h-3 w-3 opacity-60" />
                 </motion.span>

@@ -306,7 +306,7 @@ export const ProductDrawerGallery: React.FC<ProductDrawerGalleryProps> = ({
                   )}
 
                   {(imgSrc || product?.image_url)?.trim() ? (
-                    <MobileTouchZoom zoomFactor={1.85} className="relative flex items-center justify-center max-h-full max-w-full w-full h-full">
+                    <MobileTouchZoom zoomFactor={2.2} className="relative flex items-center justify-center max-h-full max-w-full w-full h-full">
                       <Lens zoomFactor={1.5} lensSize={130} className="relative flex items-center justify-center max-h-full max-w-full">
                         <img
                           src={(imgSrc || product?.image_url)!.trim()}

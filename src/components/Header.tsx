@@ -100,22 +100,23 @@ export default function Header({
   const progress = useTransform(scrollY, [0, 80], [0, 1], { clamp: true });
   const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches);
   const [isSm, setIsSm] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 640px)').matches);
+  const [viewportWidth, setViewportWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1440));
   useEffect(() => {
-    const md = window.matchMedia('(min-width: 768px)');
-    const sm = window.matchMedia('(min-width: 640px)');
-    const onChange = () => {
-      setIsDesktop(md.matches);
-      setIsSm(sm.matches);
+    const onResize = () => {
+      setIsDesktop(window.matchMedia('(min-width: 768px)').matches);
+      setIsSm(window.matchMedia('(min-width: 640px)').matches);
+      setViewportWidth(window.innerWidth);
     };
-    md.addEventListener('change', onChange);
-    sm.addEventListener('change', onChange);
-    return () => {
-      md.removeEventListener('change', onChange);
-      sm.removeEventListener('change', onChange);
-    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
   // Floating pill only from tablet up; on phones a pill squeezes the content, so the bar stays edge to edge
-  const barWidth = useTransform(progress, (v) => (isDesktop ? `${100 - 6 * v}%` : '100%'));
+  // Edge to edge at the top; narrows to a pill capped at 1440px as you scroll, and back again on the way up
+  const barWidth = useTransform(progress, (v) => {
+    if (!isDesktop) return '100%';
+    const cap = Math.max(viewportWidth, 1440);
+    return `min(${100 - 6 * v}%, ${cap - (cap - 1440) * v}px)`;
+  });
   const barRadius = useTransform(progress, (v) => (isDesktop ? 24 * v : 0));
   const barY = useTransform(progress, (v) => (isDesktop ? 8 * v : 0));
   const barShadow = useTransform(progress, (v) => `0 12px 36px -10px rgba(0,0,0,${0.12 * v}), 0 2px 6px rgba(0,0,0,${0.04 * v})`);
@@ -171,18 +172,17 @@ export default function Header({
             y: barY,
             boxShadow: barShadow,
           }}
-          className="mx-auto max-w-7xl xl:max-w-[1440px] backdrop-blur-md transition-colors"
+          className="mx-auto backdrop-blur-md transition-colors max-md:border-x-0 max-md:border-t-0"
         >
-          <div className="mx-auto w-full px-3 sm:px-6 overflow-visible">
+          <div className="mx-auto w-full max-w-[1440px] px-3 sm:px-6 overflow-visible">
             {/* 1. Resizable Top Navigation Bar */}
             <motion.div
-              dir="ltr"
-              style={{ direction: 'ltr', height: topRowHeight }}
+              style={{ direction: isDesktop ? 'ltr' : undefined, height: topRowHeight }}
               className="flex items-center justify-between w-full"
             >
               {/* Left Actions (Search Icon, Shopping Cart, Wishlist) */}
               {/* On phones these actions live in MobileBottomNav; invisible keeps the logo centred */}
-              <div className="flex items-center justify-start gap-1.5 sm:gap-2.5 min-w-[110px] sm:min-w-[140px] [direction:ltr] max-md:invisible">
+              <div className="flex items-center justify-start gap-1.5 sm:gap-2.5 min-w-[110px] sm:min-w-[140px] [direction:ltr] max-md:hidden">
                 {searchControl.visible && (
                   <button
                     type="button"
@@ -283,7 +283,7 @@ export default function Header({
               )}
 
               {/* Right Actions (Lang, Theme) */}
-              <div className="flex items-center justify-end gap-1.5 sm:gap-2.5 min-w-[80px] sm:min-w-[110px] [direction:ltr]">
+              <div className="flex items-center justify-end gap-1.5 sm:gap-2.5 md:min-w-[110px] [direction:ltr]">
                 {themeControl.visible && (
                   <button
                     type="button"

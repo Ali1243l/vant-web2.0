@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, animate, useMotionValue, useTransform } from 'framer-motion';
 import { X } from 'lucide-react';
 import type { Product, Language } from '../types';
 import { DEFAULT_WHATSAPP_PHONE } from '../lib/constants';
@@ -400,6 +400,43 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
 
   const isOpen = Boolean(product || loading);
 
+  // Phones: pull the page down from its top to close it, like a native sheet
+  const dragY = useMotionValue(0);
+  const backdropOpacity = useTransform(dragY, [0, 400], [1, 0.25]);
+  const swipeRef = useRef<{ x: number; y: number; active: boolean } | null>(null);
+  useEffect(() => {
+    // Only on open: resetting on close would snap the sheet back up mid exit
+    if (product) dragY.set(0);
+  }, [product, dragY]);
+
+  const onPanelTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (window.innerWidth >= 768 || e.touches.length !== 1 || e.currentTarget.scrollTop > 0) return;
+    swipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, active: false };
+  };
+  const onPanelTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const s = swipeRef.current;
+    if (!s) return;
+    const dx = e.touches[0].clientX - s.x;
+    const dy = e.touches[0].clientY - s.y;
+    if (!s.active) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      // Sideways is the gallery, upwards is normal scrolling
+      if (dy <= 0 || Math.abs(dx) > Math.abs(dy) || e.currentTarget.scrollTop > 0) {
+        swipeRef.current = null;
+        return;
+      }
+      s.active = true;
+    }
+    dragY.set(Math.max(0, dy));
+  };
+  const onPanelTouchEnd = () => {
+    const s = swipeRef.current;
+    swipeRef.current = null;
+    if (!s?.active) return;
+    if (dragY.get() > 110) onClose();
+    else animate(dragY, 0, { type: 'spring', stiffness: 420, damping: 36 });
+  };
+
   return (
     <AnimatePresence>
       {loading && !product && (
@@ -414,11 +451,13 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-md"
-          />
+            className="fixed inset-0 z-[1000]"
+          >
+            <motion.div style={{ opacity: backdropOpacity }} className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+          </motion.div>
 
           {/* 2. Modal Wrapper: Centered Modal on Desktop (fixed inset-0 flex items-center justify-center), Bottom Sheet on Mobile */}
-          <div className="fixed inset-0 z-[1001] flex items-end md:items-center justify-center p-0 md:p-6 lg:p-8 pointer-events-none">
+          <motion.div style={{ y: dragY }} className="fixed inset-0 z-[1001] flex items-end md:items-center justify-center p-0 md:p-6 lg:p-8 pointer-events-none">
             <motion.div
               key={`drawer-panel-${product.id}`}
               role="dialog"
@@ -428,8 +467,14 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: '100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="pointer-events-auto relative z-10 flex flex-col md:flex-row w-full max-w-5xl lg:max-w-6xl h-[100dvh] max-sm:pt-[env(safe-area-inset-top)] sm:h-[90vh] md:h-[84vh] md:max-h-[800px] bg-[#f8f9fa] dark:bg-[#0d0f12] border-t md:border border-black/10 dark:border-white/10 sm:rounded-t-[32px] md:rounded-[32px] overflow-y-auto md:overflow-hidden no-scrollbar shadow-2xl"
+              className="pointer-events-auto relative z-10 flex flex-col md:flex-row w-full max-w-5xl lg:max-w-6xl h-[100dvh] max-sm:pt-[env(safe-area-inset-top)] sm:h-[90vh] md:h-[84vh] md:max-h-[800px] bg-[#f8f9fa] dark:bg-[#0d0f12] border-t md:border border-black/10 dark:border-white/10 sm:rounded-t-[32px] md:rounded-[32px] overflow-y-auto overscroll-contain md:overflow-hidden no-scrollbar shadow-2xl"
+              onTouchStart={onPanelTouchStart}
+              onTouchMove={onPanelTouchMove}
+              onTouchEnd={onPanelTouchEnd}
+              onTouchCancel={onPanelTouchEnd}
             >
+              {/* Pull-down hint on phones */}
+              <div aria-hidden="true" className="md:hidden absolute top-[calc(0.45rem+env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-40 h-1 w-10 rounded-full bg-black/20 dark:bg-white/25" />
 
               {/* Close Button */}
               <button
@@ -557,7 +602,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                 </div>
               </div>
             </motion.div>
-          </div>
+          </motion.div>
 
           {/* Share Modal Dialog */}
           <ShareModal

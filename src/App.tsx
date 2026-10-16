@@ -459,7 +459,7 @@ function MainApp() {
         </>
       ) : (
         <div
-          className={`relative min-h-[100dvh] w-full max-w-full overflow-x-clip flex flex-col font-sans max-md:pb-[calc(3.5rem+env(safe-area-inset-bottom))] transition-colors duration-300 ${
+          className={`relative min-h-[100dvh] w-full max-w-full overflow-x-clip flex flex-col font-sans max-md:pb-[calc(3.75rem+env(safe-area-inset-bottom))] transition-colors duration-300 ${
             theme === 'dark' ? 'bg-[#0d0f12] text-[#f3f4f6]' : 'bg-[#f8f9fa] text-[#15171c]'
           }`}
         >

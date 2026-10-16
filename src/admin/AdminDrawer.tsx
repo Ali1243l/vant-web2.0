@@ -11,10 +11,7 @@ export const AdminDrawer: React.FC<AdminDrawerProps> = ({ onClose }) => {
   const { isDrawerOpen, setIsDrawerOpen, lang } = useAdminBridge();
   const isAr = lang === 'ar';
 
-  const handleClose = () => {
-    setIsDrawerOpen(false);
-    if (onClose) onClose();
-  };
+  const handleClose = () => setIsDrawerOpen(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -33,7 +30,7 @@ export const AdminDrawer: React.FC<AdminDrawerProps> = ({ onClose }) => {
   if (!isDrawerOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden lg:hidden" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[70] overflow-hidden lg:hidden" role="dialog" aria-modal="true">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm transition-opacity duration-300"
@@ -62,7 +59,7 @@ export const AdminDrawer: React.FC<AdminDrawerProps> = ({ onClose }) => {
 
         {/* Drawer navigation */}
         <div className="flex-1 overflow-y-auto">
-          <Nav onItemClick={handleClose} collapsed={false} />
+          <Nav onItemClick={handleClose} collapsed={false} onCloseAdmin={onClose} />
         </div>
       </div>
     </div>

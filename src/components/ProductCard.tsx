@@ -29,6 +29,9 @@ const cardVariants: Variants = {
   },
 };
 
+const MIN_RATIO = 0.6;
+const MAX_RATIO = 1.25;
+
 /**
  * Resolves a 100% stable, deterministic aspect ratio (never changes after initial render).
  * This completely prevents layout shifts, column reflows, and jumping during fast scrolling.
@@ -47,7 +50,7 @@ function getDeterministicAspectRatio(
   // 2. Explicit dimensions from database if within luxury lookbook bounds
   if (width && height && width > 0 && height > 0) {
     const val = width / height;
-    if (val >= 0.7 && val <= 1.05) {
+    if (val >= MIN_RATIO && val <= MAX_RATIO) {
       return { aspectRatio: `${width} / ${height}` };
     }
   }
@@ -57,9 +60,11 @@ function getDeterministicAspectRatio(
     const parts = naturalRatio.split('/').map((s) => parseFloat(s.trim()));
     if (parts.length === 2 && parts[0] > 0 && parts[1] > 0) {
       const val = parts[0] / parts[1];
-      if (val >= 0.7 && val <= 1.05) {
+      if (val >= MIN_RATIO && val <= MAX_RATIO) {
         return { aspectRatio: naturalRatio };
       }
+      // Out-of-range photos are clamped rather than dropped to 3:4, so each card still follows its image
+      return { aspectRatio: String(Math.min(MAX_RATIO, Math.max(MIN_RATIO, val))) };
     }
   }
 
@@ -315,13 +320,13 @@ export default React.memo(function ProductCard({
           {cardBadgeControl.visible && (
             <div className="absolute top-2.5 sm:top-3 ltr:left-2.5 rtl:right-2.5 ltr:sm:left-3 rtl:sm:right-3 z-20 flex flex-col items-start gap-1 pointer-events-none select-none">
               {discountPct && (
-                <span className="inline-flex items-center rounded-full bg-[#004ad7] px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9.5px] sm:text-[10.5px] font-black text-white shadow-sm shadow-[#004ad7]/30 border border-white/20">
+                <span className="inline-flex items-center rounded-full bg-[#004ad7] px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10.5px] font-black text-white shadow-sm shadow-[#004ad7]/30 border border-white/20">
                   %{discountPct}-
                 </span>
               )}
               {statusBadge && (
                 <span
-                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9px] sm:text-[10px] font-semibold tracking-wide border shadow-2xs ${statusBadge.classes}`}
+                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-[10.5px] font-semibold tracking-wide border shadow-2xs ${statusBadge.classes}`}
                 >
                   <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusBadge.dot}`} />
                   <span>{statusBadge.text}</span>
@@ -360,7 +365,7 @@ export default React.memo(function ProductCard({
               aria-expanded={sizes.length > 1 ? isPickingSize : undefined}
               aria-label={isAr ? `إضافة سريعة للسلة: ${displayTitle}` : `Quick add to cart: ${displayTitle}`}
               title={isAr ? 'إضافة سريعة' : 'Quick add'}
-              className={`absolute bottom-2.5 sm:bottom-3 ltr:right-2.5 rtl:left-2.5 ltr:sm:right-3 rtl:sm:left-3 z-20 flex h-9 w-9 before:absolute before:-inset-1 md:h-10 md:w-10 items-center justify-center rounded-full border shadow-2xs transition-all duration-200 active:scale-90 hover:scale-105 cursor-pointer ${
+              className={`max-md:hidden absolute bottom-2.5 sm:bottom-3 ltr:right-2.5 rtl:left-2.5 ltr:sm:right-3 rtl:sm:left-3 z-20 flex h-9 w-9 before:absolute before:-inset-1 md:h-10 md:w-10 items-center justify-center rounded-full border shadow-2xs transition-all duration-200 active:scale-90 hover:scale-105 cursor-pointer ${
                 justAdded
                   ? 'bg-emerald-600 border-emerald-600 text-white'
                   : 'bg-white/90 dark:bg-[#12141a]/90 text-[#15171c] dark:text-white border-black/8 dark:border-white/12 hover:text-[#004ad7] dark:hover:text-[#3b82f6]'
@@ -417,7 +422,7 @@ export default React.memo(function ProductCard({
           {/* 1. Category name - Subtle, smaller, refined grayish color */}
           {cardCategoryControl.visible && (
             <div className="flex items-center rtl:justify-start ltr:justify-start">
-              <span className="text-[11px] sm:text-xs md:text-[12.5px] font-medium text-black/45 dark:text-white/45 tracking-tight line-clamp-1">
+              <span className="text-xs md:text-[12.5px] font-medium text-black/50 dark:text-white/45 tracking-tight line-clamp-1">
                 {CATEGORY_TRANSLATIONS[product.category]?.[lang] ?? (lang === 'ar' && product.category_ar ? product.category_ar : product.category)}
               </span>
             </div>
@@ -425,7 +430,7 @@ export default React.memo(function ProductCard({
 
           {/* 2. Product Name - Prominent, strong visual weight */}
           <div className="flex items-start rtl:justify-start ltr:justify-start">
-            <h3 className="text-sm sm:text-[15px] md:text-base lg:text-[17px] font-extrabold text-[#15171c] dark:text-white leading-snug line-clamp-2 group-hover:text-[#004ad7] dark:group-hover:text-[#3b82f6] transition-colors">
+            <h3 className="text-[15px] md:text-base lg:text-[17px] font-extrabold text-[#15171c] dark:text-white leading-snug line-clamp-2 group-hover:text-[#004ad7] dark:group-hover:text-[#3b82f6] transition-colors">
               {displayTitle}
             </h3>
           </div>
@@ -433,11 +438,11 @@ export default React.memo(function ProductCard({
           {/* 3. Price - Bold, distinct signature blue */}
           {cardPriceControl.visible && (
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 pt-0.5 rtl:justify-start ltr:justify-start">
-              <span className="font-mono font-black text-sm sm:text-base md:text-[17px] lg:text-lg text-[#004ad7] dark:text-[#3b82f6] tabular-nums tracking-tight whitespace-nowrap">
+              <span className="font-mono font-black text-[15px] sm:text-base md:text-[17px] lg:text-lg text-[#004ad7] dark:text-[#3b82f6] tabular-nums tracking-tight whitespace-nowrap">
                 {formatPrice(activeVariant.price)}
               </span>
               {product.is_offer && product.original_price && product.original_price > activeVariant.price && (
-                <span className="text-[11px] sm:text-xs md:text-[13px] text-black/35 dark:text-white/35 line-through tabular-nums font-mono whitespace-nowrap">
+                <span className="text-xs md:text-[13px] text-black/40 dark:text-white/35 line-through tabular-nums font-mono whitespace-nowrap">
                   {formatPrice(product.original_price)}
                 </span>
               )}

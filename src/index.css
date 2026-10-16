@@ -126,3 +126,12 @@ html.dark ::-webkit-scrollbar-thumb {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 74, 215, 0.4);
 }
+
+/* iOS zooms the page into any field with text under 16px; keep phones at 16px so focusing never zooms */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
