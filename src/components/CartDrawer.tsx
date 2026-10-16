@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, ShoppingBag, X, Plus, Minus, Trash2, MessageCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import type { Language } from '../types';
@@ -19,6 +19,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
 
   const [cartItems, setCartItems] = useState<CartItem[]>(readCart);
   const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     // Rewrite once so the stored count matches after invalid legacy lines are dropped
@@ -27,6 +28,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
     window.addEventListener('vant-cart-update', handleUpdate);
     return () => window.removeEventListener('vant-cart-update', handleUpdate);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const opener = document.activeElement as HTMLElement | null;
+    closeButtonRef.current?.focus();
+    return () => opener?.focus?.();
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -135,7 +143,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
               <button
                 type="button"
                 onClick={onClose}
-                autoFocus
+                ref={closeButtonRef}
                 className="flex h-11 w-11 items-center justify-center rounded-full bg-black/5 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 hover:bg-black/10 dark:hover:bg-white/20 transition-all cursor-pointer"
                 aria-label={isAr ? 'إغلاق السلة' : 'Close cart'}
               >

@@ -196,9 +196,19 @@ export default React.memo(function ProductCard({
       animate="visible"
       variants={cardVariants}
       data-preload-product-id={product.id}
-      className="group cursor-pointer relative select-none touch-manipulation transform-gpu flex flex-col h-full"
+      className="group cursor-pointer relative rounded-2xl outline-none focus-visible:after:absolute focus-visible:after:inset-0 focus-visible:after:z-30 focus-visible:after:rounded-2xl focus-visible:after:pointer-events-none focus-visible:after:ring-3 focus-visible:after:ring-inset focus-visible:after:ring-[#004ad7] dark:focus-visible:after:ring-[#3b82f6] select-none touch-manipulation transform-gpu flex flex-col h-full"
       style={{ contain: 'paint layout', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
       onClick={handleCardClick}
+      role="button"
+      tabIndex={0}
+      aria-label={displayTitle}
+      onKeyDown={(e) => {
+        // Only the card itself; Enter on the inner wishlist button must not open the drawer
+        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          handleCardClick();
+        }
+      }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >

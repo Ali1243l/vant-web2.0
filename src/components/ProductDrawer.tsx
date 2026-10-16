@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import type { Product, Language } from '../types';
@@ -41,6 +41,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
 
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [sizeFeedback, setSizeFeedback] = useState<string | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [copiedTitle, setCopiedTitle] = useState(false);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -363,6 +364,14 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     }
   };
 
+  // Return keyboard focus to whatever opened the drawer (usually the product card)
+  useEffect(() => {
+    if (!product) return;
+    const opener = document.activeElement as HTMLElement | null;
+    closeButtonRef.current?.focus();
+    return () => opener?.focus?.();
+  }, [product?.id]);
+
   useEffect(() => {
     if (!product) return;
     const prevBodyOverflow = document.body.style.overflow;
@@ -412,6 +421,9 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
           <div className="fixed inset-0 z-[1001] flex items-end md:items-center justify-center p-0 md:p-6 lg:p-8 pointer-events-none">
             <motion.div
               key={`drawer-panel-${product.id}`}
+              role="dialog"
+              aria-modal="true"
+              aria-label={displayTitle}
               initial={{ y: '100%', opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: '100%', opacity: 0 }}
@@ -427,6 +439,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
               <button
                 type="button"
                 onClick={onClose}
+                ref={closeButtonRef}
                 className="absolute top-2.5 right-3 rtl:right-auto rtl:left-3 md:top-4.5 md:right-4.5 md:rtl:right-auto md:rtl:left-4.5 z-50 p-2 sm:p-2.5 bg-white/90 dark:bg-[#1a1e28]/90 hover:bg-white dark:hover:bg-[#1a1e28] rounded-full hover:scale-105 transition-all cursor-pointer backdrop-blur-md border border-black/6 dark:border-white/10 shadow-xs text-black dark:text-white"
                 aria-label={lang === 'ar' ? 'إغلاق' : 'Close'}
               >
