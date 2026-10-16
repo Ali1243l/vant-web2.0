@@ -7,7 +7,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": "(?i).*(whatsapp|facebookexternalhit|facebot|instagram|telegrambot|twitterbot|slackbot|discordbot|linkedinbot|snapchat|pinterest|skypeuripreview|viber|applebot|googlebot|bingbot).*"
+          "value": ".*(WhatsApp|facebookexternalhit|Facebot|TelegramBot|Twitterbot|Slackbot|Discordbot|LinkedInBot|Pinterestbot|SkypeUriPreview|Applebot|Googlebot|bingbot).*"
         }
       ],
       "destination": "/api/product-preview"
