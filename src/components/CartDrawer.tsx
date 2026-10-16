@@ -1,19 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, X, Plus, Minus, Trash2, MessageCircle, ArrowRight, ArrowLeft } from 'lucide-react';
+import { ShoppingCart, ShoppingBag, X, Plus, Minus, Trash2, MessageCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import type { Language } from '../types';
 import { DEFAULT_WHATSAPP_PHONE } from '../lib/constants';
 import { useSiteControls } from '../context/SiteControlsContext';
-
-export interface CartItem {
-  id: string;
-  title: string;
-  image: string;
-  price: number;
-  quantity: number;
-  size?: string;
-  color?: string;
-}
+import { readCart, writeCart, cartTotal, type CartItem } from '../lib/cart';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -26,28 +17,23 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
   const whatsappPhoneControl = getControl('cfg_whatsapp_phone');
   const whatsappPhone = whatsappPhoneControl?.actionValue || whatsappPhoneControl?.label_en || DEFAULT_WHATSAPP_PHONE;
 
-  const [cartItems, setCartItems] = useState<CartItem[]>(() => {
-    try {
-      const raw = localStorage.getItem('vant_cart_items');
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const syncCartState = () => {
-    try {
-      const raw = localStorage.getItem('vant_cart_items');
-      setCartItems(raw ? JSON.parse(raw) : []);
-    } catch {}
-  };
+  const [cartItems, setCartItems] = useState<CartItem[]>(readCart);
+  const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    syncCartState();
-    const handleUpdate = () => syncCartState();
+    // Rewrite once so the stored count matches after invalid legacy lines are dropped
+    writeCart(readCart());
+    const handleUpdate = () => setCartItems(readCart());
     window.addEventListener('vant-cart-update', handleUpdate);
     return () => window.removeEventListener('vant-cart-update', handleUpdate);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
 
   const isAr = lang === 'ar';
 
@@ -77,16 +63,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
     saveAndNotify([]);
   };
 
-  const saveAndNotify = (items: CartItem[]) => {
-    try {
-      localStorage.setItem('vant_cart_items', JSON.stringify(items));
-      const totalCount = items.reduce((acc, curr) => acc + curr.quantity, 0);
-      localStorage.setItem('vant_cart_count', totalCount.toString());
-      window.dispatchEvent(new CustomEvent('vant-cart-update', { detail: { count: totalCount, items } }));
-    } catch {}
-  };
+  const saveAndNotify = writeCart;
 
-  const totalPrice = cartItems.reduce((sum, item) => sum + (item.price || 45000) * item.quantity, 0);
+  const totalPrice = cartTotal(cartItems);
   const totalCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   const generateWhatsAppUrl = () => {
@@ -97,7 +76,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
       : `Hello, I would like to order the following items from the collection:\n\n`;
 
     cartItems.forEach((item, idx) => {
-      const priceStr = formatPrice ? formatPrice(item.price || 45000) : `${((item.price || 45000) * item.quantity).toLocaleString()} د.ع`;
+      const subtotal = item.price * item.quantity;
+      const priceStr = formatPrice ? formatPrice(subtotal) : `${subtotal.toLocaleString()} د.ع`;
       text += `${idx + 1}. *${item.title}*\n`;
       if (item.size) text += `   - ${isAr ? 'المقاس' : 'Size'}: ${item.size}\n`;
       if (item.color) text += `   - ${isAr ? 'اللون' : 'Color'}: ${item.color}\n`;
@@ -127,6 +107,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
 
           {/* Drawer Panel */}
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cart-drawer-title"
             initial={{ x: isAr ? '-100%' : '100%' }}
             animate={{ x: 0 }}
             exit={{ x: isAr ? '-100%' : '100%' }}
@@ -140,7 +123,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
                   <ShoppingCart className="h-5 w-5 stroke-[2.2]" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold tracking-wide">
+                  <h2 id="cart-drawer-title" className="text-base font-bold tracking-wide">
                     {isAr ? 'سلة التسوق' : 'Shopping Cart'}
                   </h2>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -152,8 +135,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-black/5 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 hover:bg-black/10 dark:hover:bg-white/20 transition-all cursor-pointer"
-                aria-label="Close cart"
+                autoFocus
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-black/5 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 hover:bg-black/10 dark:hover:bg-white/20 transition-all cursor-pointer"
+                aria-label={isAr ? 'إغلاق السلة' : 'Close cart'}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -185,8 +169,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
                 </div>
               ) : (
                 cartItems.map((item) => {
-                  const itemPrice = item.price || 45000;
-                  const itemSubtotal = itemPrice * item.quantity;
+                  const itemSubtotal = item.price * item.quantity;
                   const formattedSubtotal = formatPrice ? formatPrice(itemSubtotal) : `${itemSubtotal.toLocaleString()} د.ع`;
 
                   return (
@@ -194,13 +177,20 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
                       key={item.id}
                       className="flex items-center gap-3.5 p-3 rounded-2xl border border-black/8 dark:border-white/10 bg-zinc-50/60 dark:bg-[#181b26] transition-all hover:border-[#004ad7]/30"
                     >
-                      <img
-                        src={item.image}
-                        alt={item.title}
-                        className="h-16 w-14 rounded-xl object-cover border border-black/10 dark:border-white/10 shrink-0"
-                      />
+                      {item.image && !brokenImages.has(item.id) ? (
+                        <img
+                          src={item.image}
+                          alt={item.title}
+                          onError={() => setBrokenImages((prev) => new Set(prev).add(item.id))}
+                          className="h-20 w-16 rounded-xl object-cover border border-black/10 dark:border-white/10 shrink-0"
+                        />
+                      ) : (
+                        <div className="flex h-20 w-16 items-center justify-center rounded-xl border border-black/10 dark:border-white/10 bg-zinc-100 dark:bg-zinc-800 text-zinc-400 shrink-0">
+                          <ShoppingBag className="h-6 w-6 stroke-[1.5]" aria-hidden="true" />
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                        <h4 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 line-clamp-2">
                           {item.title}
                         </h4>
                         {(item.size || item.color) && (
@@ -220,19 +210,20 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
                         <button
                           type="button"
                           onClick={() => removeItem(item.id)}
-                          className="text-zinc-400 hover:text-red-500 p-1 transition-colors cursor-pointer"
-                          title={isAr ? 'حذف من السلة' : 'Remove item'}
+                          className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-400 hover:text-red-500 transition-colors cursor-pointer"
+                          aria-label={isAr ? 'حذف من السلة' : 'Remove item'}
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
 
                         <div className="flex items-center rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#12151e] p-0.5">
                           <button
                             type="button"
                             onClick={() => updateQuantity(item.id, -1)}
-                            className="flex h-6 w-6 items-center justify-center rounded-lg text-zinc-600 dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
+                            aria-label={isAr ? 'تقليل الكمية' : 'Decrease quantity'}
+                            className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-600 dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
                           >
-                            <Minus className="h-3 w-3" />
+                            <Minus className="h-3.5 w-3.5" />
                           </button>
                           <span className="px-2 text-xs font-bold font-mono">
                             {item.quantity}
@@ -240,9 +231,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
                           <button
                             type="button"
                             onClick={() => updateQuantity(item.id, 1)}
-                            className="flex h-6 w-6 items-center justify-center rounded-lg text-zinc-600 dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
+                            aria-label={isAr ? 'زيادة الكمية' : 'Increase quantity'}
+                            className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-600 dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
                           >
-                            <Plus className="h-3 w-3" />
+                            <Plus className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       </div>

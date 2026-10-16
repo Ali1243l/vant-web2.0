@@ -322,6 +322,21 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     }
   };
 
+  const canAddToCart = () => {
+    if (renderedSizes.length === 0 || (selectedSize && availableSizes.has(selectedSize.toUpperCase()))) return true;
+    setSizeFeedback(
+      lang === 'ar'
+        ? selectedSize
+          ? `المقاس (${selectedSize}) غير متوفر حالياً — اختر مقاساً آخر أو اطلبه عبر واتساب`
+          : 'اختر المقاس أولاً حتى نضيف القطعة للسلة'
+        : selectedSize
+        ? `Size (${selectedSize}) is unavailable — pick another size or request it via WhatsApp`
+        : 'Please choose a size first'
+    );
+    document.getElementById('product-size-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return false;
+  };
+
   const handleSizeClick = (size: string) => {
     setSelectedSize(size);
     if (product) {
@@ -524,6 +539,10 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                       selectedSize={selectedSize}
                       buttonLabel={buttonLabel}
                       lang={lang}
+                      price={activePrice}
+                      colorLabel={activeVariant && variantInfo?.hasMultipleColors ? (lang === 'ar' ? activeVariant.colorNameAr : activeVariant.colorNameEn) : undefined}
+                      image={images[0]}
+                      canAddToCart={canAddToCart}
                     />
                   </div>
                 </div>

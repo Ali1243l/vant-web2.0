@@ -18,6 +18,10 @@ interface ProductOrderButtonProps {
   selectedSize: string | null;
   buttonLabel: string;
   lang: Language;
+  price: number;
+  colorLabel?: string;
+  image?: string;
+  canAddToCart: () => boolean;
 }
 
 export const ProductOrderButton: React.FC<ProductOrderButtonProps> = ({
@@ -27,6 +31,10 @@ export const ProductOrderButton: React.FC<ProductOrderButtonProps> = ({
   displayTitle,
   selectedSize,
   lang,
+  price,
+  colorLabel,
+  image,
+  canAddToCart,
 }) => {
   const [isOrdering, setIsOrdering] = useState(false);
 
@@ -71,8 +79,13 @@ export const ProductOrderButton: React.FC<ProductOrderButtonProps> = ({
       {/* 1. Primary Action: Add to Cart with Fly Animation & Counter */}
       <div className="flex-1 w-full min-w-0">
         <CartInteractionWrapper
+          productId={product?.id}
           productTitle={displayTitle || product?.title}
-          productImage={product?.image_url}
+          productImage={image || product?.image_url}
+          price={price}
+          size={selectedSize}
+          color={colorLabel}
+          canAdd={canAddToCart}
           lang={lang}
           onAddToCart={handleAddToCartTrack}
         >

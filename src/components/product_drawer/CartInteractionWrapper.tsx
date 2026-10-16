@@ -1,8 +1,9 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Minus, ShoppingCart, Trash2 } from 'lucide-react';
 import { useSiteControls } from '../../context/SiteControlsContext';
 import type { Language } from '../../types';
+import { readCart, writeCart, cartLineKey } from '../../lib/cart';
 
 interface FlyingThumbnail {
   id: string;
@@ -15,12 +16,18 @@ interface FlyingThumbnail {
 
 interface CartInteractionWrapperProps {
   children?: React.ReactNode;
+  productId?: string | number;
   productTitle?: string;
   productImage?: string;
+  /** Unit price actually charged (after discount / variant pricing) */
+  price: number;
+  size?: string | null;
+  color?: string;
+  /** Return false to block adding (e.g. no size picked); the caller shows why */
+  canAdd?: () => boolean;
   lang?: Language;
   onAddToCart?: () => void;
   onQuantityChange?: (qty: number) => void;
-  initialQuantity?: number;
   /** Force enable or override context site control */
   overrideEnableAnimation?: boolean;
   /** Optional custom CSS selector for cart target element */
@@ -30,12 +37,16 @@ interface CartInteractionWrapperProps {
 
 export const CartInteractionWrapper: React.FC<CartInteractionWrapperProps> = ({
   children,
+  productId,
   productTitle = '',
   productImage = '',
+  price,
+  size,
+  color,
+  canAdd,
   lang = 'ar',
   onAddToCart,
   onQuantityChange,
-  initialQuantity = 0,
   overrideEnableAnimation,
   cartTargetSelector,
   className = '',
@@ -54,17 +65,24 @@ export const CartInteractionWrapper: React.FC<CartInteractionWrapperProps> = ({
       ? cartAnimControl.enabled !== false && cartAnimControl.visible !== false
       : true;
 
-  if (!isButtonVisible) {
-    return null;
-  }
+  const itemTitle = productTitle || 'قطعة مميزة من التشكيلة';
+  const lineKey = cartLineKey(productId ?? itemTitle, size, color);
 
-  const [quantity, setQuantity] = useState<number>(initialQuantity);
+  const [quantity, setQuantity] = useState<number>(0);
   const [flyingItems, setFlyingItems] = useState<FlyingThumbnail[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // The counter mirrors the cart line for the current size/color, so switching size shows that line's quantity
+  useEffect(() => {
+    const sync = () => setQuantity(readCart().find((i) => i.key === lineKey)?.quantity ?? 0);
+    sync();
+    window.addEventListener('vant-cart-update', sync);
+    return () => window.removeEventListener('vant-cart-update', sync);
+  }, [lineKey]);
+
   const triggerFlyAnimation = useCallback(
     (e?: React.MouseEvent) => {
-      if (!isAnimationEnabled) return;
+      if (!isAnimationEnabled || !productImage) return;
 
       let startX = window.innerWidth / 2;
       let startY = window.innerHeight / 2;
@@ -102,53 +120,31 @@ export const CartInteractionWrapper: React.FC<CartInteractionWrapperProps> = ({
       }
 
       const itemId = `fly-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-      const fallbackImage =
-        productImage ||
-        'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?q=80&w=200&auto=format&fit=crop';
-
-      setFlyingItems((prev) => [
-        ...prev,
-        {
-          id: itemId,
-          startX,
-          startY,
-          endX,
-          endY,
-          imgUrl: fallbackImage,
-        },
-      ]);
+      setFlyingItems((prev) => [...prev, { id: itemId, startX, startY, endX, endY, imgUrl: productImage }]);
     },
     [isAnimationEnabled, productImage, cartTargetSelector]
   );
 
-  const updateGlobalCartCount = (delta: number) => {
-    try {
-      const raw = localStorage.getItem('vant_cart_items');
-      let items: any[] = raw ? JSON.parse(raw) : [];
-      const itemTitle = productTitle || 'قطعة مميزة من التشكيلة';
-      const itemImage = productImage || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?q=80&w=200&auto=format&fit=crop';
-
-      const idx = items.findIndex((i: any) => i.title === itemTitle);
-      if (idx >= 0) {
-        items[idx].quantity += delta;
-        if (items[idx].quantity <= 0) {
-          items.splice(idx, 1);
-        }
-      } else if (delta > 0) {
-        items.push({
-          id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-          title: itemTitle,
-          image: itemImage,
-          price: 45000,
-          quantity: delta,
-        });
-      }
-
-      localStorage.setItem('vant_cart_items', JSON.stringify(items));
-      const nextCount = items.reduce((sum: number, curr: any) => sum + curr.quantity, 0);
-      localStorage.setItem('vant_cart_count', nextCount.toString());
-      window.dispatchEvent(new CustomEvent('vant-cart-update', { detail: { count: nextCount, items } }));
-    } catch {}
+  const updateGlobalCart = (delta: number) => {
+    const items = readCart();
+    const idx = items.findIndex((i) => i.key === lineKey);
+    if (idx >= 0) {
+      items[idx].quantity += delta;
+      if (items[idx].quantity <= 0) items.splice(idx, 1);
+    } else if (delta > 0) {
+      items.push({
+        id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        key: lineKey,
+        productId,
+        title: itemTitle,
+        image: productImage,
+        price,
+        quantity: delta,
+        ...(size ? { size } : {}),
+        ...(color ? { color } : {}),
+      });
+    }
+    writeCart(items);
   };
 
   const removeFlyingItem = useCallback((id: string) => {
@@ -160,9 +156,10 @@ export const CartInteractionWrapper: React.FC<CartInteractionWrapperProps> = ({
   const handleIncrement = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    if (canAdd && !canAdd()) return;
     const nextQty = quantity + 1;
     setQuantity(nextQty);
-    updateGlobalCartCount(1);
+    updateGlobalCart(1);
     if (quantity === 0) {
       if (onAddToCart) onAddToCart();
     }
@@ -176,13 +173,12 @@ export const CartInteractionWrapper: React.FC<CartInteractionWrapperProps> = ({
     if (quantity <= 0) return;
     const nextQty = quantity - 1;
     setQuantity(nextQty);
-    updateGlobalCartCount(-1);
+    updateGlobalCart(-1);
     if (onQuantityChange) onQuantityChange(nextQty);
   };
 
-  // If control is turned OFF from admin panel, render standard children or simple button
-  if (!isAnimationEnabled) {
-    return <div className={`relative ${className}`}>{children}</div>;
+  if (!isButtonVisible) {
+    return null;
   }
 
   const isAr = lang === 'ar';
