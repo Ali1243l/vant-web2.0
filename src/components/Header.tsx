@@ -49,7 +49,6 @@ export default function Header({
 
   const [scrolled, setScrolled] = useState(false);
   const [showCategories, setShowCategories] = useState(true);
-  const [kineticLang, setKineticLang] = useState<'en' | 'ar'>(lang);
   const cartCount = useCartCount();
   const [isCartBouncing, setIsCartBouncing] = useState(false);
 
@@ -136,17 +135,6 @@ export default function Header({
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
-
-  useEffect(() => {
-    setKineticLang(lang);
-  }, [lang]);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setKineticLang((prev) => (prev === 'en' ? 'ar' : 'en'));
-    }, 3600);
-    return () => clearInterval(timer);
   }, []);
 
   return (
@@ -277,26 +265,20 @@ export default function Header({
               {/* Logo (Center) */}
               {logoControl.visible && (
                 <motion.div style={{ scale: logoScale }} className="flex items-center justify-center">
-                  <AnimatePresence mode="wait" initial={false}>
-                    <motion.h1
-                      key={kineticLang}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.2, ease: 'easeInOut' }}
-                      onClick={() => {
-                        setKineticLang((prev) => (prev === 'en' ? 'ar' : 'en'));
-                      }}
-                      className={`select-none transition-all duration-300 font-bold text-[#15171c] dark:text-white cursor-pointer text-center active:opacity-75 text-[18px] sm:text-[21px] ${
-                        kineticLang === 'ar'
-                          ? 'tracking-[0.06em]'
-                          : 'tracking-[0.28em] uppercase font-extrabold'
-                      }`}
-                      aria-label={kineticLang === 'ar' ? 'فانت' : 'VANT'}
-                    >
-                      {kineticLang === 'ar' ? (logoControl.label_ar || 'فانت') : (logoControl.label_en || 'VANT')}
-                    </motion.h1>
-                  </AnimatePresence>
+                  {/* Both names always visible, so neither identity disappears */}
+                  <h1
+                    dir="ltr"
+                    className="select-none flex items-center gap-2 sm:gap-3 text-[#15171c] dark:text-white whitespace-nowrap"
+                    aria-label={`${logoControl.label_en || 'VANT'} ${logoControl.label_ar || 'فانت'}`}
+                  >
+                    <span className="text-[15px] sm:text-[20px] font-extrabold uppercase tracking-[0.28em] -me-[0.28em]">
+                      {logoControl.label_en || 'VANT'}
+                    </span>
+                    <span aria-hidden="true" className="h-4 sm:h-5 w-px bg-current opacity-25" />
+                    <span className="text-[15px] sm:text-[20px] font-bold tracking-[0.04em]">
+                      {logoControl.label_ar || 'فانت'}
+                    </span>
+                  </h1>
                 </motion.div>
               )}
 

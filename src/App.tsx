@@ -1,7 +1,7 @@
 import { lazy, Suspense, type ComponentType, useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from './components/Header';
-import CategoryFilter, { type AvailabilityFilterType } from './components/CategoryFilter';
+import CategoryFilter, { type AvailabilityFilterType, type CatalogSort } from './components/CategoryFilter';
 import WelcomeHeroBanner from './components/WelcomeHeroBanner';
 import NewsletterSection from './components/NewsletterSection';
 import Footer from './components/Footer';
@@ -43,6 +43,7 @@ function MainApp() {
     isAdminUnlocked,
     unlockAdmin,
     getControl,
+    fetchProductById,
   } = useSiteControls();
   const newsletterControl = getControl('sec_newsletter_subscription');
   // Mount the admin chunk on first open and keep it mounted so its close animation still plays
@@ -95,7 +96,7 @@ function MainApp() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilterType>('all');
   const [isBannerDismissed, setIsBannerDismissed] = useState(false);
-  const [catalogSort, setCatalogSort] = useState<'newest' | 'price_asc' | 'price_desc' | 'offers'>('newest');
+  const [catalogSort, setCatalogSort] = useState<CatalogSort>('newest');
   const [gridLayout, setGridLayout] = useState<'grid-4' | 'grid-2'>('grid-4');
 
   // Clear any old sessionStorage flag on mount so the banner returns fresh and re-opens on refresh
@@ -387,7 +388,6 @@ function MainApp() {
 
   const findItemFromUrl = useCallback(() => {
     const id = new URL(window.location.href).searchParams.get('item');
-    // shortcut: only finds products already loaded (first page); fetch by id if links to older items matter
     return id ? products.find((p) => String(p.id) === id) ?? null : null;
   }, [products]);
 
@@ -402,8 +402,10 @@ function MainApp() {
     if (deepLinkHandledRef.current || loading || products.length === 0) return;
     deepLinkHandledRef.current = true;
     const fromUrl = findItemFromUrl();
-    if (fromUrl) setSelected(fromUrl);
-  }, [loading, products, findItemFromUrl]);
+    if (fromUrl) return setSelected(fromUrl);
+    const id = new URL(window.location.href).searchParams.get('item');
+    if (id) fetchProductById(id).then((p) => p && setSelected(p)).catch(() => {});
+  }, [loading, products, findItemFromUrl, fetchProductById]);
 
   const showSplash = !hasFinishedSplash || isPreviewSplash;
   const showMaintenance = siteSettings.maintenance_mode && !isAdminUnlocked && !isPreviewMaintenance;
@@ -462,8 +464,8 @@ function MainApp() {
           }`}
         >
       {/* Luxury Ambient Lighting Glow Orbs */}
-      <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 h-[520px] w-[850px] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(0,74,215,0.06),transparent_70%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.08),transparent_70%)] blur-3xl animate-luxury-glow" />
-      <div className="pointer-events-none absolute top-[40%] ltr:-right-48 rtl:-left-48 h-[400px] w-[400px] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.03),transparent_70%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.04),transparent_70%)] blur-3xl" />
+      <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 h-[520px] w-[850px] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(0,74,215,0.06),transparent_70%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.08),transparent_70%)]" />
+      <div className="pointer-events-none absolute top-[40%] ltr:-right-48 rtl:-left-48 h-[400px] w-[400px] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.03),transparent_70%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.04),transparent_70%)]" />
 
       {/* 1-Click Coupon Activation Toast from Email Link */}
       <AnimatePresence>
@@ -536,6 +538,8 @@ function MainApp() {
           isOffersOnly={isOffersOnly}
           onToggleOffersOnly={setIsOffersOnly}
           offersCount={offersCount}
+          sort={catalogSort}
+          onSortChange={setCatalogSort}
         />
       </Header>
 

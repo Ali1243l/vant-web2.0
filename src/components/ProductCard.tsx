@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { motion, type Variants } from 'framer-motion';
-import { Heart, Tag, Check } from 'lucide-react';
+import { Heart, Check, ShoppingBag, X } from 'lucide-react';
 import type { Product, Language } from '../types';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { resolveProductColorVariants } from '../lib/productVariants';
 import { CATEGORY_TRANSLATIONS } from '../lib/constants';
+import { addToCart } from '../lib/cart';
 
 interface Props {
   product: Product;
@@ -84,6 +85,8 @@ export default React.memo(function ProductCard({
   const [imgError, setImgError] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [naturalRatio, setNaturalRatio] = useState<string | null>(null);
+  const [isPickingSize, setIsPickingSize] = useState(false);
+  const [justAdded, setJustAdded] = useState(false);
 
   // Algorithmic color resolution & SKU derivation
   const variantInfo = useMemo(
@@ -161,6 +164,30 @@ export default React.memo(function ProductCard({
   };
 
   const availability = activeVariant?.availability ?? product.availability ?? 'in_stock';
+
+  const sizes = (activeVariant?.sizes || product.sizes || []).filter(Boolean);
+  const canQuickAdd = (availability === 'in_stock' || availability === 'limited') && activeVariant.price > 0;
+
+  // Same line shape as the product page's Add to Cart, so both merge into one cart line
+  const quickAdd = (size?: string) => {
+    addToCart({
+      productId: product.id,
+      title: displayTitle,
+      image: primaryImage || product.image_url,
+      price: activeVariant.price,
+      ...(size ? { size } : {}),
+      ...(variantInfo.hasMultipleColors ? { color: isAr ? activeVariant.colorNameAr : activeVariant.colorNameEn } : {}),
+    });
+    setIsPickingSize(false);
+    setJustAdded(true);
+    setTimeout(() => setJustAdded(false), 1400);
+  };
+
+  const handleQuickAddClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (sizes.length > 1) setIsPickingSize((v) => !v);
+    else quickAdd(sizes[0]);
+  };
 
   // Calculate discount percentage if offer
   const discountPct =
@@ -288,13 +315,13 @@ export default React.memo(function ProductCard({
           {cardBadgeControl.visible && (
             <div className="absolute top-2.5 sm:top-3 ltr:left-2.5 rtl:right-2.5 ltr:sm:left-3 rtl:sm:right-3 z-20 flex flex-col items-start gap-1 pointer-events-none select-none">
               {discountPct && (
-                <span className="inline-flex items-center rounded-full bg-[#004ad7] px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9.5px] sm:text-[10.5px] font-black text-white shadow-sm shadow-[#004ad7]/30 border border-white/20 backdrop-blur-xs">
+                <span className="inline-flex items-center rounded-full bg-[#004ad7] px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9.5px] sm:text-[10.5px] font-black text-white shadow-sm shadow-[#004ad7]/30 border border-white/20">
                   %{discountPct}-
                 </span>
               )}
               {statusBadge && (
                 <span
-                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9px] sm:text-[10px] font-semibold tracking-wide backdrop-blur-md border shadow-2xs ${statusBadge.classes}`}
+                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9px] sm:text-[10px] font-semibold tracking-wide border shadow-2xs ${statusBadge.classes}`}
                 >
                   <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusBadge.dot}`} />
                   <span>{statusBadge.text}</span>
@@ -308,7 +335,7 @@ export default React.memo(function ProductCard({
             <button
               type="button"
               onClick={handleHeartClick}
-              className={`absolute top-2.5 sm:top-3 ltr:right-2.5 rtl:left-2.5 ltr:sm:right-3 rtl:sm:left-3 z-20 flex h-9 w-9 before:absolute before:-inset-1 md:h-10 md:w-10 lg:h-11 lg:w-11 items-center justify-center rounded-full transition-all duration-200 cursor-pointer backdrop-blur-md active:scale-90 hover:scale-105 group/heart ${
+              className={`absolute top-2.5 sm:top-3 ltr:right-2.5 rtl:left-2.5 ltr:sm:right-3 rtl:sm:left-3 z-20 flex h-9 w-9 before:absolute before:-inset-1 md:h-10 md:w-10 lg:h-11 lg:w-11 items-center justify-center rounded-full transition-all duration-200 cursor-pointer active:scale-90 hover:scale-105 group/heart ${
                 isWishlisted
                   ? 'bg-[#004ad7] dark:bg-[#3b82f6] text-white shadow-md shadow-[#004ad7]/25 border border-[#004ad7]/40 dark:border-[#3b82f6]/50'
                   : 'bg-white/90 dark:bg-[#12141a]/90 text-neutral-600 dark:text-neutral-300 hover:text-[#004ad7] dark:hover:text-[#3b82f6] hover:bg-white dark:hover:bg-[#181a22] border border-black/8 dark:border-white/12 shadow-2xs'
@@ -324,6 +351,58 @@ export default React.memo(function ProductCard({
                 }`}
               />
             </button>
+          )}
+
+          {canQuickAdd && (
+            <button
+              type="button"
+              onClick={handleQuickAddClick}
+              aria-expanded={sizes.length > 1 ? isPickingSize : undefined}
+              aria-label={isAr ? `إضافة سريعة للسلة: ${displayTitle}` : `Quick add to cart: ${displayTitle}`}
+              title={isAr ? 'إضافة سريعة' : 'Quick add'}
+              className={`absolute bottom-2.5 sm:bottom-3 ltr:right-2.5 rtl:left-2.5 ltr:sm:right-3 rtl:sm:left-3 z-20 flex h-9 w-9 before:absolute before:-inset-1 md:h-10 md:w-10 items-center justify-center rounded-full border shadow-2xs transition-all duration-200 active:scale-90 hover:scale-105 cursor-pointer ${
+                justAdded
+                  ? 'bg-emerald-600 border-emerald-600 text-white'
+                  : 'bg-white/90 dark:bg-[#12141a]/90 text-[#15171c] dark:text-white border-black/8 dark:border-white/12 hover:text-[#004ad7] dark:hover:text-[#3b82f6]'
+              } ${isPickingSize ? 'opacity-0 pointer-events-none' : ''}`}
+            >
+              {justAdded ? <Check className="h-4 w-4 stroke-[2.5]" /> : <ShoppingBag className="h-4 w-4 stroke-[2]" />}
+            </button>
+          )}
+
+          {/* Size picker for quick add: slides up over the bottom of the image */}
+          {isPickingSize && (
+            <motion.div
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              onClick={(e) => e.stopPropagation()}
+              className="absolute inset-x-0 bottom-0 z-30 bg-white/95 dark:bg-[#12141a]/95 border-t border-black/8 dark:border-white/10 p-2.5 sm:p-3 cursor-default"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] sm:text-xs font-semibold text-[#15171c] dark:text-white">{isAr ? 'اختر المقاس' : 'Choose size'}</span>
+                <button
+                  type="button"
+                  onClick={() => setIsPickingSize(false)}
+                  aria-label={isAr ? 'إغلاق' : 'Close'}
+                  className="flex h-8 w-8 -m-1.5 items-center justify-center rounded-full text-neutral-500 hover:text-[#15171c] dark:hover:text-white cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {sizes.map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => quickAdd(size)}
+                    className="min-w-10 h-10 px-2.5 rounded-lg border border-black/12 dark:border-white/15 text-xs font-bold text-[#15171c] dark:text-white hover:border-[#004ad7] hover:text-[#004ad7] dark:hover:border-[#3b82f6] dark:hover:text-[#3b82f6] active:scale-95 transition-colors cursor-pointer"
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
           )}
         </div>
 

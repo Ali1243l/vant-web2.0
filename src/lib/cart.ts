@@ -39,6 +39,17 @@ export function writeCart(items: CartItem[]) {
   window.dispatchEvent(new CustomEvent('vant-cart-update', { detail: { count, items } }));
 }
 
+/** Adds one unit, merging into the existing line for the same product + size + color */
+export function addToCart(line: Omit<CartItem, 'id' | 'key' | 'quantity'>) {
+  const key = cartLineKey(line.productId ?? line.title, line.size, line.color);
+  const items = readCart();
+  const existing = items.find((i) => i.key === key);
+  if (existing) existing.quantity += 1;
+  else items.push({ ...line, id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, key, quantity: 1 });
+  writeCart(items);
+  window.dispatchEvent(new CustomEvent('vant-cart-bounce'));
+}
+
 export const cartTotal = (items: CartItem[]) => items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
 export function useCartCount() {

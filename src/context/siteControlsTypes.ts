@@ -305,6 +305,7 @@ export interface SiteControlsContextType {
   lastSyncTime: Date | null;
   refreshProducts: () => Promise<void>;
   loadMoreProducts: () => Promise<void>;
+  fetchProductById: (id: string) => Promise<Product | null>;
   addProduct: (product: Omit<Product, 'id'> & { id?: string | number }) => Product;
   updateProduct: (id: string | number, updates: Partial<Product>) => void;
   deleteProduct: (id: string | number) => void;

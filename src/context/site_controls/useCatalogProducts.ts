@@ -197,6 +197,17 @@ export function useCatalogProducts() {
     }
   }, [currentPage, hasMore, loadingMore]);
 
+  // For shared ?item= links to products beyond the first page
+  const fetchProductById = useCallback(async (id: string): Promise<Product | null> => {
+    if (!supabase) return null;
+    const { data, error: sbError } = await supabase
+      .from('products')
+      .select('*, product_media(*)')
+      .eq('id', id)
+      .maybeSingle();
+    return !sbError && data ? mapSupabaseProducts([data])[0] : null;
+  }, []);
+
   // Realtime subscription setup
   useEffect(() => {
     loadProductsFromSupabase();
@@ -493,6 +504,7 @@ export function useCatalogProducts() {
     lastSyncTime,
     loadProductsFromSupabase,
     loadMoreProducts,
+    fetchProductById,
     addProduct,
     updateProduct,
     deleteProduct,

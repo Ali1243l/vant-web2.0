@@ -73,17 +73,6 @@
   }
 }
 
-@keyframes luxury-glow {
-  0%, 100% {
-    opacity: 0.5;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.85;
-    transform: scale(1.04);
-  }
-}
-
 @keyframes gradient-drift {
   0% {
     background-position: 0% 50%;
@@ -104,10 +93,6 @@
   transform: translateX(-100%);
   animation: shimmer 1.7s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   will-change: transform;
-}
-
-.animate-luxury-glow {
-  animation: luxury-glow 7s ease-in-out infinite;
 }
 
 .animate-gradient-drift {

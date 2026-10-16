@@ -6,6 +6,31 @@ import { DEFAULT_WHATSAPP_PHONE } from '../lib/constants';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { readCart, writeCart, cartTotal, type CartItem } from '../lib/cart';
 
+const IRAQ_CITIES: [string, string][] = [
+  ['بغداد', 'Baghdad'], ['البصرة', 'Basra'], ['نينوى', 'Nineveh'], ['أربيل', 'Erbil'], ['النجف', 'Najaf'],
+  ['كربلاء', 'Karbala'], ['السليمانية', 'Sulaymaniyah'], ['كركوك', 'Kirkuk'], ['دهوك', 'Duhok'], ['الأنبار', 'Anbar'],
+  ['بابل', 'Babil'], ['ديالى', 'Diyala'], ['ذي قار', 'Dhi Qar'], ['صلاح الدين', 'Saladin'], ['واسط', 'Wasit'],
+  ['ميسان', 'Maysan'], ['المثنى', 'Muthanna'], ['القادسية', 'Qadisiyah'],
+];
+
+interface CustomerDetails {
+  name: string;
+  phone: string;
+  city: string;
+  address: string;
+  notes: string;
+}
+
+const DETAILS_KEY = 'vant_customer_details';
+const readDetails = (): CustomerDetails => {
+  const empty = { name: '', phone: '', city: '', address: '', notes: '' };
+  try {
+    return { ...empty, ...JSON.parse(localStorage.getItem(DETAILS_KEY) || '{}') };
+  } catch {
+    return empty;
+  }
+};
+
 interface CartDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -20,6 +45,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
   const [cartItems, setCartItems] = useState<CartItem[]>(readCart);
   const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const [step, setStep] = useState<'cart' | 'details'>('cart');
+  const [details, setDetails] = useState<CustomerDetails>(readDetails);
+
+  useEffect(() => {
+    if (!isOpen || cartItems.length === 0) setStep('cart');
+  }, [isOpen, cartItems.length]);
 
   useEffect(() => {
     // Rewrite once so the stored count matches after invalid legacy lines are dropped
@@ -95,7 +126,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
 
     const totalStr = formatPrice ? formatPrice(totalPrice) : `${totalPrice.toLocaleString()} د.ع`;
     text += isAr ? `*المجموع الكلي: ${totalStr}*\n` : `*Total Amount: ${totalStr}*\n`;
-    text += isAr ? `يرجى تزويدي بتفاصيل التوصيل والدفع.` : `Please confirm delivery and payment options.`;
+    text += isAr ? `\n*معلومات التوصيل*\n` : `\n*Delivery details*\n`;
+    text += `${isAr ? 'الاسم' : 'Name'}: ${details.name.trim()}\n`;
+    text += `${isAr ? 'الهاتف' : 'Phone'}: ${details.phone.trim()}\n`;
+    text += `${isAr ? 'المحافظة' : 'City'}: ${details.city}\n`;
+    text += `${isAr ? 'العنوان' : 'Address'}: ${details.address.trim()}\n`;
+    if (details.notes.trim()) text += `${isAr ? 'ملاحظات' : 'Notes'}: ${details.notes.trim()}\n`;
+    text += isAr ? `الدفع عند الاستلام.` : `Cash on delivery.`;
 
     return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
   };
@@ -153,7 +190,86 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
 
             {/* Item List */}
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-              {cartItems.length === 0 ? (
+              {step === 'details' && cartItems.length > 0 ? (
+                <form
+                  id="checkout-details-form"
+                  className="space-y-3.5"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    try {
+                      localStorage.setItem(DETAILS_KEY, JSON.stringify(details));
+                    } catch {}
+                    window.open(generateWhatsAppUrl(), '_blank', 'noopener,noreferrer');
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setStep('cart')}
+                    className="inline-flex items-center gap-1.5 min-h-10 text-xs font-semibold text-zinc-500 hover:text-[#004ad7] dark:hover:text-[#60a5fa] cursor-pointer"
+                  >
+                    {isAr ? <ArrowRight className="h-4 w-4" /> : <ArrowLeft className="h-4 w-4" />}
+                    <span>{isAr ? 'رجوع للسلة' : 'Back to cart'}</span>
+                  </button>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    {isAr ? 'نحتاج هذه المعلومات حتى نوصل طلبك. تنحفظ على جهازك للطلب الجاي.' : 'We need these to deliver your order. They are saved on this device for next time.'}
+                  </p>
+                  {(
+                    [
+                      ['name', isAr ? 'الاسم الكامل' : 'Full name', 'name', 'text'],
+                      ['phone', isAr ? 'رقم الهاتف' : 'Phone number', 'tel', 'tel'],
+                    ] as const
+                  ).map(([field, label, autoComplete, type]) => (
+                    <label key={field} className="block">
+                      <span className="block text-xs font-semibold mb-1.5">{label}</span>
+                      <input
+                        required
+                        type={type}
+                        autoComplete={autoComplete}
+                        dir={type === 'tel' ? 'ltr' : undefined}
+                        inputMode={type === 'tel' ? 'tel' : undefined}
+                        pattern={type === 'tel' ? '[0-9+ ]{10,15}' : undefined}
+                        value={details[field]}
+                        onChange={(e) => setDetails((d) => ({ ...d, [field]: e.target.value }))}
+                        placeholder={type === 'tel' ? '07XX XXX XXXX' : undefined}
+                        className="w-full h-12 rounded-xl border border-black/12 dark:border-white/15 bg-white dark:bg-[#181b26] px-3.5 text-base sm:text-sm outline-none focus:border-[#004ad7] dark:focus:border-[#3b82f6] focus:ring-2 focus:ring-[#004ad7]/20"
+                      />
+                    </label>
+                  ))}
+                  <label className="block">
+                    <span className="block text-xs font-semibold mb-1.5">{isAr ? 'المحافظة' : 'Governorate'}</span>
+                    <select
+                      required
+                      value={details.city}
+                      onChange={(e) => setDetails((d) => ({ ...d, city: e.target.value }))}
+                      className="w-full h-12 rounded-xl border border-black/12 dark:border-white/15 bg-white dark:bg-[#181b26] px-3 text-base sm:text-sm outline-none focus:border-[#004ad7] dark:focus:border-[#3b82f6] focus:ring-2 focus:ring-[#004ad7]/20"
+                    >
+                      <option value="" disabled>{isAr ? 'اختر المحافظة' : 'Choose governorate'}</option>
+                      {IRAQ_CITIES.map(([ar, en]) => (
+                        <option key={en} value={isAr ? ar : en}>{isAr ? ar : en}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="block text-xs font-semibold mb-1.5">{isAr ? 'العنوان (المنطقة وأقرب نقطة دالة)' : 'Address (area and nearest landmark)'}</span>
+                    <input
+                      required
+                      autoComplete="street-address"
+                      value={details.address}
+                      onChange={(e) => setDetails((d) => ({ ...d, address: e.target.value }))}
+                      className="w-full h-12 rounded-xl border border-black/12 dark:border-white/15 bg-white dark:bg-[#181b26] px-3.5 text-base sm:text-sm outline-none focus:border-[#004ad7] dark:focus:border-[#3b82f6] focus:ring-2 focus:ring-[#004ad7]/20"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="block text-xs font-semibold mb-1.5">{isAr ? 'ملاحظات (اختياري)' : 'Notes (optional)'}</span>
+                    <textarea
+                      rows={2}
+                      value={details.notes}
+                      onChange={(e) => setDetails((d) => ({ ...d, notes: e.target.value }))}
+                      className="w-full rounded-xl border border-black/12 dark:border-white/15 bg-white dark:bg-[#181b26] px-3.5 py-2.5 text-base sm:text-sm outline-none focus:border-[#004ad7] dark:focus:border-[#3b82f6] focus:ring-2 focus:ring-[#004ad7]/20 resize-none"
+                    />
+                  </label>
+                </form>
+              ) : cartItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center py-12">
                   <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800/80 text-zinc-400 mb-4">
                     <ShoppingCart className="h-8 w-8 stroke-[1.5]" />
@@ -264,15 +380,19 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
                   </span>
                 </div>
 
-                <a
-                  href={generateWhatsAppUrl()}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type={step === 'details' ? 'submit' : 'button'}
+                  form={step === 'details' ? 'checkout-details-form' : undefined}
+                  onClick={step === 'cart' ? () => setStep('details') : undefined}
                   className="flex h-12 w-full items-center justify-center gap-2.5 rounded-2xl bg-[#004ad7] hover:bg-[#003db3] dark:bg-[#3b82f6] dark:hover:bg-[#2563eb] text-white text-sm font-bold shadow-lg shadow-[#004ad7]/25 transition-all active:scale-[0.98] cursor-pointer"
                 >
                   <MessageCircle className="h-5 w-5 fill-white/20 stroke-white stroke-[2]" />
-                  <span>{isAr ? 'إكمال الطلب عبر واتساب' : 'Complete Order via WhatsApp'}</span>
-                </a>
+                  <span>
+                    {step === 'cart'
+                      ? isAr ? 'متابعة الطلب' : 'Continue to checkout'
+                      : isAr ? 'إرسال الطلب عبر واتساب' : 'Send order via WhatsApp'}
+                  </span>
+                </button>
 
                 <div className="flex items-center justify-between pt-1">
                   <button
