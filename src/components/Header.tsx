@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, type ReactNode } from 'react';
-import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useMotionValueEvent, useTransform } from 'framer-motion';
 import { Search, Sun, Moon, Globe, Heart, ShoppingCart } from 'lucide-react';
 import type { Language, Theme } from '../types';
 import { useSiteControls } from '../context/SiteControlsContext';
@@ -97,6 +97,47 @@ export default function Header({
     }
   });
 
+  // Scroll-linked (not toggled) shrink: every value follows the finger over the first 80px
+  const progress = useTransform(scrollY, [0, 80], [0, 1], { clamp: true });
+  const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches);
+  const [isSm, setIsSm] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 640px)').matches);
+  useEffect(() => {
+    const md = window.matchMedia('(min-width: 768px)');
+    const sm = window.matchMedia('(min-width: 640px)');
+    const onChange = () => {
+      setIsDesktop(md.matches);
+      setIsSm(sm.matches);
+    };
+    md.addEventListener('change', onChange);
+    sm.addEventListener('change', onChange);
+    return () => {
+      md.removeEventListener('change', onChange);
+      sm.removeEventListener('change', onChange);
+    };
+  }, []);
+  // Floating pill only from tablet up; on phones a pill squeezes the content, so the bar stays edge to edge
+  const barWidth = useTransform(progress, (v) => (isDesktop ? `${100 - 6 * v}%` : '100%'));
+  const barRadius = useTransform(progress, (v) => (isDesktop ? 24 * v : 0));
+  const barY = useTransform(progress, (v) => (isDesktop ? 8 * v : 0));
+  const barShadow = useTransform(progress, (v) => `0 12px 36px -10px rgba(0,0,0,${0.12 * v}), 0 2px 6px rgba(0,0,0,${0.04 * v})`);
+  const topRowHeight = useTransform(progress, (v) => (isSm ? 64 : 56) - (isSm ? 14 : 10) * v);
+  const logoScale = useTransform(progress, [0, 1], [1, 0.86]);
+
+  // The header is fixed so collapsing the category row never shifts the page; this spacer holds its resting height
+  const headerRef = useRef<HTMLElement>(null);
+  const [restingHeight, setRestingHeight] = useState(118);
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const measure = () => {
+      if (window.scrollY < 10) setRestingHeight(el.offsetHeight);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   useEffect(() => {
     setKineticLang(lang);
   }, [lang]);
@@ -111,15 +152,10 @@ export default function Header({
   return (
     <>
       {/* Resizable Navbar Outer Wrapper */}
-      <header className="sticky top-0 z-40 w-full">
+      <div aria-hidden="true" style={{ height: restingHeight }} />
+      <header ref={headerRef} className="fixed top-0 inset-x-0 z-40 w-full">
         <motion.div
           animate={{
-            width: scrolled ? '94%' : '100%',
-            borderRadius: scrolled ? '24px' : '0px',
-            y: scrolled ? 8 : 0,
-            boxShadow: scrolled
-              ? '0 12px 36px -10px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04)'
-              : 'none',
             backgroundColor: scrolled
               ? theme === 'dark'
                 ? 'rgba(13, 15, 18, 0.88)'
@@ -142,17 +178,19 @@ export default function Header({
           style={{
             borderStyle: 'solid',
             borderWidth: '1px',
+            width: barWidth,
+            borderRadius: barRadius,
+            y: barY,
+            boxShadow: barShadow,
           }}
           className="mx-auto max-w-7xl xl:max-w-[1440px] backdrop-blur-md transition-colors"
         >
           <div className="mx-auto w-full px-3 sm:px-6 overflow-visible">
             {/* 1. Resizable Top Navigation Bar */}
-            <div
+            <motion.div
               dir="ltr"
-              style={{ direction: 'ltr' }}
-              className={`flex items-center justify-between w-full transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                scrolled ? 'h-11 sm:h-12' : 'h-14 sm:h-16'
-              }`}
+              style={{ direction: 'ltr', height: topRowHeight }}
+              className="flex items-center justify-between w-full"
             >
               {/* Left Actions (Search Icon, Shopping Cart, Wishlist) */}
               {/* On phones these actions live in MobileBottomNav; invisible keeps the logo centred */}
@@ -238,7 +276,7 @@ export default function Header({
 
               {/* Logo (Center) */}
               {logoControl.visible && (
-                <div className="flex items-center justify-center">
+                <motion.div style={{ scale: logoScale }} className="flex items-center justify-center">
                   <AnimatePresence mode="wait" initial={false}>
                     <motion.h1
                       key={kineticLang}
@@ -249,11 +287,7 @@ export default function Header({
                       onClick={() => {
                         setKineticLang((prev) => (prev === 'en' ? 'ar' : 'en'));
                       }}
-                      className={`select-none transition-all duration-300 font-bold text-[#15171c] dark:text-white cursor-pointer text-center active:opacity-75 ${
-                        scrolled
-                          ? 'text-[15px] sm:text-[17px]'
-                          : 'text-[18px] sm:text-[21px]'
-                      } ${
+                      className={`select-none transition-all duration-300 font-bold text-[#15171c] dark:text-white cursor-pointer text-center active:opacity-75 text-[18px] sm:text-[21px] ${
                         kineticLang === 'ar'
                           ? 'tracking-[0.06em]'
                           : 'tracking-[0.28em] uppercase font-extrabold'
@@ -263,7 +297,7 @@ export default function Header({
                       {kineticLang === 'ar' ? (logoControl.label_ar || 'فانت') : (logoControl.label_en || 'VANT')}
                     </motion.h1>
                   </AnimatePresence>
-                </div>
+                </motion.div>
               )}
 
               {/* Right Actions (Lang, Theme) */}
@@ -327,7 +361,7 @@ export default function Header({
                   </button>
                 )}
               </div>
-            </div>
+            </motion.div>
 
             {/* 2. Collapsible CategoryFilter Bar */}
             <AnimatePresence initial={false}>
