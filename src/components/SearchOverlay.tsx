@@ -95,18 +95,24 @@ export default function SearchOverlay({
   };
 
   const handleClose = () => {
-    if (searchQuery.trim()) {
-      saveSearchTerm(searchQuery);
-    }
     onSearchChange('');
     onClose();
   };
 
+  // Results render in the catalog behind the overlay, so showing them means closing it with the query kept
+  const handleShowResults = () => {
+    if (!searchQuery.trim()) return onClose();
+    saveSearchTerm(searchQuery);
+    onClose();
+    setTimeout(() => {
+      const grid = document.getElementById('catalog-grid');
+      const headerHeight = document.querySelector('header')?.getBoundingClientRect().bottom ?? 0;
+      if (grid) window.scrollTo({ top: grid.getBoundingClientRect().top + window.scrollY - headerHeight - 12, behavior: 'smooth' });
+    }, 80);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && searchQuery.trim()) {
-      saveSearchTerm(searchQuery);
-      inputRef.current?.blur();
-    }
+    if (e.key === 'Enter') handleShowResults();
   };
 
   const handleSelectRecent = (term: string) => {
@@ -130,7 +136,7 @@ export default function SearchOverlay({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            onClick={handleClose}
+            onClick={handleShowResults}
             className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-md"
           />
 
@@ -158,6 +164,7 @@ export default function SearchOverlay({
                   value={searchQuery}
                   onChange={(e) => onSearchChange(e.target.value)}
                   onKeyDown={handleKeyDown}
+                  enterKeyHint="search"
                   placeholder={
                     lang === 'ar'
                       ? 'ابحث بالاسم، الخامة (صوف، كشمير)، أو القطعة...'
@@ -182,13 +189,23 @@ export default function SearchOverlay({
                 )}
               </div>
 
-              <button
-                type="button"
-                onClick={handleClose}
-                className="shrink-0 px-3 py-1.5 flex items-center justify-center rounded-full text-xs font-semibold text-[#6b7280] dark:text-[#9ca3af] hover:text-[#15171c] dark:hover:text-white transition-colors cursor-pointer"
-              >
-                {lang === 'ar' ? 'إلغاء' : 'Cancel'}
-              </button>
+              {searchQuery.trim() ? (
+                <button
+                  type="button"
+                  onClick={handleShowResults}
+                  className="shrink-0 px-3.5 py-1.5 flex items-center justify-center rounded-full text-xs font-bold bg-[#004ad7] dark:bg-[#3b82f6] text-white hover:opacity-90 transition-opacity cursor-pointer"
+                >
+                  {lang === 'ar' ? 'عرض النتائج' : 'Show results'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="shrink-0 px-3 py-1.5 flex items-center justify-center rounded-full text-xs font-semibold text-[#6b7280] dark:text-[#9ca3af] hover:text-[#15171c] dark:hover:text-white transition-colors cursor-pointer"
+                >
+                  {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+              )}
             </div>
 
             {/* The Search Dropdown */}

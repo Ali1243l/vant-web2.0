@@ -1,3 +1,4 @@
+import { normalizePhone } from '../lib/constants';
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   DollarSign,
@@ -255,8 +256,9 @@ export const AdminAnalyticsDashboard: React.FC = () => {
   };
 
   const handleOpenWhatsApp = (phone: string, text: string) => {
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
-    const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+    // Visitors are anonymous, so `phone` is often just a label: let WhatsApp ask who to send it to
+    const cleanPhone = normalizePhone(phone);
+    const url = `https://wa.me/${cleanPhone.length >= 8 ? cleanPhone : ''}?text=${encodeURIComponent(text)}`;
     const link = document.createElement('a');
     link.href = url;
     link.target = '_blank';
@@ -309,39 +311,6 @@ export const AdminAnalyticsDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* VANT UI Widgets Suite Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-3xl bg-gradient-to-r from-indigo-950/40 via-slate-900/70 to-slate-900/40 border border-indigo-500/25 backdrop-blur-xl shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-500/25 shrink-0">
-            <Layers className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-white">
-                {isAr ? 'نظام الأدوات والوحدات المعيارية المدمج' : 'VANT UI Widgets Suite'}
-              </span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase">
-                {isAr ? 'مُفعّل' : 'Active'}
-              </span>
-            </div>
-            <p className="text-xs text-slate-400">
-              {isAr
-                ? 'تم دمج DateRangePicker (منتقي التواريخ الفاخر)، RangeSlider (سلايدر الأسعار)، و Pagination (التصفح المتجاوب).'
-                : 'DateRangePicker, RangeSlider, and Pagination integrated across all management views.'}
-            </p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setActiveView('widgets')}
-          className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-all cursor-pointer shadow-md shadow-indigo-600/30 shrink-0"
-        >
-          <Layers className="h-3.5 w-3.5" />
-          <span>{isAr ? 'معاينة استوديو الأدوات (Widgets Studio)' : 'Open Widgets Studio'}</span>
-        </button>
-      </div>
-
       {/* Top Header Banner with Live Refresh and Title (relative z-50 ensures popover floats over tabs) */}
       <div className="relative z-50 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>

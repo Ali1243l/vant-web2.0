@@ -8,9 +8,6 @@ import {
   Lock,
   Store,
   ExternalLink,
-  ChevronRight,
-  TrendingUp,
-  Sparkles,
   Sliders,
   X,
   Ruler,
@@ -50,59 +47,24 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
 
   const pendingOrdersCount = orders.filter((o) => o.status === 'pending_payment').length;
 
+  // Grouped by what the owner does day to day: sell, manage the shop, talk to customers, configure
   const sections: NavSection[] = [
     {
-      title: 'المشاريع والكتالوج (Projects)',
-      titleEn: 'PROJECTS & CATALOG',
+      title: 'المبيعات',
+      titleEn: 'SALES',
       items: [
-        {
-          id: 'products',
-          label: 'إدارة المنتجات والمشاريع',
-          labelEn: 'Products & Projects',
-          icon: Package,
-          count: products.length,
-        },
-        {
-          id: 'sizes',
-          label: 'دليل المقاسات والأبعاد',
-          labelEn: 'Size Guide & Specs',
-          icon: Ruler,
-        },
-        {
-          id: 'banners',
-          label: 'البانرات والوسائط',
-          labelEn: 'Banners & Media',
-          icon: ImageIcon,
-        },
-        {
-          id: 'welcome_modal',
-          label: 'النافذة الترحيبية والهدايا',
-          labelEn: 'Welcome Popup & Gift',
-          icon: Gift,
-        },
-      ],
-    },
-    {
-      title: 'المحفظة والمالية (Wallet)',
-      titleEn: 'WALLET & REVENUE',
-      items: [
-        {
-          id: 'dashboard',
-          label: 'الرئيسية وتحليلات الأرباح',
-          labelEn: 'Overview & Wallet Analytics',
-          icon: LayoutDashboard,
-        },
+        { id: 'dashboard', label: 'الرئيسية', labelEn: 'Overview', icon: LayoutDashboard },
         {
           id: 'orders',
-          label: 'الطلبات والكونسيرج',
-          labelEn: 'Orders & Concierge',
+          label: 'الطلبات',
+          labelEn: 'Orders',
           icon: ShoppingBag,
           count: pendingOrdersCount,
           isGlowingAmber: pendingOrdersCount > 0,
         },
         {
           id: 'offers',
-          label: 'العروض وقسائم الخصم',
+          label: 'العروض والخصومات',
           labelEn: 'Offers & Promos',
           icon: Tag,
           count: offers.filter((o) => o.status === 'active').length,
@@ -110,65 +72,32 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
       ],
     },
     {
-      title: 'الوحدات والأدوات (Widgets)',
-      titleEn: 'WIDGETS & UI TOOLS',
+      title: 'المتجر',
+      titleEn: 'STORE',
       items: [
-        {
-          id: 'widgets',
-          label: 'استوديو الأدوات والوحدات',
-          labelEn: 'Widgets Studio & UI Tools',
-          icon: Layers,
-          badgeText: 'New',
-        },
+        { id: 'products', label: 'المنتجات', labelEn: 'Products', icon: Package, count: products.length },
+        { id: 'sizes', label: 'دليل المقاسات', labelEn: 'Size Guide', icon: Ruler },
+        { id: 'banners', label: 'البانرات والصور', labelEn: 'Banners & Media', icon: ImageIcon },
+        { id: 'welcome_modal', label: 'النافذة الترحيبية', labelEn: 'Welcome Popup', icon: Gift },
       ],
     },
     {
-      title: 'الـ API والتكاملات (API & Cloud)',
-      titleEn: 'API & INTEGRATIONS',
+      title: 'العملاء',
+      titleEn: 'CUSTOMERS',
       items: [
-        {
-          id: 'controls',
-          label: 'أزرار وتفاعل الموقع',
-          labelEn: 'Buttons & Controls',
-          icon: Sliders,
-        },
-        {
-          id: 'subscribers',
-          label: 'النشرات والعملاء',
-          labelEn: 'Campaigns & Subscribers',
-          icon: Users,
-          count: subscribers.length,
-        },
-        {
-          id: 'social',
-          label: 'روابط التواصل والـ API',
-          labelEn: 'Social & External APIs',
-          icon: Globe,
-        },
-        {
-          id: 'backup',
-          label: 'النسخ الاحتياطي السحابي',
-          labelEn: 'Cloud Backup & JSON',
-          icon: Download,
-        },
-        {
-          id: 'settings',
-          label: 'إعدادات النظام العامة',
-          labelEn: 'System Settings',
-          icon: Store,
-        },
+        { id: 'subscribers', label: 'المشتركين والحملات', labelEn: 'Subscribers & Campaigns', icon: Users, count: subscribers.length },
+        { id: 'social', label: 'روابط التواصل', labelEn: 'Social Links', icon: Globe },
       ],
     },
     {
-      title: 'الأمان والوصول (Security)',
-      titleEn: 'SECURITY & ACCESS',
+      title: 'الإعدادات',
+      titleEn: 'SETTINGS',
       items: [
-        {
-          id: 'security',
-          label: 'الأمان ورمز دخول الإدارة',
-          labelEn: 'Security & Access PIN',
-          icon: KeyRound,
-        },
+        { id: 'settings', label: 'الإعدادات العامة', labelEn: 'General Settings', icon: Store },
+        { id: 'controls', label: 'أزرار وأقسام الموقع', labelEn: 'Site Controls', icon: Sliders },
+        { id: 'widgets', label: 'استوديو الأدوات', labelEn: 'Widgets Studio', icon: Layers },
+        { id: 'backup', label: 'النسخ الاحتياطي', labelEn: 'Backup', icon: Download },
+        { id: 'security', label: 'الأمان ورمز الدخول', labelEn: 'Security & PIN', icon: KeyRound },
       ],
     },
   ];
@@ -191,16 +120,16 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
           {!collapsed && (
             <div className="flex flex-col overflow-hidden text-start">
               <span className="font-bold text-white text-base leading-tight truncate flex items-center gap-1.5">
-                <span>{isAr ? 'دار ڤانت (VANT)' : 'Maison VANT'}</span>
-                <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] inline-block shrink-0 animate-pulse" />
+                <span>VANT | فانت</span>
               </span>
               <span className="text-xs text-neutral-400 truncate">
-                {isAr ? 'لوحة تحكم المتجر المتكاملة' : 'Admin Operations Hub'}
+                {isAr ? 'لوحة التحكم' : 'Admin'}
               </span>
             </div>
           )}
         </div>
-        {!collapsed && onCloseAdmin && (
+        {/* In the phone drawer the drawer's own X closes the menu; this one would close the whole admin */}
+        {!collapsed && onCloseAdmin && !onItemClick && (
           <button
             onClick={onCloseAdmin}
             className="p-1.5 rounded-xl text-neutral-400 hover:text-rose-400 hover:bg-neutral-800 transition-colors cursor-pointer"
@@ -216,7 +145,7 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
         {sections.map((sec, idx) => (
           <div key={idx} className="space-y-1">
             {!collapsed && (
-              <div className="px-3 pb-1 text-[10px] font-bold tracking-wider text-slate-500 uppercase text-start">
+              <div className="px-3 pb-1 text-[11px] font-bold tracking-wider text-slate-500 uppercase text-start">
                 {isAr ? sec.title : sec.titleEn}
               </div>
             )}
@@ -228,7 +157,7 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
                 <button
                   key={item.id}
                   onClick={() => handleSelect(item.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group text-start relative cursor-pointer ${
+                  className={`w-full flex items-center gap-3 px-3 min-h-11 rounded-xl text-[15px] lg:text-sm font-medium transition-all group text-start relative cursor-pointer ${
                     isActive
                       ? 'bg-indigo-600/15 text-indigo-300 border border-indigo-500/30 font-semibold shadow-xs'
                       : 'text-neutral-400 hover:text-white hover:bg-neutral-800/80 border border-transparent'
@@ -305,9 +234,6 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
           {!collapsed && (
             <div className="flex-1 flex items-center justify-between">
               <span>{isAr ? 'قفل لوحة التحكم' : 'Lock Dashboard'}</span>
-              <span className="text-[10px] text-amber-400/80 border border-amber-500/30 px-1.5 py-0.5 rounded font-mono">
-                PIN
-              </span>
             </div>
           )}
         </button>
@@ -327,8 +253,7 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
             <ExternalLink className="w-4.5 h-4.5 text-emerald-400 shrink-0" />
             {!collapsed && (
               <div className="flex-1 flex items-center justify-between">
-                <span>{isAr ? 'معاينة المتجر المباشر' : 'Live Storefront'}</span>
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>{isAr ? 'الرجوع للمتجر' : 'Back to store'}</span>
               </div>
             )}
           </button>

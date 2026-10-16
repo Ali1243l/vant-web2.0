@@ -80,13 +80,13 @@ export default function Footer({ lang, onAdminTrigger }: Props) {
                   href={social.href || '#'}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group inline-flex items-center gap-1.5 rounded-full border border-black/8 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.04] px-2.5 py-1 sm:px-3 sm:py-1.5 text-[#15171c]/75 dark:text-white/75 hover:text-[#004ad7] dark:hover:text-[#3b82f6] hover:border-[#004ad7]/30 dark:hover:border-[#3b82f6]/40 hover:bg-black/[0.04] dark:hover:bg-white/[0.08] active:scale-95 transition-all shadow-2xs"
+                  className="group inline-flex items-center gap-1.5 rounded-full border border-black/8 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.04] min-h-11 px-3 py-1.5 text-[#15171c]/75 dark:text-white/75 hover:text-[#004ad7] dark:hover:text-[#3b82f6] hover:border-[#004ad7]/30 dark:hover:border-[#3b82f6]/40 hover:bg-black/[0.04] dark:hover:bg-white/[0.08] active:scale-95 transition-all shadow-2xs"
                   title={`${social.name}: ${social.handle || social.name}`}
                 >
                   <span className="flex h-4 w-4 sm:h-4.5 sm:w-4.5 items-center justify-center text-[#15171c]/80 dark:text-white/80 group-hover:text-[#004ad7] dark:group-hover:text-[#3b82f6] transition-colors">
                     <SocialIconRenderer iconName={social.iconName} customSvg={social.customIconSvg} />
                   </span>
-                  <span className="font-mono text-[11px] sm:text-[11.5px] tracking-tight direction-ltr">
+                  <span className="font-mono text-[11px] sm:text-[11.5px] tracking-tight" dir="ltr">
                     {formatSocialDisplay(social)}
                   </span>
                 </a>

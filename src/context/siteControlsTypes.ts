@@ -208,7 +208,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   maintenance_message: 'We are preparing Volume 02. Please check back later.',
   maintenance_message_ar: 'نعمل حالياً على تجهيز التشكيلة الجديدة وتحديث النظام. يرجى العودة لاحقاً.',
   splash_motif: 'tshirt_print',
-  welcome_title_ar: 'أهلاً بك في ڤانت!',
+  welcome_title_ar: 'أهلاً بك في فانت!',
   welcome_title_en: 'Welcome to VANT!',
   welcome_message_ar: 'تم تفعيل اشتراكك بنجاح، وتم إرسال نسخة من العرض الترحيبي وكود الخصم إلى بريدك الإلكتروني.',
   welcome_message_en: 'Your subscription is active! A welcome voucher and discount code have been dispatched to your email.',
@@ -305,6 +305,7 @@ export interface SiteControlsContextType {
   lastSyncTime: Date | null;
   refreshProducts: () => Promise<void>;
   loadMoreProducts: () => Promise<void>;
+  fetchProductById: (id: string) => Promise<Product | null>;
   addProduct: (product: Omit<Product, 'id'> & { id?: string | number }) => Product;
   updateProduct: (id: string | number, updates: Partial<Product>) => void;
   deleteProduct: (id: string | number) => void;
@@ -343,9 +344,9 @@ export interface SiteControlsContextType {
   isAdminOpen: boolean;
   setIsAdminOpen: (open: boolean) => void;
   isAdminUnlocked: boolean;
-  unlockAdmin: (pin: string) => boolean;
+  /** Resolves to null on success, or the login error message */
+  unlockAdmin: (email: string, password: string) => Promise<string | null>;
   lockAdmin: () => void;
-  setAdminPin: (newPin: string) => void;
 
   // Global Site Settings (Maintenance Mode & Splash Preloader)
   siteSettings: SiteSettings;

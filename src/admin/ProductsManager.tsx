@@ -58,7 +58,7 @@ export const ProductsManager: React.FC = () => {
 
       const matchCategory = selectedCategory === 'all' || p.category === selectedCategory;
       const matchStatus = selectedStatus === 'all' || p.status === selectedStatus;
-      const matchPrice = p.price >= priceRange[0] && p.price <= priceRange[1];
+      const matchPrice = p.price >= priceRange[0] && (priceRange[1] >= 500000 || p.price <= priceRange[1]); // the slider's top end means "no limit"
 
       return matchSearch && matchCategory && matchStatus && matchPrice;
     })

@@ -70,7 +70,7 @@ export const ProductSizeSection: React.FC<ProductSizeSectionProps> = ({
   if (renderedSizes.length === 0) return null;
 
   return (
-    <div className="space-y-3">
+    <div id="product-size-section" className="space-y-3">
       {/* Sizing Header Row: Title + Guide Trigger */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">

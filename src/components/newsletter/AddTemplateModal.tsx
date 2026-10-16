@@ -72,7 +72,7 @@ export const AddTemplateModal: React.FC<AddTemplateModalProps> = ({
       badgeTextEn: newTplBadge.trim() || 'VIP PRIVILEGE ACCESS',
       headline: newTplHeadline.trim() || newTplTitle.trim(),
       headlineEn: newTplHeadline.trim() || newTplTitle.trim(),
-      message: newTplMessage.trim() || 'عرض خاص ومحدود لمشتركي الأرشيف الخاص لـ ڤانت.',
+      message: newTplMessage.trim() || 'عرض خاص ومحدود لمشتركي الأرشيف الخاص لـ فانت.',
       messageEn: newTplMessage.trim() || 'Exclusive private curation for VANT members.',
       discountCode: newTplCode.trim().toUpperCase(),
       discountPercent: Number(newTplPercent),

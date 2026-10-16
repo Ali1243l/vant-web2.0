@@ -1,13 +1,14 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { AnimatePresence, motion, animate, useMotionValue, useTransform } from 'framer-motion';
 import { X } from 'lucide-react';
 import type { Product, Language } from '../types';
-import { DEFAULT_WHATSAPP_PHONE } from '../lib/constants';
+import { resolveWhatsappPhone } from '../lib/constants';
 import ShareModal from './ShareModal';
 import ProductDrawerSkeleton from './ProductDrawerSkeleton';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { trackEvent } from '../lib/analytics';
 import { resolveProductColorVariants } from '../lib/productVariants';
+import ProductStrip from './ProductStrip';
 
 import ProductDrawerGallery from './product_drawer/ProductDrawerGallery';
 import ProductHeaderInfo from './product_drawer/ProductHeaderInfo';
@@ -21,9 +22,12 @@ interface Props {
   loading?: boolean;
   lang: Language;
   onClose: () => void;
+  /** Same-category pieces shown under the details */
+  related?: Product[];
+  onSelectRelated?: (p: Product) => void;
 }
 
-export default function ProductDrawer({ product, loading, lang, onClose }: Props) {
+export default function ProductDrawer({ product, loading, lang, onClose, related = [], onSelectRelated }: Props) {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [slideDirection, setSlideDirection] = useState(1);
   const { getControl, formatPrice, masterSizes } = useSiteControls();
@@ -41,6 +45,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
 
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [sizeFeedback, setSizeFeedback] = useState<string | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [copiedTitle, setCopiedTitle] = useState(false);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -193,14 +198,14 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
 
   switch (availability) {
     case 'sold_out':
-      statusBadgeLabel = lang === 'ar' ? 'العرض منتهي' : 'Sold Out';
+      statusBadgeLabel = lang === 'ar' ? 'نفدت الكمية' : 'Sold Out';
       statusBadgeClasses =
         'bg-black/75 dark:bg-black/85 text-white/70 dark:text-white/60 border-white/10 shadow-2xs';
       statusDotClass = 'bg-neutral-400 dark:bg-neutral-500';
       statusBannerText =
         lang === 'ar'
-          ? 'العرض منتهي — نعتذر، نفدت الكمية والمقاسات بالكامل. يمكنك اختيار مقاسك بالأسفل لطلب إعادة توفيره.'
-          : 'Sold Out — All sizes and allocations are currently exhausted. Select your size below to request a restock.';
+          ? 'نفدت الكمية — اختر مقاسك واضغط "بلغني من يتوفر" حتى نخبرك أول ما ترجع.'
+          : 'Sold Out — pick your size and tap "Notify me" to hear as soon as it is back.';
       buttonLabel = selectedSize
         ? lang === 'ar'
           ? `طلب إعادة توفير مقاس (${selectedSize}) عبر واتساب`
@@ -266,42 +271,30 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
   const activePrice = activeVariant ? activeVariant.price : (product?.price ?? 0);
   const productCode = activeVariant?.sku || (product?.id ? `#${product.id}` : '');
   const formattedProductPrice = formatPrice(activePrice);
-  const colorSpecLabel = activeVariant ? `${activeVariant.colorNameAr} (${activeVariant.colorNameEn})` : '';
+  const colorSpecLabel = activeVariant && variantInfo?.hasMultipleColors ? `${activeVariant.colorNameAr} (${activeVariant.colorNameEn})` : '';
 
-  const whatsappMessage = lang === 'ar'
-    ? isSoldOut
-      ? selectedSize
-        ? `مرحباً ڤانت، أود الاستفسار عن إمكانية إعادة توفير قطعة "${displayTitle ?? ''}" - اللون: ${colorSpecLabel} بمقاس (${selectedSize}) (كود الموديل واللون: ${productCode} - السعر: ${formattedProductPrice})`
-        : `مرحباً ڤانت، أود الاستفسار عن إمكانية إعادة توفير قطعة "${displayTitle ?? ''}" - اللون: ${colorSpecLabel} (كود الموديل واللون: ${productCode} - السعر: ${formattedProductPrice})`
-      : availability === 'coming_soon'
-      ? selectedSize
-        ? `مرحباً ڤانت، أود حجز أسبقية لقطعة "${displayTitle ?? ''}" - اللون: ${colorSpecLabel} بمقاس (${selectedSize}) (كود الموديل واللون: ${productCode} - السعر: ${formattedProductPrice})`
-        : `مرحباً ڤانت، أود الاستفسار وحجز أسبقية لقطعة "${displayTitle ?? ''}" - اللون: ${colorSpecLabel} (كود الموديل واللون: ${productCode} - السعر: ${formattedProductPrice})`
-      : selectedSize
-      ? `مرحباً ڤانت، أود طلب قطعة "${displayTitle ?? ''}" - اللون: ${colorSpecLabel} بمقاس (${selectedSize}) (كود الموديل واللون: ${productCode} - السعر: ${formattedProductPrice})`
-      : `مرحباً ڤانت، أود الاستفسار والطلب لقطعة "${displayTitle ?? ''}" - اللون: ${colorSpecLabel} (كود الموديل واللون: ${productCode} - السعر: ${formattedProductPrice})`
-    : isSoldOut
-    ? selectedSize
-      ? `Hello Maison VANT, I would like to inquire about restocking "${displayTitle ?? ''}" - Color: ${colorSpecLabel} in size (${selectedSize}) (SKU: ${productCode} - Price: ${formattedProductPrice})`
-      : `Hello Maison VANT, I would like to inquire about restocking "${displayTitle ?? ''}" - Color: ${colorSpecLabel} (SKU: ${productCode} - Price: ${formattedProductPrice})`
+  const isArMsg = lang === 'ar';
+  const msgIntent = isSoldOut
+    ? isArMsg ? 'أود الاستفسار عن إعادة توفير قطعة' : 'I would like to know when this piece is back:'
     : availability === 'coming_soon'
-    ? selectedSize
-      ? `Hello Maison VANT, I would like to pre-register "${displayTitle ?? ''}" - Color: ${colorSpecLabel} for size (${selectedSize}) (SKU: ${productCode} - Price: ${formattedProductPrice})`
-      : `Hello Maison VANT, I would like to pre-register/inquire about "${displayTitle ?? ''}" - Color: ${colorSpecLabel} (SKU: ${productCode} - Price: ${formattedProductPrice})`
-    : selectedSize
-    ? `Hello Maison VANT, I would like to order "${displayTitle ?? ''}" - Color: ${colorSpecLabel} in size (${selectedSize}) (SKU: ${productCode} - Price: ${formattedProductPrice})`
-    : `Hello Maison VANT, I would like to order/inquire about "${displayTitle ?? ''}" - Color: ${colorSpecLabel} (SKU: ${productCode} - Price: ${formattedProductPrice})`;
+    ? isArMsg ? 'أود حجز أسبقية لقطعة' : 'I would like to reserve'
+    : isArMsg ? 'أود طلب قطعة' : 'I would like to order';
+  const msgColor = colorSpecLabel ? (isArMsg ? ` - اللون: ${colorSpecLabel}` : ` - Color: ${colorSpecLabel}`) : '';
+  const msgSize = selectedSize ? (isArMsg ? ` - المقاس: ${selectedSize}` : ` - Size: ${selectedSize}`) : '';
+  const whatsappMessage = isArMsg
+    ? `مرحباً فانت، ${msgIntent} "${displayTitle ?? ''}"${msgColor}${msgSize} (الكود: ${productCode} - السعر: ${formattedProductPrice})`
+    : `Hello VANT, ${msgIntent} "${displayTitle ?? ''}"${msgColor}${msgSize} (Code: ${productCode} - Price: ${formattedProductPrice})`;
 
   const whatsappText = encodeURIComponent(whatsappMessage);
-  const targetPhone = (whatsappPhoneControl?.actionValue || '').replace(/[^0-9]/g, '') || DEFAULT_WHATSAPP_PHONE;
+  const targetPhone = resolveWhatsappPhone(whatsappPhoneControl?.actionValue);
   const whatsappUrl = `https://wa.me/${targetPhone}?text=${whatsappText}`;
 
   const bespokeWhatsappText = encodeURIComponent(
     lang === 'ar'
-      ? `مرحباً ڤانت، أود الاستفسار عن خدمة التفصيل الخاص (Made-to-Measure) لقطعة "${displayTitle ?? ''}" (كود القطعة: ${productCode} - الطول: ${calcHeight} سم، الوزن: ${calcWeight} كغم، السعر: ${formattedProductPrice})`
-      : `Hello Maison VANT, I would like to inquire about Made-to-Measure bespoke tailoring for "${displayTitle ?? ''}" (Code: ${productCode} - Height: ${calcHeight} cm, Weight: ${calcWeight} kg, Price: ${formattedProductPrice})`
+      ? `مرحباً فانت، أود الاستفسار عن خدمة التفصيل الخاص (Made-to-Measure) لقطعة "${displayTitle ?? ''}" (كود القطعة: ${productCode} - الطول: ${calcHeight} سم، الوزن: ${calcWeight} كغم، السعر: ${formattedProductPrice})`
+      : `Hello VANT, I would like to inquire about Made-to-Measure bespoke tailoring for "${displayTitle ?? ''}" (Code: ${productCode} - Height: ${calcHeight} cm, Weight: ${calcWeight} kg, Price: ${formattedProductPrice})`
   );
-  const targetBespokePhone = (bespokePhoneControl?.actionValue || '').replace(/[^0-9]/g, '') || targetPhone;
+  const targetBespokePhone = bespokePhoneControl?.actionValue ? resolveWhatsappPhone(bespokePhoneControl.actionValue) : targetPhone;
   const bespokeWhatsappUrl = `https://wa.me/${targetBespokePhone}?text=${bespokeWhatsappText}`;
 
   const handleCopyTitle = async () => {
@@ -322,6 +315,21 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     }
   };
 
+  const canAddToCart = () => {
+    if (renderedSizes.length === 0 || (selectedSize && availableSizes.has(selectedSize.toUpperCase()))) return true;
+    setSizeFeedback(
+      lang === 'ar'
+        ? selectedSize
+          ? `المقاس (${selectedSize}) غير متوفر حالياً — اختر مقاساً آخر أو اطلبه عبر واتساب`
+          : 'اختر المقاس أولاً حتى نضيف القطعة للسلة'
+        : selectedSize
+        ? `Size (${selectedSize}) is unavailable — pick another size or request it via WhatsApp`
+        : 'Please choose a size first'
+    );
+    document.getElementById('product-size-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return false;
+  };
+
   const handleSizeClick = (size: string) => {
     setSelectedSize(size);
     if (product) {
@@ -330,7 +338,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     if (isSoldOut) {
       setSizeFeedback(
         lang === 'ar'
-          ? `المقاس (${size}) منتهي حالياً ضمن هذا العرض — تم تحديده لطلب إعادة توفيره عبر واتساب بالأسفل`
+          ? `المقاس (${size}) خالص حالياً — اضغط "بلغني من يتوفر" بالأسفل`
           : `Size (${size}) is sold out — selected for restock request via WhatsApp below`
       );
     } else if (availableSizes.has(size.toUpperCase())) {
@@ -347,6 +355,14 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
       );
     }
   };
+
+  // Return keyboard focus to whatever opened the drawer (usually the product card)
+  useEffect(() => {
+    if (!product) return;
+    const opener = document.activeElement as HTMLElement | null;
+    closeButtonRef.current?.focus();
+    return () => opener?.focus?.();
+  }, [product?.id]);
 
   useEffect(() => {
     if (!product) return;
@@ -376,6 +392,43 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
 
   const isOpen = Boolean(product || loading);
 
+  // Phones: pull the page down from its top to close it, like a native sheet
+  const dragY = useMotionValue(0);
+  const backdropOpacity = useTransform(dragY, [0, 400], [1, 0.25]);
+  const swipeRef = useRef<{ x: number; y: number; active: boolean } | null>(null);
+  useEffect(() => {
+    // Only on open: resetting on close would snap the sheet back up mid exit
+    if (product) dragY.set(0);
+  }, [product, dragY]);
+
+  const onPanelTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (window.innerWidth >= 768 || e.touches.length !== 1 || e.currentTarget.scrollTop > 0) return;
+    swipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, active: false };
+  };
+  const onPanelTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const s = swipeRef.current;
+    if (!s) return;
+    const dx = e.touches[0].clientX - s.x;
+    const dy = e.touches[0].clientY - s.y;
+    if (!s.active) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      // Sideways is the gallery, upwards is normal scrolling
+      if (dy <= 0 || Math.abs(dx) > Math.abs(dy) || e.currentTarget.scrollTop > 0) {
+        swipeRef.current = null;
+        return;
+      }
+      s.active = true;
+    }
+    dragY.set(Math.max(0, dy));
+  };
+  const onPanelTouchEnd = () => {
+    const s = swipeRef.current;
+    swipeRef.current = null;
+    if (!s?.active) return;
+    if (dragY.get() > 110) onClose();
+    else animate(dragY, 0, { type: 'spring', stiffness: 420, damping: 36 });
+  };
+
   return (
     <AnimatePresence>
       {loading && !product && (
@@ -390,29 +443,37 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-md"
-          />
+            className="fixed inset-0 z-[1000]"
+          >
+            <motion.div style={{ opacity: backdropOpacity }} className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+          </motion.div>
 
           {/* 2. Modal Wrapper: Centered Modal on Desktop (fixed inset-0 flex items-center justify-center), Bottom Sheet on Mobile */}
-          <div className="fixed inset-0 z-[1001] flex items-end md:items-center justify-center p-0 md:p-6 lg:p-8 pointer-events-none">
+          <motion.div style={{ y: dragY }} className="fixed inset-0 z-[1001] flex items-end md:items-center justify-center p-0 md:p-6 lg:p-8 pointer-events-none">
             <motion.div
               key={`drawer-panel-${product.id}`}
+              role="dialog"
+              aria-modal="true"
+              aria-label={displayTitle}
               initial={{ y: '100%', opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: '100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="pointer-events-auto relative z-10 flex flex-col md:flex-row w-full max-w-5xl lg:max-w-6xl h-[92vh] sm:h-[90vh] md:h-[84vh] md:max-h-[800px] bg-[#f8f9fa] dark:bg-[#0d0f12] border-t md:border border-black/10 dark:border-white/10 rounded-t-[28px] sm:rounded-t-[32px] md:rounded-[32px] overflow-y-auto md:overflow-hidden no-scrollbar shadow-2xl"
+              className="pointer-events-auto relative z-10 flex flex-col md:flex-row w-full max-w-5xl lg:max-w-6xl h-[100dvh] max-sm:pt-[env(safe-area-inset-top)] sm:h-[90vh] md:h-[84vh] md:max-h-[800px] bg-[#f8f9fa] dark:bg-[#0d0f12] border-t md:border border-black/10 dark:border-white/10 sm:rounded-t-[32px] md:rounded-[32px] overflow-y-auto overscroll-contain md:overflow-hidden no-scrollbar shadow-2xl"
+              onTouchStart={onPanelTouchStart}
+              onTouchMove={onPanelTouchMove}
+              onTouchEnd={onPanelTouchEnd}
+              onTouchCancel={onPanelTouchEnd}
             >
-              {/* Mobile Top Drag Indicator */}
-              <div className="md:hidden flex items-center justify-center pt-2 pb-0.5 shrink-0 w-full select-none touch-none">
-                <div className="h-1.5 w-10 rounded-full bg-black/20 dark:bg-white/25" />
-              </div>
+              {/* Pull-down hint on phones */}
+              <div aria-hidden="true" className="md:hidden absolute top-[calc(0.45rem+env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-40 h-1 w-10 rounded-full bg-black/20 dark:bg-white/25" />
 
               {/* Close Button */}
               <button
                 type="button"
                 onClick={onClose}
-                className="absolute top-2.5 right-3 rtl:right-auto rtl:left-3 md:top-4.5 md:right-4.5 md:rtl:right-auto md:rtl:left-4.5 z-50 p-2 sm:p-2.5 bg-white/90 dark:bg-[#1a1e28]/90 hover:bg-white dark:hover:bg-[#1a1e28] rounded-full hover:scale-105 transition-all cursor-pointer backdrop-blur-md border border-black/6 dark:border-white/10 shadow-xs text-black dark:text-white"
+                ref={closeButtonRef}
+                className="absolute top-[calc(0.625rem+env(safe-area-inset-top))] sm:top-2.5 right-3 rtl:right-auto rtl:left-3 md:top-4.5 md:right-4.5 md:rtl:right-auto md:rtl:left-4.5 z-50 p-2 sm:p-2.5 bg-white/90 dark:bg-[#1a1e28]/90 hover:bg-white dark:hover:bg-[#1a1e28] rounded-full hover:scale-105 transition-all cursor-pointer backdrop-blur-md border border-black/6 dark:border-white/10 shadow-xs text-black dark:text-white"
                 aria-label={lang === 'ar' ? 'إغلاق' : 'Close'}
               >
                 <X className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-black dark:text-white" />
@@ -421,7 +482,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
               {/* 3. Bento Box Layout Container */}
               <div className="flex flex-col md:flex-row w-full h-full p-2.5 sm:p-5 md:p-6 gap-2.5 sm:gap-4 md:gap-5">
                 {/* Left Box: Product Image (Bento Box 1) */}
-                <div className="w-full md:w-[48%] h-[260px] xs:h-[300px] sm:h-[380px] md:h-full rounded-[18px] sm:rounded-[22px] md:rounded-[26px] bg-black/5 dark:bg-white/5 overflow-hidden relative shrink-0">
+                <div className="w-full md:w-[48%] md:h-full rounded-[18px] sm:rounded-[22px] md:rounded-[26px] md:bg-black/5 md:dark:bg-white/5 overflow-hidden relative shrink-0">
                   <ProductDrawerGallery
                     images={images}
                     product={product}
@@ -514,6 +575,16 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                     />
                   </div>
 
+                  {onSelectRelated && (
+                    <ProductStrip
+                      className="mt-3"
+                      title={lang === 'ar' ? 'قطع مشابهة' : 'You may also like'}
+                      products={related}
+                      lang={lang}
+                      onSelect={onSelectRelated}
+                    />
+                  )}
+
                   {/* Sticky Bottom Actions (Add to Cart & WhatsApp) */}
                   <div className="sticky bottom-0 pt-2 pb-[calc(0.6rem+env(safe-area-inset-bottom,0px))] bg-gradient-to-t from-[#f8f9fa] dark:from-[#0d0f12] via-[#f8f9fa]/95 dark:via-[#0d0f12]/95 to-transparent mt-auto z-20">
                     <ProductOrderButton
@@ -524,12 +595,17 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                       selectedSize={selectedSize}
                       buttonLabel={buttonLabel}
                       lang={lang}
+                      price={activePrice}
+                      colorLabel={activeVariant && variantInfo?.hasMultipleColors ? (lang === 'ar' ? activeVariant.colorNameAr : activeVariant.colorNameEn) : undefined}
+                      image={images[0]}
+                      canAddToCart={canAddToCart}
+                      availability={availability}
                     />
                   </div>
                 </div>
               </div>
             </motion.div>
-          </div>
+          </motion.div>
 
           {/* Share Modal Dialog */}
           <ShareModal

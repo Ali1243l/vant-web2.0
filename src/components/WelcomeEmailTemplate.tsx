@@ -27,7 +27,7 @@ export default function WelcomeEmailTemplate({
   customerEmail = 'member@vant.archive',
   couponCode = 'VANT-WELCOME-15',
   discountPercent = 15,
-  welcomeTitle = 'أهلاً بك في الأرشيف الخاص لـ ڤانت',
+  welcomeTitle = 'أهلاً بك في الأرشيف الخاص لـ فانت',
   welcomeMessage = 'يسعدنا انضمامك إلى القائمة الحصرية لعشاق الخياطة الراقية والتصاميم المعمارية الفاخرة. استمتع بتجربة تسوق استثنائية مع كود الخصم الترحيبي الخاص بطلبك الأول.',
   badgeText = 'VIP PRIVILEGE ACCESS',
   heroImage = 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1200&q=80',
@@ -271,7 +271,7 @@ export default function WelcomeEmailTemplate({
               VANT ATELIER &bull; ALL RIGHTS RESERVED &bull; 2026
             </p>
             <p className="text-[9.5px] text-zinc-500 leading-relaxed max-w-sm mx-auto">
-              هذه الرسالة مخصصة للمشترك المعتمد في أرشيف ڤانت. يمكنك إلغاء الاشتراك في أي وقت عبر الموقع.
+              هذه الرسالة مخصصة للمشترك المعتمد في أرشيف فانت. يمكنك إلغاء الاشتراك في أي وقت عبر الموقع.
             </p>
           </footer>
         </div>

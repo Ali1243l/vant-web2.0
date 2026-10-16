@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { motion, useSpring } from 'framer-motion';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, useMotionValue, animate } from 'framer-motion';
 
 export interface MobileTouchZoomProps {
   children: React.ReactNode;
@@ -7,126 +7,138 @@ export interface MobileTouchZoomProps {
   className?: string;
 }
 
+const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+const MAX_SCALE = 4;
+
 /**
- * MobileTouchZoom Component (Hold & Pan UX)
- * Designed for Mobile Touch Devices.
- * - TouchStart: Instantly zooms in around the touch point with smooth spring physics.
- * - TouchMove: Pans image opposite to touch location to reveal fine product details.
- * - TouchEnd/TouchCancel: Resets scale and position with a smooth spring bounce back to default.
+ * Phone image zoom: double-tap to zoom in/out at the tapped point, pinch to zoom freely,
+ * drag to pan while zoomed. Unzoomed touches pass through, so the gallery still swipes
+ * and the page still scrolls.
  */
-export const MobileTouchZoom: React.FC<MobileTouchZoomProps> = ({
-  children,
-  zoomFactor = 1.85,
-  className = '',
-}) => {
+export const MobileTouchZoom: React.FC<MobileTouchZoomProps> = ({ children, zoomFactor = 2.2, className = '' }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isTouching, setIsTouching] = useState(false);
+  const [zoomed, setZoomed] = useState(false);
+  // Plain motion values so pan and pinch track the finger 1:1; only zoom in/out is animated
+  const scale = useMotionValue(1);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const ease = { type: 'tween', duration: 0.22, ease: [0.16, 1, 0.3, 1] } as const;
 
-  // Framer Motion Springs for fluid 60fps spring animations
-  const scale = useSpring(1, { stiffness: 320, damping: 28 });
-  const translateX = useSpring(0, { stiffness: 320, damping: 28 });
-  const translateY = useSpring(0, { stiffness: 320, damping: 28 });
+  const lastTap = useRef(0);
+  const start = useRef({ x: 0, y: 0 });
+  const last = useRef({ x: 0, y: 0 });
+  const pinch = useRef<{ dist: number; scale: number } | null>(null);
 
-  const updatePanPosition = useCallback(
-    (clientX: number, clientY: number) => {
-      if (!containerRef.current) return;
+  const panLimits = (s: number) => {
+    const r = containerRef.current?.getBoundingClientRect();
+    return r ? { mx: (r.width * (s - 1)) / 2, my: (r.height * (s - 1)) / 2 } : { mx: 0, my: 0 };
+  };
 
-      const rect = containerRef.current.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) return;
+  const setPan = (nx: number, ny: number, s: number) => {
+    const { mx, my } = panLimits(s);
+    x.set(clamp(nx, -mx, mx));
+    y.set(clamp(ny, -my, my));
+  };
 
-      // Clamp touch point strictly within image bounds
-      const touchX = Math.max(0, Math.min(rect.width, clientX - rect.left));
-      const touchY = Math.max(0, Math.min(rect.height, clientY - rect.top));
+  const reset = () => {
+    animate(scale, 1, ease);
+    animate(x, 0, ease);
+    animate(y, 0, ease);
+    setZoomed(false);
+  };
 
-      // Calculate relative coordinate from center [-1, 1]
-      const relativeX = (touchX / rect.width - 0.5) * 2;
-      const relativeY = (touchY / rect.height - 0.5) * 2;
+  const zoomAt = (clientX: number, clientY: number) => {
+    const r = containerRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const { mx, my } = panLimits(zoomFactor);
+    animate(scale, zoomFactor, ease);
+    animate(x, clamp(-(clientX - r.left - r.width / 2) * (zoomFactor - 1), -mx, mx), ease);
+    animate(y, clamp(-(clientY - r.top - r.height / 2) * (zoomFactor - 1), -my, my), ease);
+    setZoomed(true);
+  };
 
-      // Maximum allowable translation to keep zoomed image edges aligned
-      const maxPanX = (rect.width * (zoomFactor - 1)) / 2;
-      const maxPanY = (rect.height * (zoomFactor - 1)) / 2;
+  const distance = (t: React.TouchList) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
 
-      translateX.set(-relativeX * maxPanX);
-      translateY.set(-relativeY * maxPanY);
-    },
-    [translateX, translateY, zoomFactor]
-  );
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      pinch.current = { dist: distance(e.touches), scale: scale.get() };
+      setZoomed(true);
+      e.stopPropagation();
+      return;
+    }
+    const t = e.touches[0];
+    start.current = last.current = { x: t.clientX, y: t.clientY };
+    if (zoomed) e.stopPropagation();
+  };
 
-  const handleTouchStart = useCallback(
-    (e: React.TouchEvent<HTMLDivElement>) => {
-      if (e.touches.length !== 1) return;
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (pinch.current && e.touches.length === 2) {
+      const s = clamp((pinch.current.scale * distance(e.touches)) / pinch.current.dist, 1, MAX_SCALE);
+      scale.set(s);
+      setPan(x.get(), y.get(), s);
+      e.stopPropagation();
+      return;
+    }
+    if (!zoomed || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    setPan(x.get() + t.clientX - last.current.x, y.get() + t.clientY - last.current.y, scale.get());
+    last.current = { x: t.clientX, y: t.clientY };
+    e.stopPropagation();
+  };
 
-      setIsTouching(true);
-      scale.set(zoomFactor);
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (pinch.current) {
+      if (e.touches.length < 2) {
+        pinch.current = null;
+        if (scale.get() < 1.08) reset();
+        else setZoomed(true);
+      }
+      e.stopPropagation();
+      return;
+    }
+    const t = e.changedTouches[0];
+    const isTap = Math.hypot(t.clientX - start.current.x, t.clientY - start.current.y) < 10;
+    if (zoomed) e.stopPropagation();
+    if (!isTap) return;
+    const now = Date.now();
+    if (now - lastTap.current < 300) {
+      lastTap.current = 0;
+      if (zoomed) reset();
+      else zoomAt(t.clientX, t.clientY);
+    } else {
+      lastTap.current = now;
+    }
+  };
 
-      const touch = e.touches[0];
-      updatePanPosition(touch.clientX, touch.clientY);
-    },
-    [scale, updatePanPosition, zoomFactor]
-  );
-
-  const handleTouchMove = useCallback(
-    (e: React.TouchEvent<HTMLDivElement>) => {
-      if (!isTouching || e.touches.length !== 1) return;
-
-      const touch = e.touches[0];
-      updatePanPosition(touch.clientX, touch.clientY);
-    },
-    [isTouching, updatePanPosition]
-  );
-
-  const handleTouchEnd = useCallback(() => {
-    setIsTouching(false);
-    scale.set(1);
-    translateX.set(0);
-    translateY.set(0);
-  }, [scale, translateX, translateY]);
-
-  // Lock document body / native page scroll during touch drag gesture
+  // While zoomed or pinching, the finger belongs to the image. Only attached then: a blocking
+  // touch listener on every slide would make the browser wait on JS for each swipe frame
   useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
-
-    const preventNativeScroll = (e: TouchEvent) => {
-      if (e.touches.length === 1 && isTouching) {
-        if (e.cancelable) {
-          e.preventDefault();
-        }
-      }
+    if (!el || !zoomed) return;
+    const block = (e: TouchEvent) => {
+      if (e.cancelable) e.preventDefault();
     };
-
-    // Attach non-passive native touch listener to reliably prevent touch scroll
-    el.addEventListener('touchmove', preventNativeScroll, { passive: false });
-    return () => {
-      el.removeEventListener('touchmove', preventNativeScroll);
-    };
-  }, [isTouching]);
+    el.addEventListener('touchmove', block, { passive: false });
+    return () => el.removeEventListener('touchmove', block);
+  }, [zoomed]);
 
   return (
     <div
       ref={containerRef}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchEnd}
-      className={`relative overflow-hidden touch-none select-none ${className}`}
-      style={{ touchAction: 'none' }}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchEnd}
+      // The gallery swipes on pointer events; keep them away from it while the image is zoomed
+      onPointerDown={(e) => zoomed && e.stopPropagation()}
+      onPointerMove={(e) => zoomed && e.stopPropagation()}
+      onPointerUp={(e) => zoomed && e.stopPropagation()}
+      className={`relative overflow-hidden select-none ${className}`}
+      style={{ touchAction: zoomed ? 'none' : 'pan-x pan-y' }}
     >
-      <motion.div
-        style={{
-          scale,
-          x: translateX,
-          y: translateY,
-        }}
-        className="w-full h-full origin-center flex items-center justify-center"
-      >
+      <motion.div style={{ scale, x, y }} className="w-full h-full origin-center flex items-center justify-center will-change-transform">
         {children}
       </motion.div>
-
-      {/* Subtle indicator ring while panning on mobile */}
-      {isTouching && (
-        <div className="absolute inset-0 pointer-events-none border border-primary/30 rounded-lg shadow-inner transition-opacity duration-200" />
-      )}
     </div>
   );
 };

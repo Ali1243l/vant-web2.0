@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { normalizePhone } from '../lib/constants';
 import {
   X,
   Phone,
@@ -116,23 +117,16 @@ export const OrderDetailsSheet: React.FC<OrderDetailsSheetProps> = ({
   };
 
   const handleWhatsAppCustomer = () => {
-    const cleanPhone = order.customerPhone.replace(/[^0-9]/g, '');
-    const greeting = isAr ? `مرحباً ${order.customerName} العزيز` : `Dear ${order.customerName}`;
+    const cleanPhone = normalizePhone(order.customerPhone);
+    const greeting = isAr ? `مرحباً ${order.customerName}` : `Hi ${order.customerName}`;
     const statusText = isAr
       ? statusConfigs[order.status].labelAr
       : statusConfigs[order.status].labelEn;
 
+    const fitting = order.type === 'bespoke' && order.bespokeDetails?.fittingDate ? order.bespokeDetails.fittingDate : '';
     const message = isAr
-      ? `${greeting}،\nتحية طيبة من دار الرافدين للأزياء والتصميم الرفيع 🏛️✨\n\nنود إعلامكم بآخر مستجدات طلبكم رقم #${order.id} (${order.type === 'bespoke' ? 'تفصيل ملكي خاص Bespoke' : 'جاهز للارتداء'}):\nحالة الطلب الحالية: *${statusText}*.\n\n${
-          order.type === 'bespoke' && order.bespokeDetails?.fittingDate
-            ? `موعد جلسة البروفة / الفحص: ${order.bespokeDetails.fittingDate}\n`
-            : ''
-        }إذا كان لديكم أي استفسار أو تعديل، مستشار الكونسيرج الخاص بكم جاهز لخدمتكم دوماً.`
-      : `${greeting},\nGreetings from Dar Al-Rafidain Haute Couture 🏛️✨\n\nRegarding your Order #${order.id} (${order.type === 'bespoke' ? 'Royal Bespoke Tailoring' : 'Ready-to-Wear'}):\nCurrent Status: *${statusText}*.\n\n${
-          order.type === 'bespoke' && order.bespokeDetails?.fittingDate
-            ? `Fitting Session: ${order.bespokeDetails.fittingDate}\n`
-            : ''
-        }Please reply here if you require bespoke assistance from our VIP concierge.`;
+      ? `${greeting}،\nهذا تحديث من فانت VANT عن طلبك رقم #${order.id}.\nحالة الطلب: *${statusText}*.\n${fitting ? `موعد البروفة: ${fitting}\n` : ''}\nإذا عندك أي سؤال، رد علينا هنا.`
+      : `${greeting},\nAn update from VANT on your order #${order.id}.\nStatus: *${statusText}*.\n${fitting ? `Fitting: ${fitting}\n` : ''}\nReply here if you have any questions.`;
 
     const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -141,97 +135,70 @@ export const OrderDetailsSheet: React.FC<OrderDetailsSheetProps> = ({
   const handlePrintInvoice = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
+    // Customer fields come from the public checkout form, so everything is escaped before it becomes HTML
+    const esc = (value: unknown) =>
+      String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+    const money = (n: number) => `${Number(n || 0).toLocaleString('en-US')} IQD`;
 
     const itemsHtml = order.items
       .map(
         (item) => `
-      <tr style="border-bottom: 1px solid #e2e8f0;">
-        <td style="padding: 12px 8px; font-weight: 600;">${item.name} <br/><small style="color: #64748b;">${item.nameEn} • Size: ${item.selectedSize} ${item.fabricOption ? `• ${item.fabricOption}` : ''}</small></td>
-        <td style="padding: 12px 8px; text-align: center;">${item.quantity}</td>
-        <td style="padding: 12px 8px; text-align: right; font-family: monospace;">${item.price.toLocaleString('en-US')} IQD</td>
-        <td style="padding: 12px 8px; text-align: right; font-weight: bold; font-family: monospace;">${(item.price * item.quantity).toLocaleString('en-US')} IQD</td>
-      </tr>
-    `
+      <tr>
+        <td>${esc(item.name)}<br/><small>${[item.selectedSize && `${isAr ? 'المقاس' : 'Size'}: ${esc(item.selectedSize)}`, item.fabricOption && esc(item.fabricOption)].filter(Boolean).join(' • ')}</small></td>
+        <td class="c">${esc(item.quantity)}</td>
+        <td class="n">${money(item.price)}</td>
+        <td class="n"><b>${money(item.price * item.quantity)}</b></td>
+      </tr>`
       )
       .join('');
 
-    printWindow.document.write(`
-      <!DOCTYPE html>
+    printWindow.document.write(`<!DOCTYPE html>
       <html dir="${isAr ? 'rtl' : 'ltr'}" lang="${isAr ? 'ar' : 'en'}">
       <head>
-        <title>فاتورة رسمية - دار الرافدين #${order.id}</title>
+        <meta charset="utf-8">
+        <title>${isAr ? 'فاتورة' : 'Invoice'} VANT #${esc(order.id)}</title>
         <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 40px; color: #0f172a; }
-          .header { display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 20px; margin-bottom: 30px; }
-          .title { font-size: 24px; font-weight: bold; margin: 0; }
-          .badge { display: inline-block; padding: 4px 10px; background: #e0e7ff; color: #4338ca; border-radius: 9999px; font-size: 12px; font-weight: bold; margin-top: 6px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 24px; }
-          th { text-align: ${isAr ? 'right' : 'left'}; background: #f8fafc; padding: 10px 8px; border-bottom: 2px solid #cbd5e1; font-size: 13px; }
-          .total-box { margin-top: 30px; display: flex; justify-content: flex-end; }
-          .total-table { width: 300px; }
-          .footer { margin-top: 50px; padding-top: 20px; border-top: 1px dashed #cbd5e1; font-size: 12px; color: #64748b; text-align: center; }
-          @media print { button { display: none; } body { margin: 20mm; } }
+          body { font-family: -apple-system, 'Segoe UI', Tahoma, Arial, sans-serif; margin: 40px; color: #15171c; }
+          .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #15171c; padding-bottom: 18px; margin-bottom: 24px; }
+          .logo { font-size: 24px; font-weight: 800; margin: 0; } .logo span { letter-spacing: .28em; }
+          .muted { color: #6b7280; margin: 4px 0; }
+          .box { background: #f8f9fa; padding: 14px 16px; border-radius: 10px; margin-bottom: 20px; } .box p { margin: 4px 0; }
+          table { width: 100%; border-collapse: collapse; }
+          th { text-align: start; background: #f8f9fa; padding: 10px 8px; border-bottom: 2px solid #d1d5db; font-size: 13px; }
+          td { padding: 10px 8px; border-bottom: 1px solid #e5e7eb; } td small { color: #6b7280; }
+          .c { text-align: center; } .n { text-align: end; font-family: monospace; white-space: nowrap; }
+          .total { margin-top: 20px; font-size: 18px; font-weight: 800; text-align: end; color: #004ad7; }
+          button { margin-top: 24px; padding: 8px 20px; background: #004ad7; color: #fff; border: 0; border-radius: 8px; cursor: pointer; font-weight: 700; }
+          @media print { button { display: none; } body { margin: 15mm; } }
         </style>
       </head>
       <body>
-        <div class="header">
+        <div class="head">
           <div>
-            <h1 class="title">دار الرافدين للأزياء والتصميم الرفيع</h1>
-            <p style="margin: 4px 0; color: #64748b;">Dar Al-Rafidain Haute Couture & Atelier</p>
-            <span class="badge">${order.type === 'bespoke' ? 'طلب تفصيل خاص VIP BESPOKE' : 'طلب جاهز READY-TO-WEAR'}</span>
+            <h1 class="logo" dir="ltr"><span>VANT</span> | فانت</h1>
           </div>
-          <div style="text-align: ${isAr ? 'left' : 'right'};">
-            <h2 style="margin: 0; font-size: 20px; color: #4338ca;">#${order.id}</h2>
-            <p style="margin: 4px 0; color: #64748b;">التاريخ: ${order.orderDate}</p>
-            <p style="margin: 4px 0; color: #64748b;">طريقة الدفع: ${order.paymentMethod}</p>
+          <div style="text-align: end;">
+            <h2 style="margin: 0; color: #004ad7;">#${esc(order.id)}</h2>
+            <p class="muted">${isAr ? 'التاريخ' : 'Date'}: ${esc(order.orderDate)}</p>
+            <p class="muted">${isAr ? 'الدفع' : 'Payment'}: ${esc(order.paymentMethod)}</p>
           </div>
         </div>
-
-        <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
-          <h3 style="margin: 0 0 8px 0; font-size: 15px;">بيانات العميل والشحن:</h3>
-          <p style="margin: 4px 0;"><strong>الاسم:</strong> ${order.customerName} ${order.isVip ? '★ (VIP Client)' : ''}</p>
-          <p style="margin: 4px 0;"><strong>الهاتف:</strong> ${order.customerPhone}</p>
-          <p style="margin: 4px 0;"><strong>العنوان:</strong> ${order.shippingAddress}</p>
+        <div class="box">
+          <p><b>${isAr ? 'الاسم' : 'Name'}:</b> ${esc(order.customerName)}</p>
+          <p><b>${isAr ? 'الهاتف' : 'Phone'}:</b> <span dir="ltr">${esc(order.customerPhone)}</span></p>
+          <p><b>${isAr ? 'العنوان' : 'Address'}:</b> ${esc(order.shippingAddress)}</p>
         </div>
-
         <table>
-          <thead>
-            <tr>
-              <th>العنصر / المواصفات</th>
-              <th style="text-align: center;">الكمية</th>
-              <th style="text-align: right;">سعر القطعة</th>
-              <th style="text-align: right;">المجموع</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemsHtml}
-          </tbody>
+          <thead><tr>
+            <th>${isAr ? 'القطعة' : 'Item'}</th><th class="c">${isAr ? 'العدد' : 'Qty'}</th>
+            <th class="n">${isAr ? 'السعر' : 'Price'}</th><th class="n">${isAr ? 'المجموع' : 'Subtotal'}</th>
+          </tr></thead>
+          <tbody>${itemsHtml}</tbody>
         </table>
-
-        <div class="total-box">
-          <table class="total-table">
-            <tr>
-              <td style="padding: 6px 0;">المجموع الفرعي:</td>
-              <td style="padding: 6px 0; text-align: right; font-family: monospace;">${order.totalPrice.toLocaleString('en-US')} IQD</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0;">رسوم التوصيل والكونسيرج:</td>
-              <td style="padding: 6px 0; text-align: right; color: #10b981; font-weight: bold;">مجاناً (VIP Complimentary)</td>
-            </tr>
-            <tr style="border-top: 2px solid #0f172a; font-size: 18px; font-weight: bold;">
-              <td style="padding: 10px 0;">الإجمالي الكلي:</td>
-              <td style="padding: 10px 0; text-align: right; font-family: monospace; color: #4338ca;">${order.totalPrice.toLocaleString('en-US')} IQD</td>
-            </tr>
-          </table>
-        </div>
-
-        <div class="footer">
-          <p>شكراً لثقتكم بدار الرافدين للأزياء • بغداد - المنصور - شارع الأميرات • هاتف الكونسيرج: +964 780 987 6543</p>
-          <button onclick="window.print()" style="margin-top: 15px; padding: 8px 20px; background: #4338ca; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">طباعة الفاتورة الآن (Print Invoice)</button>
-        </div>
+        <p class="total">${isAr ? 'الإجمالي' : 'Total'}: ${money(order.totalPrice)}</p>
+        <button onclick="window.print()">${isAr ? 'طباعة' : 'Print'}</button>
       </body>
-      </html>
-    `);
+      </html>`);
     printWindow.document.close();
   };
 

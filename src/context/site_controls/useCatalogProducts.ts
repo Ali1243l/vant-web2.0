@@ -8,7 +8,6 @@ import {
   saveProductEnhancement,
   removeProductEnhancement,
 } from './constants';
-import { FALLBACK_CATALOG_PRODUCTS } from './fallbackProducts';
 
 export function useCatalogProducts() {
   const [products, setProducts] = useState<Product[]>(() => {
@@ -17,17 +16,17 @@ export function useCatalogProducts() {
         const stored = localStorage.getItem(PRODUCTS_STORAGE_KEY);
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          if (Array.isArray(parsed)) return parsed;
         }
       }
     } catch {}
-    return FALLBACK_CATALOG_PRODUCTS;
+    return [];
   });
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(() => products.length === 0 && !!supabase);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [totalProductsCount, setTotalProductsCount] = useState<number>(() => {
-    return products.length || FALLBACK_CATALOG_PRODUCTS.length;
+    return products.length;
   });
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [error, setError] = useState<string | null>(null);
@@ -88,75 +87,56 @@ export function useCatalogProducts() {
     });
   };
 
+  // Refetch keeps every page the customer already loaded, so a background sync never snaps the list back to page 1
+  const loadedCountRef = useRef(products.length);
+  loadedCountRef.current = products.length;
+
   const loadProductsFromSupabase = useCallback(async (isSilent = false) => {
+    if (!supabase) {
+      hasLoadedOnceRef.current = true;
+      setHasMore(false);
+      return;
+    }
     try {
-      if (!isSilent && !hasLoadedOnceRef.current && products.length === 0) {
+      if (!isSilent && !hasLoadedOnceRef.current && loadedCountRef.current === 0) {
         setLoading(true);
       }
       setError(null);
 
-      let fetchedData: any[] | null = null;
-      let fetchedCount: number | null = null;
+      const pages = Math.max(1, Math.ceil(loadedCountRef.current / PAGE_SIZE));
+      const { data, count, error: sbError } = await supabase
+        .from('products')
+        .select('*, product_media(*)', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(0, pages * PAGE_SIZE - 1);
 
-      // 1. Try fetching via same-origin backend proxy to avoid CORS / ad-blocker restrictions
-      try {
-        const proxyRes = await fetch('/api/products');
-        if (proxyRes.ok) {
-          const json = await proxyRes.json();
-          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-            fetchedData = json.data;
-            fetchedCount = json.count || json.data.length;
-          }
+      if (sbError) {
+        // Network or policy failure: keep whatever is cached instead of blanking the shop
+        if (!sbError.message.includes('Failed to fetch')) {
+          console.warn('Supabase catalog response info:', sbError.message);
         }
-      } catch {
-        // Fall through to direct Supabase SDK if proxy is unavailable
+        setHasMore(false);
+        return;
       }
 
-      // 2. If proxy had no data and direct supabase client is present, query it
-      if (!fetchedData && supabase) {
-        try {
-          const { data, count, error: sbError } = await supabase
-            .from('products')
-            .select('*, product_media(*)', { count: 'exact' })
-            .order('created_at', { ascending: false })
-            .range(0, PAGE_SIZE - 1);
-
-          if (!sbError && data && data.length > 0) {
-            fetchedData = data;
-            fetchedCount = count;
-          } else if (sbError && !sbError.message.includes('Failed to fetch')) {
-            console.warn('Supabase catalog response info:', sbError.message);
-          }
-        } catch (clientErr: any) {
-          // Graceful handling of browser client network/sandbox restrictions
-          if (!clientErr?.message?.includes('Failed to fetch')) {
-            console.warn('Direct Supabase fetch fallback to local cache:', clientErr?.message);
-          }
-        }
+      const mapped = mapSupabaseProducts(data || []);
+      const total = count ?? mapped.length;
+      setProducts(mapped);
+      setTotalProductsCount(total);
+      setCurrentPage(pages);
+      setHasMore(total > mapped.length);
+      setIsLiveDatabase(true);
+      setLastSyncTime(new Date());
+    } catch (clientErr: any) {
+      if (!clientErr?.message?.includes('Failed to fetch')) {
+        console.warn('Direct Supabase fetch fallback to local cache:', clientErr?.message);
       }
-
-      if (fetchedData && fetchedData.length > 0) {
-        const mapped = mapSupabaseProducts(fetchedData);
-        setProducts(mapped);
-        setTotalProductsCount(fetchedCount || mapped.length);
-        setCurrentPage(1);
-        setHasMore((fetchedCount || mapped.length) > PAGE_SIZE);
-        setIsLiveDatabase(true);
-        setLastSyncTime(new Date());
-        hasLoadedOnceRef.current = true;
-      } else {
-        // Ensure fallback products are active if database is empty
-        setProducts((prev) => (prev.length > 0 ? prev : FALLBACK_CATALOG_PRODUCTS));
-        setTotalProductsCount((prev) => (prev > 0 ? prev : FALLBACK_CATALOG_PRODUCTS.length));
-        hasLoadedOnceRef.current = true;
-      }
-    } catch {
-      // Always guarantee products remain available from fallback cache
-      setProducts((prev) => (prev.length > 0 ? prev : FALLBACK_CATALOG_PRODUCTS));
+      setHasMore(false);
     } finally {
+      hasLoadedOnceRef.current = true;
       setLoading(false);
     }
-  }, [products.length]);
+  }, []);
 
   const loadMoreProducts = useCallback(async () => {
     if (!supabase || loadingMore || !hasMore) return;
@@ -176,6 +156,7 @@ export function useCatalogProducts() {
         if (!sbError.message.includes('Failed to fetch')) {
           console.warn('Supabase pagination fetch info:', sbError.message);
         }
+        setHasMore(false); // stop auto-loading from retrying in a loop; the next sync turns it back on
       } else {
         const mapped = mapSupabaseProducts(data || []);
         setProducts((prev) => {
@@ -190,10 +171,22 @@ export function useCatalogProducts() {
       if (!err?.message?.includes('Failed to fetch')) {
         console.warn('Pagination fetch fallback:', err?.message);
       }
+      setHasMore(false);
     } finally {
       setLoadingMore(false);
     }
   }, [currentPage, hasMore, loadingMore]);
+
+  // For shared ?item= links to products beyond the first page
+  const fetchProductById = useCallback(async (id: string): Promise<Product | null> => {
+    if (!supabase) return null;
+    const { data, error: sbError } = await supabase
+      .from('products')
+      .select('*, product_media(*)')
+      .eq('id', id)
+      .maybeSingle();
+    return !sbError && data ? mapSupabaseProducts([data])[0] : null;
+  }, []);
 
   // Realtime subscription setup
   useEffect(() => {
@@ -332,17 +325,12 @@ export function useCatalogProducts() {
   };
 
   const updateProduct = (id: string | number, updates: Partial<Product>) => {
-    saveProductEnhancement(id, {
-      title_ar: updates.title_ar,
-      category_ar: updates.category_ar,
-      is_offer: updates.is_offer,
-      original_price: updates.original_price,
-      offer_badge_ar: updates.offer_badge_ar,
-      offer_badge_en: updates.offer_badge_en,
-      tags: updates.tags,
-      image_url: updates.image_url,
-      images: updates.images,
-    });
+    // Only fields this update names: a partial update (e.g. availability) must not wipe the saved title or photos
+    const enhancementKeys = ['title_ar', 'category_ar', 'is_offer', 'original_price', 'offer_badge_ar', 'offer_badge_en', 'tags', 'image_url', 'images'] as const;
+    saveProductEnhancement(
+      id,
+      Object.fromEntries(enhancementKeys.filter((k) => k in updates).map((k) => [k, updates[k]]))
+    );
 
     setProducts((prev) =>
       prev.map((item) => (String(item.id) === String(id) ? { ...item, ...updates } : item))
@@ -491,6 +479,7 @@ export function useCatalogProducts() {
     lastSyncTime,
     loadProductsFromSupabase,
     loadMoreProducts,
+    fetchProductById,
     addProduct,
     updateProduct,
     deleteProduct,

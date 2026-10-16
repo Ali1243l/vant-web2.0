@@ -4,8 +4,6 @@ export const STORAGE_KEY = 'vant_site_controls_v2';
 export const PRODUCTS_STORAGE_KEY = 'vant_custom_products_v2';
 export const ENHANCEMENTS_STORAGE_KEY = 'vant_product_enhancements_v2';
 export const CURRENCY_STORAGE_KEY = 'vant_currency_code_v2';
-export const PIN_STORAGE_KEY = 'vant_admin_pass_v3';
-export const SESSION_AUTH_KEY = 'vant_admin_auth_session';
 export const SETTINGS_STORAGE_KEY = 'vant_site_settings_v1';
 export const SIZES_STORAGE_KEY = 'vant_master_sizes_v2';
 

@@ -6,6 +6,14 @@ import { useSiteControls } from '../context/SiteControlsContext';
 import { trackEvent } from '../lib/analytics';
 
 export type AvailabilityFilterType = 'all' | 'in_stock' | 'coming_soon' | 'sold_out';
+export type CatalogSort = 'newest' | 'price_asc' | 'price_desc' | 'offers';
+
+const SORT_OPTIONS: { id: CatalogSort; ar: string; en: string }[] = [
+  { id: 'newest', ar: 'الأحدث', en: 'Newest' },
+  { id: 'price_asc', ar: 'السعر: الأقل أولاً', en: 'Price: Low to High' },
+  { id: 'price_desc', ar: 'السعر: الأعلى أولاً', en: 'Price: High to Low' },
+  { id: 'offers', ar: 'العروض أولاً', en: 'Offers First' },
+];
 
 interface Props {
   categories: string[];
@@ -19,6 +27,8 @@ interface Props {
   isOffersOnly?: boolean;
   onToggleOffersOnly?: (val: boolean) => void;
   offersCount?: number;
+  sort?: CatalogSort;
+  onSortChange?: (s: CatalogSort) => void;
 }
 
 export default function CategoryFilter({
@@ -33,6 +43,8 @@ export default function CategoryFilter({
   isOffersOnly = false,
   onToggleOffersOnly,
   offersCount = 0,
+  sort = 'newest',
+  onSortChange,
 }: Props) {
   const { getControl } = useSiteControls();
   const filterControl = getControl('btn_filter_availability');
@@ -55,6 +67,8 @@ export default function CategoryFilter({
   };
 
   // Container-isolated scroll: smoothly centers active category inside tabs bar
+  // On (re)mount — the header remounts this row when you scroll up — jump instantly: a smooth scroll here cancels the page's own smooth scroll (back-to-top stopped after ~25px)
+  const hasCenteredRef = useRef(false);
   useEffect(() => {
     if (!activeRef.current || !tabsContainerRef.current) return;
     const container = tabsContainerRef.current;
@@ -66,8 +80,9 @@ export default function CategoryFilter({
 
     container.scrollBy({
       left: offset,
-      behavior: 'smooth',
+      behavior: hasCenteredRef.current ? 'smooth' : 'auto',
     });
+    hasCenteredRef.current = true;
   }, [active, isOffersOnly]);
 
   // Close dropdown on outside click or deliberate scroll
@@ -133,7 +148,7 @@ export default function CategoryFilter({
     },
     {
       id: 'sold_out',
-      label_ar: 'العرض منتهي',
+      label_ar: 'نفدت الكمية',
       label_en: 'Sold Out',
       sub_ar: 'قطع غير متوفرة حالياً',
       sub_en: 'Currently archived',
@@ -152,7 +167,7 @@ export default function CategoryFilter({
           <div
             ref={tabsContainerRef}
             role="tablist"
-            className="no-scrollbar flex flex-nowrap items-center gap-1.5 sm:gap-2 md:gap-2.5 overflow-x-auto [scroll-snap-type:x_proximity] select-none py-1 md:py-1.5"
+            className="no-scrollbar flex flex-nowrap items-center gap-1.5 sm:gap-2 md:gap-2.5 overflow-x-auto [scroll-snap-type:x_proximity] select-none py-1 md:py-1.5 max-md:px-3 max-md:[mask-image:linear-gradient(to_right,transparent,black_20px,black_calc(100%-20px),transparent)]"
           >
             {/* Special Offers & Discounts Button */}
             {onToggleOffersOnly && offersControl.visible && (
@@ -167,7 +182,7 @@ export default function CategoryFilter({
                   trackEvent('category_filter', { category: 'offers', isOffersOnly: nextState });
                   scrollToCatalogTop();
                 }}
-                className={`relative shrink-0 snap-center whitespace-nowrap rounded-full px-3.5 py-1.5 md:h-9.5 md:px-4 lg:h-10 lg:px-4.5 flex items-center justify-center text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
+                className={`relative shrink-0 snap-center whitespace-nowrap rounded-full h-10 px-3.5 md:px-4 lg:h-10 lg:px-4.5 flex items-center justify-center text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
                   isOffersOnly
                     ? 'text-white dark:text-[#15171c] font-semibold'
                     : 'bg-black/[0.035] dark:bg-white/[0.06] text-[#6b7280] dark:text-[#9ca3af] hover:text-[#15171c] dark:hover:text-[#f3f4f6] hover:bg-black/[0.06] dark:hover:bg-white/[0.1] border border-black/5 dark:border-white/5'
@@ -206,7 +221,7 @@ export default function CategoryFilter({
                     }
                     scrollToCatalogTop();
                   }}
-                  className={`relative shrink-0 snap-center whitespace-nowrap rounded-full px-3.5 py-1.5 md:h-9.5 md:px-4 lg:h-10 lg:px-4.5 flex items-center justify-center text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
+                  className={`relative shrink-0 snap-center whitespace-nowrap rounded-full h-10 px-3.5 md:px-4 lg:h-10 lg:px-4.5 flex items-center justify-center text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
                     isActive
                       ? 'text-white dark:text-[#15171c] font-semibold'
                       : 'bg-black/[0.035] dark:bg-white/[0.06] text-[#6b7280] dark:text-[#9ca3af] hover:text-[#15171c] dark:hover:text-[#f3f4f6] hover:bg-black/[0.06] dark:hover:bg-white/[0.1] border border-black/5 dark:border-white/5'
@@ -241,23 +256,24 @@ export default function CategoryFilter({
                 }}
                 aria-expanded={isOpen}
                 aria-haspopup="true"
-                className={`flex shrink-0 items-center gap-1.5 md:gap-2 rounded-full px-3.5 py-1.5 md:h-9.5 md:px-4 lg:h-10 lg:px-4.5 text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer border shadow-2xs select-none ${
-                  availability !== 'all'
+                className={`flex shrink-0 items-center justify-center gap-1.5 md:gap-2 rounded-full h-10 max-md:w-10 max-md:px-0 px-3.5 md:px-4 lg:h-10 lg:px-4.5 text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer border shadow-2xs select-none ${
+                  availability !== 'all' || sort !== 'newest'
                     ? 'border-[#004ad7]/35 dark:border-[#3b82f6]/35 bg-[#004ad7]/10 dark:bg-[#3b82f6]/15 text-[#004ad7] dark:text-[#3b82f6] font-semibold ring-1 ring-[#004ad7]/20 dark:ring-[#3b82f6]/25'
                     : isOpen
                     ? 'bg-black/[0.08] dark:bg-white/[0.12] text-[#15171c] dark:text-[#f3f4f6] border-black/15 dark:border-white/20 ring-1 ring-black/5 dark:ring-white/10'
                     : 'bg-black/[0.035] dark:bg-white/[0.06] text-[#6b7280] dark:text-[#9ca3af] hover:text-[#15171c] dark:hover:text-[#f3f4f6] hover:bg-black/[0.06] dark:hover:bg-white/[0.1] border-black/8 dark:border-white/10'
                 }`}
               >
-                <SlidersHorizontal className="h-3.5 w-3.5 opacity-60" />
-                <span>{isAr ? currentOption.label_ar : currentOption.label_en}</span>
+                <SlidersHorizontal className="h-4 w-4 md:h-3.5 md:w-3.5 opacity-70 md:opacity-60" />
+                {/* Icon-only on phones so the category chips get the width */}
+                <span className="max-md:sr-only">{isAr ? currentOption.label_ar : currentOption.label_en}</span>
                 {currentOption.dot && (
                   <span className={`h-1.5 w-1.5 rounded-full ${currentOption.dot}`} />
                 )}
                 <motion.span
                   animate={{ rotate: isOpen ? 180 : 0 }}
                   transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                  className="inline-flex items-center"
+                  className="inline-flex items-center max-md:hidden"
                 >
                   <ChevronDown className="h-3 w-3 opacity-60" />
                 </motion.span>
@@ -272,7 +288,7 @@ export default function CategoryFilter({
                     exit={{ opacity: 0, scale: 0.98, y: 6 }}
                     transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                     role="menu"
-                    className="absolute top-full mt-2 end-0 ltr:right-0 rtl:left-0 z-[100000] min-w-[240px] sm:min-w-[255px] md:min-w-[270px] rounded-2xl border border-black/10 dark:border-white/15 bg-white/95 dark:bg-[#12141a]/95 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.18),0_6px_18px_rgba(0,0,0,0.08)] dark:shadow-[0_24px_55px_rgba(0,0,0,0.9),0_6px_20px_rgba(0,0,0,0.6)] backdrop-blur-2xl text-[#15171c] dark:text-white max-w-[calc(100vw-32px)] will-change-transform transform-gpu ring-1 ring-black/5 dark:ring-white/10"
+                    className="absolute top-full mt-2 end-0 ltr:right-0 rtl:left-0 z-[100000] min-w-[240px] sm:min-w-[255px] md:min-w-[270px] rounded-2xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#12141a] p-2 shadow-[0_20px_50px_rgba(0,0,0,0.18),0_6px_18px_rgba(0,0,0,0.08)] dark:shadow-[0_24px_55px_rgba(0,0,0,0.9),0_6px_20px_rgba(0,0,0,0.6)] text-[#15171c] dark:text-white max-w-[calc(100vw-32px)] will-change-transform transform-gpu ring-1 ring-black/5 dark:ring-white/10"
                   >
                     {/* Header */}
                     <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-black/6 dark:border-white/8 mb-1.5">
@@ -377,6 +393,36 @@ export default function CategoryFilter({
                         );
                       })}
                     </div>
+
+                    {onSortChange && (
+                      <div className="mt-1.5 pt-1.5 border-t border-black/6 dark:border-white/8">
+                        <div className="px-2.5 py-1.5 text-[11px] font-bold tracking-wider text-[#6b7280] dark:text-[#9ca3af] uppercase select-none">
+                          {isAr ? 'ترتيب حسب' : 'Sort by'}
+                        </div>
+                        <div className="grid grid-cols-2 gap-1 px-1 pb-1">
+                          {SORT_OPTIONS.map((opt) => (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              role="menuitemradio"
+                              aria-checked={sort === opt.id}
+                              onClick={() => {
+                                onSortChange(opt.id);
+                                setIsOpen(false);
+                                scrollToCatalogTop();
+                              }}
+                              className={`min-h-10 rounded-xl px-2 py-2 text-[11.5px] sm:text-xs text-center transition-colors cursor-pointer ${
+                                sort === opt.id
+                                  ? 'bg-[#004ad7]/10 dark:bg-[#3b82f6]/15 text-[#004ad7] dark:text-[#60a5fa] font-semibold ring-1 ring-[#004ad7]/20 dark:ring-[#3b82f6]/30'
+                                  : 'bg-black/[0.03] dark:bg-white/[0.05] hover:bg-black/[0.06] dark:hover:bg-white/[0.1] text-neutral-700 dark:text-neutral-200'
+                              }`}
+                            >
+                              {isAr ? opt.ar : opt.en}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>

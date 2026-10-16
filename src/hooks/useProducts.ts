@@ -1,5 +1,10 @@
+import { useMemo } from 'react';
 import { useSiteControls } from '../context/SiteControlsContext';
 import type { Product } from '../types';
+import { DEMO_PRODUCTS } from '../data/demoProducts';
+
+// Test-only: ?demo in the URL appends the demo catalogue for this visit
+const IS_DEMO = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('demo');
 
 export function useProducts(): {
   products: Product[];
@@ -25,13 +30,14 @@ export function useProducts(): {
     refreshProducts,
     loadMoreProducts,
   } = useSiteControls();
+  const withDemo = useMemo(() => (IS_DEMO ? [...products, ...DEMO_PRODUCTS] : products), [products]);
 
   return {
-    products,
+    products: withDemo,
     loading,
     loadingMore,
     hasMore,
-    totalProductsCount,
+    totalProductsCount: totalProductsCount + (IS_DEMO ? DEMO_PRODUCTS.length : 0),
     error,
     isLiveDatabase,
     lastSyncTime,

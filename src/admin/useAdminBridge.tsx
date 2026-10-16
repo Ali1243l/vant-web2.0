@@ -180,18 +180,16 @@ export interface AdminSiteSettings {
   whatsappConciergeNumber: string;
   whatsappConciergeName: string;
   whatsappDefaultMsg: string;
-  pin?: string;
 }
 
 export type SiteSettings = AdminSiteSettings;
 
 export const defaultSiteSettings: SiteSettings = {
-  storeName: 'دار ڤانت (Maison VANT)',
+  storeName: 'دار فانت (Maison VANT)',
   storeNameEn: 'Maison VANT | Editorial Haute Streetwear',
   currency: 'IQD',
   emailAlerts: true,
   smsAlerts: false,
-  pin: '1234',
 
   maintenanceMode: false,
   maintenanceMessageAr: 'نقوم حالياً بتجهيز وإطلاق المجموعة الحصرية الجديدة. سنعود لاستقبال طلباتكم قريباً جداً.',
@@ -199,14 +197,14 @@ export const defaultSiteSettings: SiteSettings = {
   maintenanceEstimatedBack: 'خلال ساعتين (2 Hours)',
 
   splashMotif: 'hanger',
-  splashTextAr: 'دار ڤانت للأزياء • أصل التشكيلة والتريندات',
+  splashTextAr: 'دار فانت للأزياء • أصل التشكيلة والتريندات',
   splashTextEn: 'Maison VANT • Editorial Streetwear Catalogue',
   splashDurationMs: 2500,
 
   heroBannerBg: '',
   heroHeadlineAr: 'أصل التشكيلة والتريندات الحصرية',
   heroHeadlineEn: 'Curated Exclusive Collection & Trends',
-  heroSubtitleAr: 'استكشف التشكيلة الحصرية من دار ڤانت مباشرة من قاعدة البيانات.',
+  heroSubtitleAr: 'استكشف التشكيلة الحصرية من دار فانت مباشرة من قاعدة البيانات.',
   heroSubtitleEn: 'Explore curated haute streetwear pieces directly from our database.',
   heroBadgeAr: 'التشكيلة الحصرية • 2026',
   heroBadgeEn: 'Exclusive Archive • 2026',
@@ -218,7 +216,7 @@ export const defaultSiteSettings: SiteSettings = {
   whatsappOrdersName: 'خدمة العملاء والطلبات',
   whatsappConciergeNumber: '',
   whatsappConciergeName: 'كونسيرج الاستفسارات',
-  whatsappDefaultMsg: 'مرحباً، أود الاستفسار عن قطعة من دار ڤانت.',
+  whatsappDefaultMsg: 'مرحباً، أود الاستفسار عن قطعة من دار فانت.',
 };
 
 interface AdminContextType {
@@ -229,9 +227,6 @@ interface AdminContextType {
   toggleDrawer: () => void;
   isLocked: boolean;
   lock: () => void;
-  unlock: (pin: string) => boolean;
-  pin: string;
-  setPin: (pin: string) => void;
   lang: 'ar' | 'en';
   setLang: (lang: 'ar' | 'en') => void;
   toggleLang: () => void;
@@ -300,15 +295,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     siteControls.lockAdmin();
   }, [siteControls]);
 
-  const unlock = useCallback((enteredPin: string) => {
-    const cleanPin = String(enteredPin || '').trim();
-    return siteControls.unlockAdmin(cleanPin);
-  }, [siteControls]);
-
-  const pin = siteControls.siteSettings ? (localStorage.getItem('vant_admin_pin') || '1234') : '1234';
-  const setPin = useCallback((newPin: string) => {
-    siteControls.setAdminPin(newPin);
-  }, [siteControls]);
 
   // Language state
   const [lang, setLang] = useState<'ar' | 'en'>('ar');
@@ -316,7 +302,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setLang((prev) => (prev === 'ar' ? 'en' : 'ar'));
   }, []);
 
-  const currentStore = siteControls.siteSettings.welcome_title_ar || 'دار ڤانت (VANT)';
+  const currentStore = siteControls.siteSettings.welcome_title_ar || 'دار فانت (VANT)';
   const setCurrentStore = useCallback((name: string) => {
     siteControls.updateSiteSettings({ welcome_title_ar: name });
   }, [siteControls]);
@@ -495,18 +481,21 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const patch: Partial<StoreProduct> = {};
     if (updated.name) patch.title_ar = updated.name;
     if (updated.nameEn) patch.title = updated.nameEn;
-    if (updated.price !== undefined) {
-      if (updated.salePrice) {
+    // The store keeps the selling price in `price` and the pre-offer price in `original_price`, so an offer
+    // (or removing one) must always be computed from the real base price, never from the current sale price
+    if (updated.price !== undefined || 'salePrice' in updated) {
+      const current = siteControls.products.find((p) => String(p.id) === String(id));
+      const currentBase = current?.is_offer && current.original_price ? current.original_price : current?.price ?? 0;
+      const basePrice = updated.price ?? currentBase;
+      if (updated.salePrice && updated.salePrice < basePrice) {
         patch.price = updated.salePrice;
-        patch.original_price = updated.price;
+        patch.original_price = basePrice;
         patch.is_offer = true;
       } else {
-        patch.price = updated.price;
+        patch.price = basePrice;
+        patch.original_price = undefined;
         patch.is_offer = false;
       }
-    } else if (updated.salePrice !== undefined) {
-      patch.price = updated.salePrice;
-      patch.is_offer = true;
     }
     if (updated.category) {
       patch.category = updated.category;
@@ -526,6 +515,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     if (updated.offerBadgeText || updated.offerCampaign) {
       patch.offer_badge_ar = updated.offerBadgeText || updated.offerCampaign;
+    } else if ('offerBadgeText' in updated) {
+      patch.offer_badge_ar = undefined;
     }
 
     siteControls.updateProduct(id, patch);
@@ -818,12 +809,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const siteSettings: SiteSettings = useMemo(() => {
     const sc = siteControls.siteSettings;
     return {
-      storeName: sc.welcome_title_ar || 'دار ڤانت للأزياء الرفيعة',
+      storeName: sc.welcome_title_ar || 'دار فانت للأزياء الرفيعة',
       storeNameEn: sc.welcome_title_en || 'Maison VANT Haute Couture',
       currency: siteControls.currencyCode || 'IQD',
       emailAlerts: true,
       smsAlerts: false,
-      pin: '1234',
       maintenanceMode: !!sc.maintenance_mode,
       maintenanceMessageAr: sc.maintenance_message_ar || 'نقوم حالياً بتجهيز وإطلاق المجموعة الحصرية الجديدة. سنعود لاستقبال طلباتكم الفاخرة قريباً جداً.',
       maintenanceMessageEn: sc.maintenance_message || 'We are currently curating and preparing our new exclusive collection.',
@@ -831,7 +821,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       splashMotif: (sc.splash_motif === 'hanger' || sc.splash_motif === 'scissors' || sc.splash_motif === 'monogram')
         ? (sc.splash_motif as any)
         : 'hanger',
-      splashTextAr: sc.loading_text_ar || 'ڤانت للأزياء • أصالة الحرفة الرفيعة',
+      splashTextAr: sc.loading_text_ar || 'فانت للأزياء • أصالة الحرفة الرفيعة',
       splashTextEn: sc.loading_text_en || 'VANT • High-Fashion & Modern Silhouettes',
       splashDurationMs: 2200,
       heroBannerBg: siteControls.controls['banner_hero_bg']?.actionValue || 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1600&auto=format&fit=crop&q=80',
@@ -839,7 +829,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       heroHeadlineEn: siteControls.controls['banner_hero_title']?.label_en || 'Architectural Silhouettes in Virgin Wool',
       heroSubtitleAr: siteControls.controls['banner_hero_subtitle']?.label_ar || 'تصاميم تم تفصيلها بدقة هندسية في أرقى المعامل الإيطالية.',
       heroSubtitleEn: siteControls.controls['banner_hero_subtitle']?.label_en || 'Engineered with sculptural precision from virgin Italian wool.',
-      heroBadgeAr: siteControls.controls['banner_hero_tag']?.label_ar || 'ڤانت · كتالوج موسم 2026',
+      heroBadgeAr: siteControls.controls['banner_hero_tag']?.label_ar || 'فانت · كتالوج موسم 2026',
       heroBadgeEn: siteControls.controls['banner_hero_tag']?.label_en || 'MAISON VANT · WINTER CAPSULE 2026',
       heroCtaTextAr: siteControls.controls['banner_hero_btn']?.label_ar || 'تصفح كافة القطع',
       heroCtaTextEn: siteControls.controls['banner_hero_btn']?.label_en || 'Browse All Pieces',
@@ -848,7 +838,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       whatsappOrdersName: 'قسم إدارة واستلام الطلبات الفورية',
       whatsappConciergeNumber: siteControls.controls['cfg_bespoke_phone']?.actionValue || '+9647809876543',
       whatsappConciergeName: 'كونسيرج التفصيل الخاص والخياطة الراقية',
-      whatsappDefaultMsg: 'مرحباً، أود الاستفسار عن تفصيل قطعة خاصة من دار ڤانت.',
+      whatsappDefaultMsg: 'مرحباً، أود الاستفسار عن تفصيل قطعة خاصة من دار فانت.',
     };
   }, [siteControls.siteSettings, siteControls.currencyCode, siteControls.controls]);
 
@@ -880,9 +870,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     if (partial.currency && (partial.currency === 'د.ع' || partial.currency === 'IQD' || partial.currency === 'USD')) {
       siteControls.setCurrencyCode(partial.currency as any);
-    }
-    if (partial.pin) {
-      siteControls.setAdminPin(partial.pin);
     }
     if (partial.heroHeadlineAr) {
       siteControls.updateControl('banner_hero_title', { label_ar: partial.heroHeadlineAr });
@@ -928,9 +915,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         toggleDrawer,
         isLocked,
         lock,
-        unlock,
-        pin,
-        setPin,
         lang,
         setLang,
         toggleLang,

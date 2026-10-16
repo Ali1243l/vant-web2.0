@@ -283,10 +283,10 @@ export function calculateRecommendedSize(
       reason_ar: 'يتطلب تفصيلاً خاصاً (Bespoke)',
       reason_en: 'Requires Bespoke Tailoring',
       note_ar: weightKg > maxSupportedWeight
-        ? `المقاسات الجاهزة المتوفرة مخصصة حتى وزن ${maxSupportedWeight} كغم، ولن توفر الراحة أو الاتساع المطلوب لهذا القياس. ڤانت ترحب بطلب تفصيل قطعة خاصة لك بمقاساتك الدقيقة عبر خدمة التفصيل الخاص.`
+        ? `المقاسات الجاهزة المتوفرة مخصصة حتى وزن ${maxSupportedWeight} كغم، ولن توفر الراحة أو الاتساع المطلوب لهذا القياس. فانت ترحب بطلب تفصيل قطعة خاصة لك بمقاساتك الدقيقة عبر خدمة التفصيل الخاص.`
         : 'نظراً لاختلاف تناسق الطول والوزن عن قوالب المقاسات الجاهزة، المقاسات الجاهزة ستكون غير متناسقة في طول الأكمام والكتفين. نوصي بالتفصيل الخاص لضمان قصة مثالية ومريحة.',
       note_en: weightKg > maxSupportedWeight
-        ? `Current ready-to-wear sizes are tailored up to ${maxSupportedWeight} kg and cannot accommodate this profile comfortably. Maison VANT welcomes bespoke Made-to-Measure orders tailored to your exact measurements.`
+        ? `Current ready-to-wear sizes are tailored up to ${maxSupportedWeight} kg and cannot accommodate this profile comfortably. VANT welcomes bespoke Made-to-Measure orders tailored to your exact measurements.`
         : 'Due to distinct proportion differences from ready-to-wear patterns, custom bespoke tailoring is recommended for optimal fit and silhouette harmony.',
     };
   }

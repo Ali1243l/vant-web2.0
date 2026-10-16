@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef, type ReactNode } from 'react';
-import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useMotionValueEvent, useTransform } from 'framer-motion';
 import { Search, Sun, Moon, Globe, Heart, ShoppingCart } from 'lucide-react';
 import type { Language, Theme } from '../types';
 import { useSiteControls } from '../context/SiteControlsContext';
 import SearchOverlay from './SearchOverlay';
+import { useCartCount } from '../lib/cart';
 
 interface Props {
   children?: ReactNode;
@@ -48,39 +49,19 @@ export default function Header({
 
   const [scrolled, setScrolled] = useState(false);
   const [showCategories, setShowCategories] = useState(true);
-  const [kineticLang, setKineticLang] = useState<'en' | 'ar'>(lang);
-  const [cartCount, setCartCount] = useState<number>(() => {
-    try {
-      const stored = localStorage.getItem('vant_cart_count');
-      return stored ? parseInt(stored, 10) : 0;
-    } catch {
-      return 0;
-    }
-  });
+  // Overflow stays clipped while the row animates, then opens so the filter dropdown can spill out
+  const [categoriesSettled, setCategoriesSettled] = useState(true);
+  const cartCount = useCartCount();
   const [isCartBouncing, setIsCartBouncing] = useState(false);
 
   useEffect(() => {
-    const handleCartUpdate = (e: Event) => {
-      const customEv = e as CustomEvent;
-      if (customEv.detail && typeof customEv.detail.count === 'number') {
-        setCartCount(customEv.detail.count);
-      } else {
-        try {
-          const stored = localStorage.getItem('vant_cart_count');
-          setCartCount(stored ? parseInt(stored, 10) : 0);
-        } catch {}
-      }
-    };
-
     const handleCartBounce = () => {
       setIsCartBouncing(true);
       setTimeout(() => setIsCartBouncing(false), 600);
     };
 
-    window.addEventListener('vant-cart-update', handleCartUpdate);
     window.addEventListener('vant-cart-bounce', handleCartBounce);
     return () => {
-      window.removeEventListener('vant-cart-update', handleCartUpdate);
       window.removeEventListener('vant-cart-bounce', handleCartBounce);
     };
   }, []);
@@ -117,29 +98,55 @@ export default function Header({
     }
   });
 
+  // Scroll-linked (not toggled) shrink: every value follows the finger over the first 80px
+  const progress = useTransform(scrollY, [0, 80], [0, 1], { clamp: true });
+  const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches);
+  const [isSm, setIsSm] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 640px)').matches);
+  const [viewportWidth, setViewportWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1440));
   useEffect(() => {
-    setKineticLang(lang);
-  }, [lang]);
+    const onResize = () => {
+      setIsDesktop(window.matchMedia('(min-width: 768px)').matches);
+      setIsSm(window.matchMedia('(min-width: 640px)').matches);
+      setViewportWidth(window.innerWidth);
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  // Floating pill only from tablet up; on phones a pill squeezes the content, so the bar stays edge to edge
+  // Edge to edge at the top; narrows to a pill capped at 1440px as you scroll, and back again on the way up
+  const barWidth = useTransform(progress, (v) => {
+    if (!isDesktop) return '100%';
+    const cap = Math.max(viewportWidth, 1440);
+    return `min(${100 - 6 * v}%, ${cap - (cap - 1440) * v}px)`;
+  });
+  const barRadius = useTransform(progress, (v) => (isDesktop ? 24 * v : 0));
+  const barY = useTransform(progress, (v) => (isDesktop ? 8 * v : 0));
+  const barShadow = useTransform(progress, (v) => `0 12px 36px -10px rgba(0,0,0,${0.12 * v}), 0 2px 6px rgba(0,0,0,${0.04 * v})`);
+  const topRowHeight = useTransform(progress, (v) => (isSm ? 64 : 56) - (isSm ? 14 : 10) * v);
+  const logoScale = useTransform(progress, [0, 1], [1, 0.86]);
 
+  // The header is fixed so collapsing the category row never shifts the page; this spacer holds its resting height
+  const headerRef = useRef<HTMLElement>(null);
+  const [restingHeight, setRestingHeight] = useState(118);
   useEffect(() => {
-    const timer = setInterval(() => {
-      setKineticLang((prev) => (prev === 'en' ? 'ar' : 'en'));
-    }, 3600);
-    return () => clearInterval(timer);
+    const el = headerRef.current;
+    if (!el) return;
+    const measure = () => {
+      if (window.scrollY < 10) setRestingHeight(el.offsetHeight);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
   }, []);
 
   return (
     <>
       {/* Resizable Navbar Outer Wrapper */}
-      <header className="sticky top-0 z-40 w-full">
+      <div aria-hidden="true" style={{ height: restingHeight }} />
+      <header ref={headerRef} className="fixed top-0 inset-x-0 z-40 w-full">
         <motion.div
           animate={{
-            width: scrolled ? '94%' : '100%',
-            borderRadius: scrolled ? '24px' : '0px',
-            y: scrolled ? 8 : 0,
-            boxShadow: scrolled
-              ? '0 12px 36px -10px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04)'
-              : 'none',
             backgroundColor: scrolled
               ? theme === 'dark'
                 ? 'rgba(13, 15, 18, 0.88)'
@@ -162,26 +169,28 @@ export default function Header({
           style={{
             borderStyle: 'solid',
             borderWidth: '1px',
+            width: barWidth,
+            borderRadius: barRadius,
+            y: barY,
+            boxShadow: barShadow,
           }}
-          className="mx-auto max-w-7xl xl:max-w-[1440px] backdrop-blur-md transition-colors"
+          className="mx-auto backdrop-blur-md transition-colors max-md:border-x-0 max-md:border-t-0"
         >
-          <div className="mx-auto w-full px-3 sm:px-6 overflow-visible">
+          <div className="mx-auto w-full max-w-[1440px] px-3 sm:px-6 overflow-visible">
             {/* 1. Resizable Top Navigation Bar */}
-            <div
-              dir="ltr"
-              style={{ direction: 'ltr' }}
-              className={`flex items-center justify-between w-full transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                scrolled ? 'h-11 sm:h-12' : 'h-14 sm:h-16'
-              }`}
+            <motion.div
+              style={{ direction: isDesktop ? 'ltr' : undefined, height: topRowHeight }}
+              className="flex items-center justify-between w-full"
             >
               {/* Left Actions (Search Icon, Shopping Cart, Wishlist) */}
-              <div className="flex items-center justify-start gap-1.5 sm:gap-2.5 min-w-[110px] sm:min-w-[140px] [direction:ltr]">
+              {/* On phones these actions live in MobileBottomNav; invisible keeps the logo centred */}
+              <div className="flex items-center justify-start gap-1.5 sm:gap-2.5 min-w-[110px] sm:min-w-[140px] [direction:ltr] max-md:hidden">
                 {searchControl.visible && (
                   <button
                     type="button"
                     onClick={() => onToggleSearch(true)}
-                    className={`flex items-center justify-center rounded-full text-[#15171c]/80 dark:text-white/80 transition-all hover:bg-black/5 dark:hover:bg-white/10 active:scale-95 cursor-pointer ${
-                      scrolled ? 'h-8 w-8' : 'h-9 w-9'
+                    className={`relative flex items-center justify-center rounded-full text-[#15171c]/80 dark:text-white/80 transition-all hover:bg-black/5 dark:hover:bg-white/10 active:scale-95 cursor-pointer ${
+                      'h-9 w-9 before:absolute before:-inset-1'
                     }`}
                     aria-label={lang === 'ar' ? 'فتح شريط البحث' : 'Open search'}
                     title={lang === 'ar' ? searchControl.label_ar : searchControl.label_en}
@@ -197,7 +206,7 @@ export default function Header({
                     id="header-cart-icon"
                     onClick={onOpenCart}
                     className={`relative flex items-center justify-center rounded-full transition-all active:scale-90 cursor-pointer ${
-                      scrolled ? 'h-8 w-8' : 'h-9 w-9'
+                      'h-9 w-9 before:absolute before:-inset-1'
                     } ${
                       isCartOpen
                         ? 'bg-[#004ad7] text-white shadow-md shadow-[#004ad7]/30'
@@ -236,7 +245,7 @@ export default function Header({
                     type="button"
                     onClick={onToggleWishlistOnly}
                     className={`relative flex items-center justify-center rounded-full transition-all active:scale-90 cursor-pointer ${
-                      scrolled ? 'h-8 w-8' : 'h-9 w-9'
+                      'h-9 w-9 before:absolute before:-inset-1'
                     } ${
                       isWishlistOnly
                         ? 'bg-[#004ad7]/15 dark:bg-[#3b82f6]/20 text-[#004ad7] dark:text-[#3b82f6]'
@@ -257,42 +266,32 @@ export default function Header({
 
               {/* Logo (Center) */}
               {logoControl.visible && (
-                <div className="flex items-center justify-center">
-                  <AnimatePresence mode="wait" initial={false}>
-                    <motion.h1
-                      key={kineticLang}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.2, ease: 'easeInOut' }}
-                      onClick={() => {
-                        setKineticLang((prev) => (prev === 'en' ? 'ar' : 'en'));
-                      }}
-                      className={`select-none transition-all duration-300 font-bold text-[#15171c] dark:text-white cursor-pointer text-center active:opacity-75 ${
-                        scrolled
-                          ? 'text-[15px] sm:text-[17px]'
-                          : 'text-[18px] sm:text-[21px]'
-                      } ${
-                        kineticLang === 'ar'
-                          ? 'tracking-[0.06em]'
-                          : 'tracking-[0.28em] uppercase font-extrabold'
-                      }`}
-                      aria-label={kineticLang === 'ar' ? 'فانت' : 'VANT'}
-                    >
-                      {kineticLang === 'ar' ? (logoControl.label_ar || 'فانت') : (logoControl.label_en || 'VANT')}
-                    </motion.h1>
-                  </AnimatePresence>
-                </div>
+                <motion.div style={{ scale: logoScale }} className="flex items-center justify-center">
+                  {/* Both names always visible, so neither identity disappears */}
+                  <h1
+                    dir="ltr"
+                    className="select-none flex items-center gap-2 sm:gap-3 text-[#15171c] dark:text-white whitespace-nowrap"
+                    aria-label={`${logoControl.label_en || 'VANT'} ${logoControl.label_ar || 'فانت'}`}
+                  >
+                    <span className="text-[15px] sm:text-[20px] font-extrabold uppercase tracking-[0.28em] -me-[0.28em]">
+                      {logoControl.label_en || 'VANT'}
+                    </span>
+                    <span aria-hidden="true" className="h-4 sm:h-5 w-px bg-current opacity-25" />
+                    <span className="text-[15px] sm:text-[20px] font-bold tracking-[0.04em]">
+                      {logoControl.label_ar || 'فانت'}
+                    </span>
+                  </h1>
+                </motion.div>
               )}
 
               {/* Right Actions (Lang, Theme) */}
-              <div className="flex items-center justify-end gap-1.5 sm:gap-2.5 min-w-[80px] sm:min-w-[110px] [direction:ltr]">
+              <div className="flex items-center justify-end gap-1.5 sm:gap-2.5 md:min-w-[110px] [direction:ltr]">
                 {themeControl.visible && (
                   <button
                     type="button"
                     onClick={onToggleTheme}
                     className={`relative flex items-center justify-center rounded-full text-[#15171c]/80 dark:text-white/80 transition-all hover:bg-black/5 dark:hover:bg-white/10 active:scale-90 cursor-pointer ${
-                      scrolled ? 'h-8 w-8' : 'h-9 w-9'
+                      'h-9 w-9 before:absolute before:-inset-1'
                     }`}
                     aria-label={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
                   >
@@ -328,7 +327,7 @@ export default function Header({
                   <button
                     type="button"
                     onClick={onToggleLang}
-                    className={`group flex items-center gap-1.5 rounded-full border border-black/8 dark:border-white/15 bg-white/70 dark:bg-white/10 px-2.5 text-[11px] sm:text-xs font-bold tracking-wide text-[#15171c] dark:text-white transition-all hover:bg-black/5 dark:hover:bg-white/15 active:scale-95 cursor-pointer shadow-2xs ${
+                    className={`group relative before:absolute before:-inset-1.5 flex items-center gap-1.5 rounded-full border border-black/8 dark:border-white/15 bg-white/70 dark:bg-white/10 px-2.5 text-[11px] sm:text-xs font-bold tracking-wide text-[#15171c] dark:text-white transition-all hover:bg-black/5 dark:hover:bg-white/15 active:scale-95 cursor-pointer shadow-2xs ${
                       scrolled ? 'h-7.5 sm:h-8' : 'h-8 sm:h-8.5'
                     }`}
                     aria-label={lang === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
@@ -346,36 +345,22 @@ export default function Header({
                   </button>
                 )}
               </div>
-            </div>
+            </motion.div>
 
             {/* 2. Collapsible CategoryFilter Bar */}
-            <AnimatePresence initial={false}>
-              {showCategories && children && (
-                <motion.div
-                  key="header-category-filter-wrapper"
-                  initial={{ height: 0, opacity: 0, overflow: 'hidden' }}
-                  animate={{
-                    height: 'auto',
-                    opacity: 1,
-                    overflow: 'visible',
-                  }}
-                  exit={{
-                    height: 0,
-                    opacity: 0,
-                    overflow: 'hidden',
-                  }}
-                  transition={{
-                    duration: 0.32,
-                    ease: [0.16, 1, 0.3, 1],
-                  }}
-                  className="w-full overflow-visible"
-                >
-                  <div className="w-full pb-2 pt-0.5 overflow-visible">
-                    {children}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* CSS grid-rows collapse, not framer height:auto: measuring auto height makes framer reset window scroll, which killed smooth scrolls like back-to-top */}
+            {children && (
+              <div
+                className="grid grid-cols-[minmax(0,1fr)] transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
+                style={{ gridTemplateRows: showCategories ? '1fr' : '0fr', opacity: showCategories ? 1 : 0 }}
+                onTransitionEnd={(e) => e.propertyName === 'grid-template-rows' && setCategoriesSettled(showCategories)}
+                inert={!showCategories}
+              >
+                <div className={`min-h-0 ${showCategories && categoriesSettled ? 'overflow-visible' : 'overflow-hidden'}`}>
+                  <div className="w-full pb-2 pt-0.5 overflow-visible">{children}</div>
+                </div>
+              </div>
+            )}
           </div>
         </motion.div>
       </header>

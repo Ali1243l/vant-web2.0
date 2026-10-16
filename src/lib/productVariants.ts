@@ -298,7 +298,12 @@ function analyzeColorTone(colorNameEn: string, hex: string) {
  */
 export function extractColorFromImageUrl(url: string): string | null {
   if (!url || typeof url !== 'string') return null;
-  const decoded = decodeURIComponent(url);
+  let decoded = url;
+  try {
+    decoded = decodeURIComponent(url);
+  } catch {
+    // A stray % in an uploaded file name; match on the raw URL
+  }
 
   // Specific user uploads:
   // b4niw is the Brown shirt variant

@@ -413,7 +413,7 @@ export const AdminBannersView: React.FC = () => {
             <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center p-4 text-center">
               <div>
                 <span className="text-[10px] text-amber-400 font-bold uppercase tracking-widest block mb-1">
-                  {controls['banner_hero_tag']?.label_ar || 'ڤانت · كتالوج 2026'}
+                  {controls['banner_hero_tag']?.label_ar || 'فانت · كتالوج 2026'}
                 </span>
                 <h4 className="text-sm sm:text-base font-bold text-white">
                   {controls['banner_hero_title']?.label_ar || 'الصياغة المعمارية للأزياء'}

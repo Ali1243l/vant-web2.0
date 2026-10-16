@@ -1,9 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import type { Product, Language } from '../types';
 import ProductCard from './ProductCard';
 import SkeletonCard from './SkeletonCard';
-import PremiumGlowWrapper from './ui/PremiumGlowWrapper';
-import BlurFade from './ui/BlurFade';
 
 interface Props {
   products: Product[];
@@ -19,6 +17,18 @@ interface Props {
   layout?: 'grid-4' | 'grid-2';
 }
 
+const columnsFor = (w: number) => (w >= 1536 ? 5 : w >= 1024 ? 4 : w >= 768 ? 3 : 2);
+
+function useColumnCount() {
+  const [cols, setCols] = useState(() => (typeof window !== 'undefined' ? columnsFor(window.innerWidth) : 4));
+  useEffect(() => {
+    const onResize = () => setCols(columnsFor(window.innerWidth));
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return cols;
+}
+
 export default function MasonryGrid({
   products,
   loading,
@@ -31,11 +41,12 @@ export default function MasonryGrid({
   layout = 'grid-4',
 }: Props) {
   const handleOpen = onOpen || onSelect || (() => {});
+  const columnCount = useColumnCount();
 
   const gridClasses =
     layout === 'grid-2'
       ? 'grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 pb-4 pt-2 w-full max-w-5xl mx-auto'
-      : 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-5 md:gap-6 lg:gap-6 xl:gap-8 pb-4 pt-2 w-full max-w-screen-2xl mx-auto';
+      : 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5 md:gap-6 lg:gap-6 xl:gap-8 pb-4 pt-2 w-full max-w-screen-2xl mx-auto';
 
   if (loading) {
     return (
@@ -62,22 +73,43 @@ export default function MasonryGrid({
     );
   }
 
+  // Plain CSS fade + hover shadow: the old per-card blur filter and spring wrappers made scrolling and loading heavy
+  const renderCard = (p: Product, i: number) => (
+    <div
+      key={p.id}
+      className="animate-fade-up rounded-2xl md:rounded-3xl overflow-hidden shadow-sm md:hover:shadow-xl md:hover:shadow-black/10 dark:md:hover:shadow-black/50 transition-shadow duration-300"
+      style={{ animationDelay: `${(i % 4) * 60}ms` }}
+    >
+      <ProductCard
+        product={p}
+        index={i}
+        lang={lang}
+        isWishlisted={isWishlisted ? isWishlisted(p.id) : false}
+        onToggleWishlist={onToggleWishlist}
+        onOpen={handleOpen}
+      />
+    </div>
+  );
+
+  if (layout === 'grid-4') {
+    // Masonry: each card keeps its own image height; dealing cards round-robin keeps the sort order reading across rows
+    const columns: { p: Product; i: number }[][] = Array.from({ length: columnCount }, () => []);
+    products.forEach((p, i) => columns[i % columnCount].push({ p, i }));
+    return (
+      <div className="flex items-start gap-3 sm:gap-5 md:gap-6 xl:gap-8 pb-4 pt-2 w-full max-w-screen-2xl mx-auto">
+        {columns.map((col, c) => (
+          <div key={c} className="flex min-w-0 flex-1 flex-col gap-5 sm:gap-6 md:gap-7 xl:gap-9">
+            {col.map(({ p, i }) => renderCard(p, i))}
+            {loadingMore && <SkeletonCard aspectRatioClass="aspect-[3/4]" index={products.length + c} />}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className={gridClasses}>
-      {products.map((p, i) => (
-        <BlurFade key={`blur-fade-${p.id}`} delay={(i % 4) * 0.08} duration={0.6}>
-          <PremiumGlowWrapper>
-            <ProductCard
-              product={p}
-              index={i}
-              lang={lang}
-              isWishlisted={isWishlisted ? isWishlisted(p.id) : false}
-              onToggleWishlist={onToggleWishlist}
-              onOpen={handleOpen}
-            />
-          </PremiumGlowWrapper>
-        </BlurFade>
-      ))}
+      {products.map(renderCard)}
       {loadingMore &&
         Array.from({ length: 4 }).map((_, idx) => (
           <SkeletonCard key={`more-skeleton-${idx}`} aspectRatioClass="aspect-[3/4]" index={products.length + idx} />

@@ -8,14 +8,18 @@ import {
   EyeOff,
   AlertTriangle,
   Unlock,
+  Mail,
 } from 'lucide-react';
 
 export interface AdminLockScreenProps {
   isAr?: boolean;
+  emailInput: string;
+  setEmailInput: React.Dispatch<React.SetStateAction<string>>;
+  isSigningIn: boolean;
   passwordInput: string;
   setPasswordInput: React.Dispatch<React.SetStateAction<string>>;
-  passwordError: boolean;
-  setPasswordError: React.Dispatch<React.SetStateAction<boolean>>;
+  passwordError: string | null;
+  setPasswordError: React.Dispatch<React.SetStateAction<string | null>>;
   showPassword: boolean;
   setShowPassword: React.Dispatch<React.SetStateAction<boolean>>;
   handleUnlock: (e?: React.FormEvent) => void;
@@ -24,6 +28,9 @@ export interface AdminLockScreenProps {
 
 export const AdminLockScreen: React.FC<AdminLockScreenProps> = ({
   isAr = true,
+  emailInput,
+  setEmailInput,
+  isSigningIn,
   passwordInput,
   setPasswordInput,
   passwordError,
@@ -65,15 +72,33 @@ export const AdminLockScreen: React.FC<AdminLockScreenProps> = ({
         </div>
 
         <h2 className="text-lg font-bold text-white tracking-tight">
-          {isAr ? 'بوابة ڤانت · وصول محمي' : 'VANT · Secure Portal'}
+          {isAr ? 'بوابة فانت · وصول محمي' : 'VANT · Secure Portal'}
         </h2>
         <p className="mt-2 text-xs text-white/50 leading-relaxed">
           {isAr
-            ? 'هذه المنطقة مخصصة للإدارة، يرجى إدخال رمز التحقق الخاص بك للمتابعة'
-            : 'Restricted area. Please enter your authorization key to proceed'}
+            ? 'سجل دخول بحساب الإدارة حتى تكمل'
+            : 'Sign in with the admin account to continue'}
         </p>
 
         <form onSubmit={handleUnlock} className="mt-6 space-y-4">
+          <div className="relative flex items-center">
+            <Mail className="pointer-events-none absolute ltr:left-3.5 rtl:right-3.5 h-4 w-4 text-white/40" />
+            <input
+              type="email"
+              dir="ltr"
+              value={emailInput}
+              onChange={(e) => {
+                setEmailInput(e.target.value);
+                if (passwordError) setPasswordError(null);
+              }}
+              placeholder="email@example.com"
+              autoComplete="username"
+              autoFocus
+              required
+              aria-label={isAr ? 'الإيميل' : 'Email'}
+              className="h-12 w-full rounded-2xl border border-white/15 bg-black/60 px-10 text-center text-sm outline-none transition-all placeholder:text-white/20 focus:border-[#3b82f6] focus:ring-2 focus:ring-[#3b82f6]/20 text-white"
+            />
+          </div>
           <div className="relative flex items-center">
             <KeyRound className="pointer-events-none absolute ltr:left-3.5 rtl:right-3.5 h-4 w-4 text-white/40" />
             <input
@@ -81,12 +106,13 @@ export const AdminLockScreen: React.FC<AdminLockScreenProps> = ({
               value={passwordInput}
               onChange={(e) => {
                 setPasswordInput(e.target.value);
-                if (passwordError) setPasswordError(false);
+                if (passwordError) setPasswordError(null);
               }}
               placeholder="••••••••"
-              autoFocus
-              maxLength={40}
-              className={`h-12 w-full rounded-2xl border bg-black/60 px-10 text-center text-sm font-mono tracking-widest outline-none transition-all placeholder:text-white/20 ${
+              autoComplete="current-password"
+              required
+              aria-label={isAr ? 'كلمة السر' : 'Password'}
+              className={`h-12 w-full rounded-2xl border bg-black/60 px-10 text-center text-sm tracking-widest outline-none transition-all placeholder:text-white/20 ${
                 passwordError
                   ? 'border-[#3b82f6] ring-2 ring-[#3b82f6]/35 text-white shadow-[0_0_15px_rgba(59,130,246,0.2)]'
                   : 'border-white/15 focus:border-[#3b82f6] focus:ring-2 focus:ring-[#3b82f6]/20 text-white'
@@ -110,20 +136,17 @@ export const AdminLockScreen: React.FC<AdminLockScreenProps> = ({
               className="flex items-center justify-center gap-1.5 text-xs text-[#93c5fd] font-medium"
             >
               <AlertTriangle className="h-3.5 w-3.5 text-[#3b82f6] shrink-0" />
-              <span>
-                {isAr
-                  ? 'رمز المرور غير صحيح، يرجى إعادة المحاولة'
-                  : 'Incorrect credentials, please retry'}
-              </span>
+              <span>{passwordError}</span>
             </motion.div>
           )}
 
           <button
             type="submit"
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#004ad7] to-[#2563eb] font-semibold text-xs text-white shadow-lg shadow-[#004ad7]/30 hover:from-[#004ad7]/90 hover:to-[#2563eb]/90 active:scale-98 transition-all cursor-pointer"
+            disabled={isSigningIn}
+            className="disabled:opacity-60 disabled:cursor-wait flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#004ad7] to-[#2563eb] font-semibold text-xs text-white shadow-lg shadow-[#004ad7]/30 hover:from-[#004ad7]/90 hover:to-[#2563eb]/90 active:scale-98 transition-all cursor-pointer"
           >
             <Unlock className="h-4 w-4" />
-            <span>{isAr ? 'تأكيد الدخول والمتابعة' : 'Authorize & Continue'}</span>
+            <span>{isSigningIn ? (isAr ? 'جاري الدخول...' : 'Signing in...') : isAr ? 'دخول' : 'Sign in'}</span>
           </button>
 
           <div className="pt-2">

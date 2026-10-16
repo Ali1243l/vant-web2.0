@@ -1,16 +1,17 @@
-import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, type ComponentType, useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from './components/Header';
-import CategoryFilter, { type AvailabilityFilterType } from './components/CategoryFilter';
+import CategoryFilter, { type AvailabilityFilterType, type CatalogSort } from './components/CategoryFilter';
 import WelcomeHeroBanner from './components/WelcomeHeroBanner';
 import NewsletterSection from './components/NewsletterSection';
 import Footer from './components/Footer';
 import MasonryGrid from './components/MasonryGrid';
 import ProductDrawer from './components/ProductDrawer';
 import CartDrawer from './components/CartDrawer';
+import ProductStrip from './components/ProductStrip';
+import MobileBottomNav from './components/MobileBottomNav';
 import ImagePreloader from './components/ImagePreloader';
 import BackToTop from './components/BackToTop';
-import AdminDrawer from './components/AdminDrawer';
 import SplashLoader from './components/SplashLoader';
 import MaintenanceScreen from './components/MaintenanceScreen';
 import { SiteControlsProvider, useSiteControls } from './context/SiteControlsContext';
@@ -18,24 +19,21 @@ import { trackEvent } from './lib/analytics';
 import { useProducts } from './hooks/useProducts';
 import { useWishlist } from './hooks/useWishlist';
 import { productMatchesQuery } from './lib/search';
-import { Heart, Loader2, Check, X, Sparkles, Gift, Percent, Tag, ArrowUpDown, LayoutGrid, Grid2X2 } from 'lucide-react';
+import { CATEGORY_TRANSLATIONS, resolveWhatsappPhone } from './lib/constants';
+import { Heart, Loader2, Check, X, Gift, Tag, LayoutGrid, RectangleVertical, Share2 } from 'lucide-react';
 import type { Product, Language, Theme } from './types';
+
+// Admin (charts, newsletter studio, etc.) is a separate chunk so shoppers never download it
+// A failed chunk download (offline, flaky network) renders nothing instead of crashing the storefront
+const AdminDrawer = lazy<ComponentType<{ lang: Language }>>(() =>
+  import('./components/AdminDrawer').catch(() => ({ default: () => null }))
+);
 
 const ALL = 'All';
 
-const CATEGORY_TRANSLATIONS: Record<string, { en: string; ar: string }> = {
-  All: { en: 'All', ar: 'الكل' },
-  'T-Shirts': { en: 'T-Shirts', ar: 'تيشيرتات' },
-  'ملابس وأزياء': { en: 'Apparel & Fashion', ar: 'ملابس وأزياء' },
-  Outerwear: { en: 'Outerwear', ar: 'المعاطف والسترات' },
-  Tailoring: { en: 'Tailoring', ar: 'الأزياء الرسمية' },
-  Knitwear: { en: 'Knitwear', ar: 'التريكو والصوف' },
-  Footwear: { en: 'Footwear', ar: 'الأحذية' },
-  Accessories: { en: 'Accessories', ar: 'الإكسسوارات' },
-};
-
 function MainApp() {
   const {
+    isAdminOpen,
     setIsAdminOpen,
     siteSettings,
     isInitialSplashLoading,
@@ -44,10 +42,13 @@ function MainApp() {
     isPreviewMaintenance,
     setIsPreviewMaintenance,
     isAdminUnlocked,
-    unlockAdmin,
     getControl,
+    fetchProductById,
   } = useSiteControls();
   const newsletterControl = getControl('sec_newsletter_subscription');
+  // Mount the admin chunk on first open and keep it mounted so its close animation still plays
+  const [adminRequested, setAdminRequested] = useState(false);
+  if (isAdminOpen && !adminRequested) setAdminRequested(true);
   const {
     products,
     loading,
@@ -60,6 +61,50 @@ function MainApp() {
     loadMore,
   } = useProducts();
   const { wishlist, wishlistCount, isWishlisted, toggleWishlist } = useWishlist();
+
+  // ?wishlist=id1,id2 opens a list someone shared; the viewer can save it into their own wishlist
+  const [sharedWishlist, setSharedWishlist] = useState<string[] | null>(() => {
+    const raw = new URLSearchParams(window.location.search).get('wishlist');
+    return raw ? raw.split(',').filter(Boolean) : null;
+  });
+  const [wishlistLinkCopied, setWishlistLinkCopied] = useState(false);
+  const [recentIds, setRecentIds] = useState<string[]>(() => {
+    try {
+      const list = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+      return Array.isArray(list) ? list.map(String) : [];
+    } catch {
+      return [];
+    }
+  });
+  const recentProducts = useMemo(
+    () => recentIds.map((id) => products.find((p) => String(p.id) === id)).filter((p): p is Product => Boolean(p)),
+    [recentIds, products]
+  );
+  const clearRecent = () => {
+    setRecentIds([]);
+    try {
+      localStorage.removeItem(RECENT_KEY);
+    } catch {}
+  };
+  const closeSharedWishlist = () => {
+    setSharedWishlist(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('wishlist');
+    window.history.replaceState(window.history.state, '', url);
+  };
+  const shareWishlist = async () => {
+    const url = new URL(window.location.origin + window.location.pathname);
+    url.searchParams.set('wishlist', wishlist.join(','));
+    const link = url.toString();
+    try {
+      if (navigator.share) return await navigator.share({ title: 'VANT', url: link });
+      await navigator.clipboard.writeText(link);
+      setWishlistLinkCopied(true);
+      setTimeout(() => setWishlistLinkCopied(false), 2000);
+    } catch {
+      // Share sheet dismissed
+    }
+  };
 
   const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
 
@@ -88,6 +133,12 @@ function MainApp() {
   });
   const [category, setCategory] = useState(ALL);
   const [isWishlistOnly, setIsWishlistOnly] = useState(false);
+  // Entering or leaving the wishlist swaps the whole grid; start at the top instead of deep in an empty page
+  const wishlistViewMounted = useRef(false);
+  useEffect(() => {
+    if (wishlistViewMounted.current) window.scrollTo({ top: 0 });
+    wishlistViewMounted.current = true;
+  }, [isWishlistOnly]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isOffersOnly, setIsOffersOnly] = useState(false);
   const [selected, setSelected] = useState<Product | null>(null);
@@ -95,8 +146,20 @@ function MainApp() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilterType>('all');
   const [isBannerDismissed, setIsBannerDismissed] = useState(false);
-  const [catalogSort, setCatalogSort] = useState<'newest' | 'price_asc' | 'price_desc' | 'offers'>('newest');
-  const [gridLayout, setGridLayout] = useState<'grid-4' | 'grid-2'>('grid-4');
+  const [catalogSort, setCatalogSort] = useState<CatalogSort>('newest');
+  const [gridLayout, setGridLayout] = useState<'grid-4' | 'grid-2'>(() => {
+    try {
+      return localStorage.getItem('vant_grid_layout') === 'grid-2' ? 'grid-2' : 'grid-4';
+    } catch {
+      return 'grid-4';
+    }
+  });
+  const changeGridLayout = (layout: 'grid-4' | 'grid-2') => {
+    setGridLayout(layout);
+    try {
+      localStorage.setItem('vant_grid_layout', layout);
+    } catch {}
+  };
 
   // Clear any old sessionStorage flag on mount so the banner returns fresh and re-opens on refresh
   useEffect(() => {
@@ -129,6 +192,13 @@ function MainApp() {
     observer.observe(target);
     return () => observer.disconnect();
   }, [hasMore, loading, loadingMore, loadMore, isWishlistOnly, searchQuery]);
+
+  // Search, filters and wishlists must see the whole catalog, not just the pages scrolled so far
+  const isNarrowed =
+    !!searchQuery.trim() || category !== ALL || availabilityFilter !== 'all' || isOffersOnly || isWishlistOnly || !!sharedWishlist;
+  useEffect(() => {
+    if (isNarrowed && hasMore && !loading && !loadingMore) loadMore();
+  }, [isNarrowed, hasMore, loading, loadingMore, loadMore]);
 
   // Track initial page view telemetry
   useEffect(() => {
@@ -286,7 +356,7 @@ function MainApp() {
     };
 
     searchFiltered.forEach((p) => {
-      const a = p.availability || 'in_stock';
+      const a = p.availability === 'limited' ? 'in_stock' : p.availability || 'in_stock';
       if (a in counts) {
         counts[a as AvailabilityFilterType]++;
       }
@@ -303,6 +373,7 @@ function MainApp() {
         return false;
       }
       // 1. Wishlist Only Filter
+      if (sharedWishlist) return sharedWishlist.includes(String(p.id));
       if (isWishlistOnly && !isWishlisted(p.id)) {
         return false;
       }
@@ -313,7 +384,12 @@ function MainApp() {
       // 3. Availability Filter
       if (availabilityFilter !== 'all') {
         const itemAvailability = p.availability || 'in_stock';
-        if (itemAvailability !== availabilityFilter) {
+        // "Limited" pieces can still be bought, so they count as in stock
+        const matches =
+          availabilityFilter === 'in_stock'
+            ? itemAvailability === 'in_stock' || itemAvailability === 'limited'
+            : itemAvailability === availabilityFilter;
+        if (!matches) {
           return false;
         }
       }
@@ -335,7 +411,7 @@ function MainApp() {
     }
     // Default: 'newest' (products are ordered in natural chronological order, latest first)
     return filtered;
-  }, [products, isOffersOnly, category, wishlist, isWishlistOnly, availabilityFilter, searchQuery, catalogSort]);
+  }, [products, isOffersOnly, category, wishlist, isWishlistOnly, availabilityFilter, searchQuery, catalogSort, sharedWishlist]);
 
   // Smoothly scroll window back to the top of the collection whenever category, offers, or availability changes
   const isFirstMountRef = useRef(true);
@@ -365,10 +441,64 @@ function MainApp() {
     }
   }, [category, isOffersOnly, availabilityFilter]);
 
-  const closeDrawer = useCallback(() => setSelected(null), []);
+  // Each open product gets its own ?item=<id> URL: shared links open it, and the phone back button closes it
+  const openProduct = useCallback((p: Product) => {
+    setSelected(p);
+    setRecentIds((prev) => {
+      const next = [String(p.id), ...prev.filter((id) => id !== String(p.id))].slice(0, 12);
+      try {
+        localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('item') === String(p.id)) return;
+    url.searchParams.set('item', String(p.id));
+    // Switching items inside an open drawer (related pieces) replaces the entry, so one Back still closes it
+    const sameDrawer = window.history.state?.vantItem !== undefined;
+    window.history[sameDrawer ? 'replaceState' : 'pushState']({ vantItem: p.id }, '', url);
+  }, []);
+
+  const closeDrawer = useCallback(() => {
+    setSelected(null);
+    if (window.history.state?.vantItem !== undefined) {
+      window.history.back();
+    } else {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('item');
+      window.history.replaceState(null, '', url);
+    }
+  }, []);
+
+  const relatedProducts = useMemo(
+    () => (selected ? products.filter((p) => p.category === selected.category && p.id !== selected.id).slice(0, 8) : []),
+    [selected, products]
+  );
+
+  const findItemFromUrl = useCallback(() => {
+    const id = new URL(window.location.href).searchParams.get('item');
+    return id ? products.find((p) => String(p.id) === id) ?? null : null;
+  }, [products]);
+
+  useEffect(() => {
+    const onPopState = () => setSelected(findItemFromUrl());
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [findItemFromUrl]);
+
+  const deepLinkHandledRef = useRef(false);
+  useEffect(() => {
+    if (deepLinkHandledRef.current || loading || products.length === 0) return;
+    deepLinkHandledRef.current = true;
+    const fromUrl = findItemFromUrl();
+    if (fromUrl) return setSelected(fromUrl);
+    const id = new URL(window.location.href).searchParams.get('item');
+    if (id) fetchProductById(id).then((p) => p && setSelected(p)).catch(() => {});
+  }, [loading, products, findItemFromUrl, fetchProductById]);
 
   const showSplash = !hasFinishedSplash || isPreviewSplash;
   const showMaintenance = siteSettings.maintenance_mode && !isAdminUnlocked && !isPreviewMaintenance;
+  const maintenanceWhatsapp = resolveWhatsappPhone(getControl('cfg_whatsapp_phone')?.actionValue);
 
   return (
     <>
@@ -394,11 +524,7 @@ function MainApp() {
           maintenanceMessageAr={siteSettings.maintenance_message_ar}
           isPreview={true}
           onClosePreview={() => setIsPreviewMaintenance(false)}
-          onAdminUnlock={unlockAdmin}
-          onBypass={() => {
-            setIsPreviewMaintenance(false);
-            setIsAdminOpen(true);
-          }}
+          whatsappPhone={maintenanceWhatsapp}
         />
       )}
 
@@ -408,20 +534,23 @@ function MainApp() {
           <MaintenanceScreen
             maintenanceMessage={siteSettings.maintenance_message}
             maintenanceMessageAr={siteSettings.maintenance_message_ar}
-            onAdminUnlock={unlockAdmin}
-            onBypass={() => setIsAdminOpen(true)}
+            whatsappPhone={maintenanceWhatsapp}
           />
-          <AdminDrawer lang={lang} />
+          {adminRequested && (
+            <Suspense fallback={null}>
+              <AdminDrawer lang={lang} />
+            </Suspense>
+          )}
         </>
       ) : (
         <div
-          className={`relative min-h-[100dvh] w-full max-w-full overflow-x-clip flex flex-col font-sans transition-colors duration-300 ${
+          className={`relative min-h-[100dvh] w-full max-w-full overflow-x-clip flex flex-col font-sans max-md:pb-[calc(3.75rem+env(safe-area-inset-bottom))] transition-colors duration-300 ${
             theme === 'dark' ? 'bg-[#0d0f12] text-[#f3f4f6]' : 'bg-[#f8f9fa] text-[#15171c]'
           }`}
         >
       {/* Luxury Ambient Lighting Glow Orbs */}
-      <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 h-[520px] w-[850px] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(0,74,215,0.06),transparent_70%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.08),transparent_70%)] blur-3xl animate-luxury-glow" />
-      <div className="pointer-events-none absolute top-[40%] ltr:-right-48 rtl:-left-48 h-[400px] w-[400px] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.03),transparent_70%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.04),transparent_70%)] blur-3xl" />
+      <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 h-[520px] w-[850px] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(0,74,215,0.06),transparent_70%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.08),transparent_70%)]" />
+      <div className="pointer-events-none absolute top-[40%] ltr:-right-48 rtl:-left-48 h-[400px] w-[400px] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.03),transparent_70%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.04),transparent_70%)]" />
 
       {/* 1-Click Coupon Activation Toast from Email Link */}
       <AnimatePresence>
@@ -494,6 +623,8 @@ function MainApp() {
           isOffersOnly={isOffersOnly}
           onToggleOffersOnly={setIsOffersOnly}
           offersCount={offersCount}
+          sort={catalogSort}
+          onSortChange={setCatalogSort}
         />
       </Header>
 
@@ -538,22 +669,79 @@ function MainApp() {
 
         {/* Wishlist Active Filter Banner */}
         {isWishlistOnly && (
-          <div className="mb-5 flex items-center justify-between rounded-2xl border border-[#004ad7]/20 dark:border-[#3b82f6]/30 bg-[#004ad7]/8 dark:bg-[#3b82f6]/10 px-4 py-3 text-xs sm:text-sm">
-            <div className="flex items-center gap-2 text-[#004ad7] dark:text-[#3b82f6] font-medium">
-              <Heart className="h-4 w-4 fill-current" />
-              <span>
-                {lang === 'ar'
-                  ? `خزانتك الخاصة المنسقة (${visible.length} قطعة محفوظة)`
-                  : `Curated Archive (${visible.length} saved pieces)`}
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-x-3 gap-y-2.5 rounded-2xl border border-[#004ad7]/20 dark:border-[#3b82f6]/30 bg-[#004ad7]/8 dark:bg-[#3b82f6]/10 px-4 py-3 text-xs sm:text-sm">
+            <div className="flex min-w-0 items-center gap-2 text-[#004ad7] dark:text-[#3b82f6] font-semibold">
+              <Heart className="h-4 w-4 shrink-0 fill-current" />
+              <span>{lang === 'ar' ? 'مفضلتي' : 'My wishlist'}</span>
+              <span className="rounded-full bg-[#004ad7]/12 dark:bg-[#3b82f6]/20 px-2 py-0.5 text-[11px] font-bold tabular-nums">
+                {lang === 'ar' ? `${visible.length} قطعة` : `${visible.length} pieces`}
               </span>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsWishlistOnly(false)}
-              className="text-xs font-semibold text-[#004ad7] dark:text-[#3b82f6] hover:underline cursor-pointer"
-            >
-              {lang === 'ar' ? 'عرض التشكيلة الكاملة' : 'View All Pieces'}
-            </button>
+            <div className="flex shrink-0 items-center gap-3">
+              {wishlist.length > 0 && (
+                <button
+                  type="button"
+                  onClick={shareWishlist}
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-[#004ad7] dark:bg-[#3b82f6] px-3 text-xs font-semibold text-white cursor-pointer"
+                >
+                  {wishlistLinkCopied ? <Check className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
+                  <span>{wishlistLinkCopied ? (lang === 'ar' ? 'تم نسخ الرابط' : 'Link copied') : lang === 'ar' ? 'مشاركة' : 'Share'}</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsWishlistOnly(false)}
+                className="whitespace-nowrap text-xs font-semibold text-[#004ad7] dark:text-[#3b82f6] hover:underline cursor-pointer"
+              >
+                {lang === 'ar' ? 'كل القطع' : 'All pieces'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!isWishlistOnly && !sharedWishlist && !searchQuery.trim() && recentProducts.length >= 2 && (
+          <ProductStrip
+            className="mb-5"
+            compact
+            title={lang === 'ar' ? 'شاهدتها مؤخراً' : 'Recently viewed'}
+            products={recentProducts}
+            lang={lang}
+            onSelect={openProduct}
+            action={
+              <button type="button" onClick={clearRecent} className="min-h-8 rounded-full px-3 text-xs font-semibold text-[#15171c]/70 dark:text-white/70 bg-black/[0.04] dark:bg-white/[0.08] hover:text-[#004ad7] cursor-pointer">
+                {lang === 'ar' ? 'مسح' : 'Clear'}
+              </button>
+            }
+          />
+        )}
+
+        {sharedWishlist && (
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[#004ad7]/20 dark:border-[#3b82f6]/30 bg-[#004ad7]/8 dark:bg-[#3b82f6]/10 px-4 py-3 text-xs sm:text-sm">
+            <div className="flex items-center gap-2 text-[#004ad7] dark:text-[#3b82f6] font-medium">
+              <Share2 className="h-4 w-4" />
+              <span>{lang === 'ar' ? `مفضلة شاركها معك صديق (${visible.length} قطعة)` : `A friend's wishlist (${visible.length} pieces)`}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  sharedWishlist.filter((id) => !isWishlisted(id)).forEach(toggleWishlist);
+                  closeSharedWishlist();
+                  setIsWishlistOnly(true);
+                }}
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-[#004ad7] dark:bg-[#3b82f6] px-3 text-xs font-semibold text-white cursor-pointer"
+              >
+                <Heart className="h-3.5 w-3.5" />
+                <span>{lang === 'ar' ? 'احفظها بمفضلتي' : 'Save to my wishlist'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={closeSharedWishlist}
+                className="text-xs font-semibold text-[#004ad7] dark:text-[#3b82f6] hover:underline cursor-pointer"
+              >
+                {lang === 'ar' ? 'عرض التشكيلة الكاملة' : 'View All Pieces'}
+              </button>
+            </div>
           </div>
         )}
 
@@ -612,6 +800,50 @@ function MainApp() {
           </div>
         ) : (
           <div id="catalog-grid" className="w-full">
+            {!loading && !isWishlistOnly && !sharedWishlist && (
+              <div className="mb-1 flex items-center justify-between gap-3 px-0.5">
+                <p className="text-sm font-bold text-[#15171c] dark:text-white">
+                  {searchQuery.trim()
+                    ? lang === 'ar' ? `نتائج "${searchQuery.trim()}"` : `Results for "${searchQuery.trim()}"`
+                    : category !== ALL
+                    ? (lang === 'ar' && products.find((p) => p.category === category)?.category_ar) || category
+                    : lang === 'ar' ? 'كل القطع' : 'All pieces'}
+                  <span className="ms-2 text-xs font-medium text-[#6b7280] dark:text-[#9ca3af]">
+                    {lang === 'ar' ? `${visible.length} قطعة` : `${visible.length} pieces`}
+                  </span>
+                  {searchQuery.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="ms-2 rounded-full bg-black/[0.05] dark:bg-white/[0.08] px-2.5 py-1 text-[11px] font-semibold text-[#15171c] dark:text-white hover:bg-black/10 dark:hover:bg-white/15 cursor-pointer"
+                    >
+                      {lang === 'ar' ? 'مسح البحث' : 'Clear search'}
+                    </button>
+                  )}
+                </p>
+                <div role="group" aria-label={lang === 'ar' ? 'طريقة العرض' : 'View'} className="flex items-center gap-0.5 rounded-full bg-black/[0.04] dark:bg-white/[0.06] p-0.5">
+                  {([
+                    ['grid-4', LayoutGrid, lang === 'ar' ? 'عرض شبكي' : 'Grid view'],
+                    ['grid-2', RectangleVertical, lang === 'ar' ? 'عرض كبير' : 'Large view'],
+                  ] as const).map(([value, Icon, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => changeGridLayout(value)}
+                      aria-label={label}
+                      aria-pressed={gridLayout === value}
+                      className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors cursor-pointer ${
+                        gridLayout === value
+                          ? 'bg-white dark:bg-[#20242c] text-[#004ad7] dark:text-[#60a5fa] shadow-sm'
+                          : 'text-[#15171c]/50 dark:text-white/50 hover:text-[#15171c] dark:hover:text-white'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <MasonryGrid
               products={visible}
               loading={loading}
@@ -630,7 +862,7 @@ function MainApp() {
                 });
               }}
               onOpen={(p) => {
-                setSelected(p);
+                openProduct(p);
                 trackEvent('product_view', {
                   productId: p.id,
                   productTitle: p.title_ar || p.title,
@@ -687,19 +919,46 @@ function MainApp() {
       {/* Floating Back to Top Button */}
       <BackToTop lang={lang} />
 
+      <MobileBottomNav
+        lang={lang}
+        isWishlistOnly={isWishlistOnly}
+        wishlistCount={wishlistCount}
+        isCartOpen={isCartOpen}
+        onHome={() => {
+          setIsWishlistOnly(false);
+          setSearchQuery('');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onSearch={() => setIsSearchOpen(true)}
+        onToggleWishlist={() => setIsWishlistOnly((prev) => !prev)}
+        onOpenCart={() => setIsCartOpen(true)}
+      />
+
       {/* Responsive Luxury Detail Modal / Sheet */}
-      <ProductDrawer product={selected} lang={lang} onClose={closeDrawer} />
+      <ProductDrawer
+        product={selected}
+        lang={lang}
+        onClose={closeDrawer}
+        related={relatedProducts}
+        onSelectRelated={openProduct}
+      />
 
       {/* Dedicated Shopping Cart Drawer */}
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} lang={lang} />
 
       {/* Secret Admin Control Drawer (Triggered via Shift+A, typing 'admin', or footer 3-tap) */}
-      <AdminDrawer lang={lang} />
+      {adminRequested && (
+            <Suspense fallback={null}>
+              <AdminDrawer lang={lang} />
+            </Suspense>
+          )}
     </div>
     )}
     </>
   );
 }
+
+const RECENT_KEY = 'vant_recently_viewed';
 
 export default function App() {
   return (

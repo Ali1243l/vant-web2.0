@@ -86,7 +86,7 @@ export default function AdminNewsletterManager({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("tpl_welcome_vip");
   const [campaignTitle, setCampaignTitle] = useState("الترحيب بالعضوية الحصرية · كود 15%");
   const [campaignSubject, setCampaignSubject] = useState("Welcome to VANT // Access Granted (VANT-WELCOME-15)");
-  const [campaignHeadline, setCampaignHeadline] = useState("أهلاً بك في الأرشيف الخاص لـ ڤانت");
+  const [campaignHeadline, setCampaignHeadline] = useState("أهلاً بك في الأرشيف الخاص لـ فانت");
   const [campaignBadge, setCampaignBadge] = useState("VIP PRIVILEGE ACCESS");
   const [discountCode, setDiscountCode] = useState("VANT-WELCOME-15");
   const [discountPercent, setDiscountPercent] = useState<number>(15);
@@ -266,7 +266,7 @@ export default function AdminNewsletterManager({
       return;
     }
 
-    const mailBody = `${campaignHeadline}\n\n${campaignMessage}\n\nبيانات الخصم:\n• كود الخصم: ${discountCode}\n• نسبة الخصم: ${discountPercent}%\n• رابط المتجر: https://vant.fashion\n\nفريق ڤانت للأزياء الحصرية`;
+    const mailBody = `${campaignHeadline}\n\n${campaignMessage}\n\nبيانات الخصم:\n• كود الخصم: ${discountCode}\n• نسبة الخصم: ${discountPercent}%\n• رابط المتجر: https://vant.fashion\n\nفريق فانت للأزياء الحصرية`;
     const mailto = generateMailtoLink(subscribers, campaignSubject, mailBody);
     if (!mailto) return;
 

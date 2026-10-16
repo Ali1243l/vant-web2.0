@@ -18,7 +18,7 @@ import {
 import type { Language } from '../types';
 import {
   addSubscriber,
-  removeSubscriber,
+  unsubscribeEmail,
   dispatchWelcomeEmailCopy,
 } from '../lib/newsletter';
 import { useSiteControls } from '../context/SiteControlsContext';
@@ -28,7 +28,6 @@ interface Props {
 }
 
 const SUBSCRIPTION_STORAGE_KEY = 'vant_client_newsletter_subscription';
-const IP_MAP_KEY = 'vant_ip_subscribers_map';
 
 export default function NewsletterSection({ lang }: Props) {
   const isAr = lang === 'ar';
@@ -39,7 +38,7 @@ export default function NewsletterSection({ lang }: Props) {
   } = useSiteControls();
 
   const welcomeTitle = isAr
-    ? siteSettings.welcome_title_ar || 'أهلاً بك في ڤانت!'
+    ? siteSettings.welcome_title_ar || 'أهلاً بك في فانت!'
     : siteSettings.welcome_title_en || 'Welcome to VANT!';
 
   const welcomeMessage = isAr
@@ -80,7 +79,6 @@ export default function NewsletterSection({ lang }: Props) {
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [savedEmail, setSavedEmail] = useState('');
-  const [clientIp, setClientIp] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [copiedCoupon, setCopiedCoupon] = useState(false);
@@ -100,31 +98,6 @@ export default function NewsletterSection({ lang }: Props) {
     } catch (e) {
       console.warn('Notice reading local subscriber:', e);
     }
-
-    let isMounted = true;
-    fetch('https://api.ipify.org?format=json')
-      .then((res) => res.json())
-      .then((data) => {
-        if (!isMounted || !data?.ip) return;
-        const detectedIp = String(data.ip).trim();
-        setClientIp(detectedIp);
-
-        try {
-          const mapRaw = localStorage.getItem(IP_MAP_KEY);
-          if (mapRaw) {
-            const map = JSON.parse(mapRaw);
-            if (map && map[detectedIp]) {
-              setSavedEmail(map[detectedIp]);
-              setIsSubscribed(true);
-            }
-          }
-        } catch {}
-      })
-      .catch(() => {});
-
-    return () => {
-      isMounted = false;
-    };
   }, []);
 
   const validateEmail = (val: string) => {
@@ -152,8 +125,7 @@ export default function NewsletterSection({ lang }: Props) {
     setErrorMsg('');
 
     try {
-      const sourceTag = clientIp ? `الموقع - IP: ${clientIp}` : 'الموقع';
-      const res = await addSubscriber(cleanEmail, sourceTag);
+      const res = await addSubscriber(cleanEmail, 'الموقع');
 
       if (res.success) {
         setSavedEmail(cleanEmail);
@@ -166,20 +138,9 @@ export default function NewsletterSection({ lang }: Props) {
             JSON.stringify({
               email: cleanEmail,
               subscribed_at: new Date().toISOString(),
-              ip: clientIp || undefined,
             })
           );
         } catch {}
-
-        // Save to IP map
-        if (clientIp) {
-          try {
-            const mapRaw = localStorage.getItem(IP_MAP_KEY);
-            const map = mapRaw ? JSON.parse(mapRaw) : {};
-            map[clientIp] = cleanEmail;
-            localStorage.setItem(IP_MAP_KEY, JSON.stringify(map));
-          } catch {}
-        }
 
         // Automatically dispatch welcome email copy
         if (siteSettings.welcome_auto_dispatch !== false) {
@@ -208,6 +169,8 @@ export default function NewsletterSection({ lang }: Props) {
         if (siteSettings.welcome_modal_enabled !== false) {
           setShowWelcomeModal(true);
         }
+      } else {
+        setErrorMsg(isAr ? 'ما كدرنا نسجل اشتراكك، جرب مرة ثانية' : "We couldn't sign you up, please try again");
       }
     } catch (err: any) {
       setErrorMsg(isAr ? 'حدث خطأ أثناء الاشتراك، يرجى المحاولة ثانية' : 'Error subscribing, please retry');
@@ -226,18 +189,10 @@ export default function NewsletterSection({ lang }: Props) {
 
     setIsDeleting(true);
     try {
-      await removeSubscriber(emailToDelete);
+      await unsubscribeEmail(emailToDelete);
 
       try {
         localStorage.removeItem(SUBSCRIPTION_STORAGE_KEY);
-        if (clientIp) {
-          const mapRaw = localStorage.getItem(IP_MAP_KEY);
-          if (mapRaw) {
-            const map = JSON.parse(mapRaw);
-            delete map[clientIp];
-            localStorage.setItem(IP_MAP_KEY, JSON.stringify(map));
-          }
-        }
       } catch {}
 
       setIsSubscribed(false);
@@ -301,7 +256,7 @@ export default function NewsletterSection({ lang }: Props) {
               <h2 className="text-lg sm:text-xl md:text-2xl lg:text-[28px] font-bold tracking-tight text-[#15171c] dark:text-white leading-snug">
                 {isSubscribed
                   ? isAr
-                    ? 'حسابك مسجل ومشترك في ڤانت'
+                    ? 'حسابك مسجل ومشترك في فانت'
                     : 'You Are Subscribed to VANT'
                   : isAr
                   ? siteSettings.newsletter_title_ar || 'ابقَ على اطّلاع على أحدث القطع'
@@ -382,7 +337,7 @@ export default function NewsletterSection({ lang }: Props) {
                           : siteSettings.newsletter_input_placeholder_en || 'Enter your email address here...'
                       }
                       aria-label={isAr ? 'عنوان البريد الإلكتروني' : 'Email address'}
-                      className="w-full min-w-0 bg-transparent px-2.5 py-1.5 md:px-3.5 md:py-2 text-xs sm:text-[13px] md:text-sm text-[#15171c] dark:text-white placeholder-[#6b7280] dark:placeholder-white/50 outline-none disabled:opacity-50"
+                      className="w-full min-w-0 bg-transparent px-2.5 py-3 md:px-3.5 text-xs sm:text-[13px] md:text-sm text-[#15171c] dark:text-white placeholder-[#6b7280] dark:placeholder-white/50 outline-none rounded-full focus-visible:ring-2 focus-visible:ring-[#004ad7]/60 dark:focus-visible:ring-[#3b82f6]/60 disabled:opacity-50"
                     />
 
                     <button

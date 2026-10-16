@@ -73,17 +73,6 @@
   }
 }
 
-@keyframes luxury-glow {
-  0%, 100% {
-    opacity: 0.5;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.85;
-    transform: scale(1.04);
-  }
-}
-
 @keyframes gradient-drift {
   0% {
     background-position: 0% 50%;
@@ -104,10 +93,6 @@
   transform: translateX(-100%);
   animation: shimmer 1.7s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   will-change: transform;
-}
-
-.animate-luxury-glow {
-  animation: luxury-glow 7s ease-in-out infinite;
 }
 
 .animate-gradient-drift {
@@ -140,4 +125,13 @@ html.dark ::-webkit-scrollbar-thumb {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 74, 215, 0.4);
+}
+
+/* iOS zooms the page into any field with text under 16px; keep phones at 16px so focusing never zooms */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }

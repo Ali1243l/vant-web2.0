@@ -31,7 +31,7 @@ export const DEFAULT_CAMPAIGN_TEMPLATES: CampaignTemplateConfig[] = [
     subject: 'Welcome to VANT // Access Granted (VANT-WELCOME-15)',
     badgeText: 'VIP PRIVILEGE ACCESS',
     badgeTextEn: 'VIP PRIVILEGE ACCESS',
-    headline: 'أهلاً بك في الأرشيف الخاص لـ ڤانت',
+    headline: 'أهلاً بك في الأرشيف الخاص لـ فانت',
     headlineEn: 'WELCOME TO THE VANT ARCHIVE',
     message: 'يسعدنا انضمامك إلى القائمة الحصرية لعشاق الخياطة الراقية والتصاميم المعمارية الفاخرة. استمتع بتجربة تسوق استثنائية مع كود الخصم الترحيبي الخاص بطلبك الأول.',
     messageEn: 'Your exclusive membership access is granted. Enjoy a bespoke curation experience with your private welcome discount code below.',
@@ -96,7 +96,7 @@ export const DEFAULT_CAMPAIGN_TEMPLATES: CampaignTemplateConfig[] = [
     badgeTextEn: 'VIP NOIR REWARD',
     headline: 'مكافأة الولاء الخاص — خصم 30% وشحن مجاني',
     headlineEn: 'PRIVATE CLIENT APPRECIATION · 30% OFF',
-    message: 'تقديراً لثقتك الدائمة بدار ڤانت، يسرنا منحك رمز الخصم الأعلى لهذا الموسم مع خدمة التفصيل والتوصيل السريع مجاناً لكافة مشترياتك القادمة.',
+    message: 'تقديراً لثقتك الدائمة بدار فانت، يسرنا منحك رمز الخصم الأعلى لهذا الموسم مع خدمة التفصيل والتوصيل السريع مجاناً لكافة مشترياتك القادمة.',
     messageEn: 'In celebration of your continued patronage, we grant you our highest seasonal privilege code along with complimentary bespoke fitting and priority courier dispatch.',
     discountCode: 'LOYALTY-NOIR-30',
     discountPercent: 30,
@@ -156,7 +156,7 @@ export function buildUniversalVantEmailHtml(params: EmailRenderParams): string {
   const customerEmail = params.customerEmail || 'member@vant.archive';
   const couponCode = (params.couponCode || 'VANT-WELCOME-15').toUpperCase();
   const discountPercent = params.discountPercent ?? 15;
-  const headline = params.headline || 'أهلاً بك في الأرشيف الخاص لـ ڤانت';
+  const headline = params.headline || 'أهلاً بك في الأرشيف الخاص لـ فانت';
   const message = params.message || 'يسعدنا انضمامك إلى القائمة الحصرية لعشاق الخياطة الراقية والتصاميم المعمارية الفاخرة. استمتع بتجربة تسوق استثنائية مع كود الخصم الخاص بطلبك.';
   const badgeText = params.badgeText || 'VIP PRIVILEGE ACCESS';
   
@@ -425,7 +425,7 @@ export function buildUniversalVantEmailHtml(params: EmailRenderParams): string {
           VANT ATELIER &bull; ALL RIGHTS RESERVED &bull; 2026
         </p>
         <p dir="rtl" style="margin: 0; font-size: 10.5px; color: #475569; line-height: 1.5; max-width: 440px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Arial, sans-serif;">
-          هذه الرسالة مخصصة للمشترك المعتمد في أرشيف ڤانت. يمكنك إلغاء الاشتراك في أي وقت عبر زيارة الموقع.
+          هذه الرسالة مخصصة للمشترك المعتمد في أرشيف فانت. يمكنك إلغاء الاشتراك في أي وقت عبر زيارة الموقع.
         </p>
       </td>
     </tr>

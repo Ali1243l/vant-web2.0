@@ -4,33 +4,56 @@ export const config = {
   runtime: 'nodejs',
 };
 
-const DEFAULT_STORE_URL = 'https://vant-web.vercel.app/';
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+
+const escapeHtml = (value: unknown) =>
+  String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+
+// Only a signed-in admin (checked against the database's is_admin()) may send custom HTML, subjects or links.
+// Anyone else gets the fixed welcome template, so this endpoint can't be used to mail arbitrary content.
+async function isAdminRequest(authorization?: string) {
+  if (!authorization?.startsWith('Bearer ') || !SUPABASE_URL || !SUPABASE_ANON_KEY) return false;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/is_admin`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: authorization, 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    return r.ok && (await r.json()) === true;
+  } catch {
+    return false;
+  }
+}
 
 export default async function handler(req: any, res: any) {
-  // Enable CORS headers
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
-
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
-
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method Not Allowed' });
   }
 
   try {
-    const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
-    const recipientEmail = (body.email || body.to || '').trim().toLowerCase();
+    const raw = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
+    const isAdmin = await isAdminRequest(req.headers.authorization);
+    const host = req.headers['x-forwarded-host'] || req.headers.host || 'vant-web.vercel.app';
+    const DEFAULT_STORE_URL = `https://${host}/`;
+    // Text fields are escaped for everyone; html/subject/ctaUrl overrides are admin-only
+    const body: Record<string, any> = {};
+    for (const key of ['couponCode', 'discountPercent', 'headline', 'welcomeTitle', 'message', 'welcomeMessage', 'badgeText', 'ctaText', 'editionNote']) {
+      if (raw[key] !== undefined) body[key] = key === 'discountPercent' ? Number(raw[key]) || 0 : escapeHtml(String(raw[key]).slice(0, 600));
+    }
+    body.email = raw.email || raw.to;
+    for (const key of ['heroImage', 'imageUrl', 'heroImageUrl', 'image', 'welcomeImage']) {
+      if (typeof raw[key] === 'string' && /^https:\/\//.test(raw[key])) body[key] = escapeHtml(raw[key]);
+    }
+    if (isAdmin) {
+      body.html = raw.html;
+      body.subject = raw.subject;
+      body.ctaUrl = raw.ctaUrl || raw.storeUrl;
+    }
+    const recipientEmail = String(body.email || '').trim().toLowerCase();
     const couponCode = (body.couponCode || 'VANT-WELCOME-15').toUpperCase();
     const discountPercent = body.discountPercent ?? 15;
-    const headline = body.headline || body.welcomeTitle || 'أهلاً بك في الأرشيف الخاص لـ ڤانت';
+    const headline = body.headline || body.welcomeTitle || 'أهلاً بك في الأرشيف الخاص لـ فانت';
     const message =
       body.message ||
       body.welcomeMessage ||
@@ -44,9 +67,6 @@ export default async function handler(req: any, res: any) {
 
     if (rawHeroImage.startsWith('http://') || rawHeroImage.startsWith('https://')) {
       heroImage = rawHeroImage;
-    } else if (rawHeroImage && !rawHeroImage.startsWith('data:')) {
-      const cleanPath = rawHeroImage.replace(/^\/+/, '').replace(/^product-images\//, '');
-      heroImage = `https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/${cleanPath}`;
     } else {
       heroImage = defaultFallbackImage;
     }
@@ -76,10 +96,7 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ success: false, error: 'Invalid recipient email address' });
     }
 
-    const resendApiKey =
-      process.env.RESEND_API_KEY ||
-      process.env.VITE_RESEND_API_KEY ||
-      're_DgBbp68L_6UUeE8DRtYyyTgFMSrd7qSQo';
+    const resendApiKey = process.env.RESEND_API_KEY || '';
 
     // Bulletproof HTML email with mobile image support & direct offers routing
     const htmlContent = body.html || `<!DOCTYPE html>
@@ -258,7 +275,7 @@ export default async function handler(req: any, res: any) {
         <table width="100%" border="0" cellpadding="0" cellspacing="0" style="border: 1px solid rgba(255, 255, 255, 0.08); background-color: rgba(255, 255, 255, 0.02); border-radius: 14px; padding: 14px 18px;">
           <tr>
             <td align="right" dir="rtl" style="padding-bottom: 6px; font-size: 11.5px; color: #94a3b8; text-align: right; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Arial, sans-serif;">
-              البريد المعتمد: <span dir="ltr" style="color: #ffffff; font-family: 'Courier New', monospace; font-weight: bold;">${recipientEmail}</span>
+              البريد المعتمد: <span dir="ltr" style="color: #ffffff; font-family: 'Courier New', monospace; font-weight: bold;">${escapeHtml(recipientEmail)}</span>
             </td>
           </tr>
           <tr>
@@ -277,7 +294,7 @@ export default async function handler(req: any, res: any) {
           VANT ATELIER &bull; ALL RIGHTS RESERVED &bull; 2026
         </p>
         <p dir="rtl" style="margin: 0; font-size: 10.5px; color: #475569; line-height: 1.5; max-width: 440px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Arial, sans-serif;">
-          هذه الرسالة مخصصة للمشترك المعتمد في أرشيف ڤانت. يمكنك إلغاء الاشتراك في أي وقت عبر زيارة الموقع.
+          هذه الرسالة مخصصة للمشترك المعتمد في أرشيف فانت. يمكنك إلغاء الاشتراك في أي وقت عبر زيارة الموقع.
         </p>
       </td>
     </tr>
@@ -288,17 +305,16 @@ export default async function handler(req: any, res: any) {
 
     // Ensure all <img> tags in htmlContent strictly have absolute https:// URLs (prevents Gmail from stripping src)
     let finalHtml = htmlContent;
-    finalHtml = finalHtml.replace(/src=["']product-images\/([^"']+)["']/g, 'src="https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/$1"');
-    finalHtml = finalHtml.replace(/src=["']newsletter-banners\/([^"']+)["']/g, 'src="https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/newsletter-banners/$1"');
-    finalHtml = finalHtml.replace(/src=["']catalog\/([^"']+)["']/g, 'src="https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/$1"');
+    const publicBucket = `${SUPABASE_URL}/storage/v1/object/public/product-images`;
+    finalHtml = finalHtml.replace(/src=["']product-images\/([^"']+)["']/g, `src="${publicBucket}/$1"`);
+    finalHtml = finalHtml.replace(/src=["']newsletter-banners\/([^"']+)["']/g, `src="${publicBucket}/newsletter-banners/$1"`);
+    finalHtml = finalHtml.replace(/src=["']catalog\/([^"']+)["']/g, `src="${publicBucket}/catalog/$1"`);
 
     if (!resendApiKey) {
       return res.status(200).json({
-        success: true,
+        success: false,
         previewOnly: true,
-        message: 'Resend API key missing on server, simulated email dispatch successfully.',
-        subject,
-        htmlPreview: finalHtml,
+        message: 'RESEND_API_KEY is not set on the server, so no email was sent.',
       });
     }
 
@@ -318,9 +334,6 @@ export default async function handler(req: any, res: any) {
     });
   } catch (error: any) {
     console.error('Error in /api/send-welcome:', error);
-    return res.status(500).json({
-      success: false,
-      error: error.message || 'Internal Server Error',
-    });
+    return res.status(500).json({ success: false, error: 'Email could not be sent' });
   }
 }

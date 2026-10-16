@@ -7,7 +7,6 @@ import {
   VISIT_COUNT_KEY,
   LAST_ACTIVITY_KEY,
   SESSION_TIMEOUT_MS,
-  TELEMETRY_FILE,
 } from './types';
 
 // Detect real client device type
@@ -137,7 +136,6 @@ export function trackEvent(
     }
 
     // 2. Periodically sync stream to Supabase Storage (debounced)
-    scheduleSupabaseSync(updated);
   } catch (e) {
     console.warn('Telemetry recording failed', e);
   }
@@ -268,33 +266,6 @@ export async function updateSystemErrorStatus(
   }
 }
 
-// Debounced background sync to Supabase Storage
-let syncTimer: any = null;
-function scheduleSupabaseSync(events: AnalyticsEvent[]) {
-  if (syncTimer) clearTimeout(syncTimer);
-  syncTimer = setTimeout(async () => {
-    if (!supabase) return;
-    try {
-      const payload = JSON.stringify(
-        {
-          synced_at: new Date().toISOString(),
-          total_events: events.length,
-          events: events.slice(0, 500),
-        },
-        null,
-        2
-      );
-      const blob = new Blob([payload], { type: 'application/json' });
-      await supabase.storage.from('product-images').upload(TELEMETRY_FILE, blob, {
-        contentType: 'application/json',
-        upsert: true,
-      });
-    } catch {
-      // Background sync silent catch
-    }
-  }, 4000);
-}
-
 // Fetch telemetry events directly from Supabase `logs` database table
 export async function syncFromSupabaseCloud(): Promise<AnalyticsEvent[]> {
   if (!supabase) return [];
@@ -304,9 +275,6 @@ export async function syncFromSupabaseCloud(): Promise<AnalyticsEvent[]> {
       .select('*')
       .order('created_at', { ascending: false })
       .limit(1000);
-
-    console.log('Supabase Fetch Result:', dbLogs);
-    console.log('Supabase Fetch Error:', dbErr);
 
     if (!dbErr && Array.isArray(dbLogs)) {
       if (dbLogs.length === 0) {

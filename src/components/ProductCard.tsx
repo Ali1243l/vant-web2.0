@@ -1,9 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { motion, type Variants } from 'framer-motion';
-import { Heart, Tag, Check } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Heart, Check, ShoppingBag, X } from 'lucide-react';
 import type { Product, Language } from '../types';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { resolveProductColorVariants } from '../lib/productVariants';
+import { CATEGORY_TRANSLATIONS } from '../lib/constants';
+import { addToCart } from '../lib/cart';
+import { cardImageUrl } from '../lib/utils';
 
 interface Props {
   product: Product;
@@ -14,54 +17,24 @@ interface Props {
   onOpen: (p: Product) => void;
 }
 
-const cardVariants: Variants = {
-  hidden: {
-    opacity: 0,
-  },
-  visible: {
-    opacity: 1,
-    transition: {
-      duration: 0.28,
-      ease: 'easeOut',
-    },
-  },
-};
+
+const MIN_RATIO = 0.45;
+const MAX_RATIO = 1.8;
+const clampRatio = (r: number) => Math.min(MAX_RATIO, Math.max(MIN_RATIO, r));
 
 /**
- * Resolves a 100% stable, deterministic aspect ratio (never changes after initial render).
- * This completely prevents layout shifts, column reflows, and jumping during fast scrolling.
+ * Each card follows its own photo: the real loaded proportions win; the stored ratio or
+ * dimensions only hold the space until the image arrives, then 3:4 as a last resort.
  */
-function getDeterministicAspectRatio(
+function getCardAspectRatio(
   aspectRatio?: string,
   width?: number | null,
   height?: number | null,
-  naturalRatio?: string | null
+  naturalRatio?: number | null
 ): { aspectRatio: string } {
-  // 1. Explicit aspect_ratio from database
-  if (aspectRatio && aspectRatio.trim()) {
-    return { aspectRatio: aspectRatio.replace(':', '/').trim() };
-  }
-
-  // 2. Explicit dimensions from database if within luxury lookbook bounds
-  if (width && height && width > 0 && height > 0) {
-    const val = width / height;
-    if (val >= 0.7 && val <= 1.05) {
-      return { aspectRatio: `${width} / ${height}` };
-    }
-  }
-
-  // 3. Natural ratio from uploaded file clamped to lookbook standards (never collapse into flat strips)
-  if (naturalRatio) {
-    const parts = naturalRatio.split('/').map((s) => parseFloat(s.trim()));
-    if (parts.length === 2 && parts[0] > 0 && parts[1] > 0) {
-      const val = parts[0] / parts[1];
-      if (val >= 0.7 && val <= 1.05) {
-        return { aspectRatio: naturalRatio };
-      }
-    }
-  }
-
-  // 4. Default clean editorial portrait proportion for luxury fashion lookbook (3:4)
+  if (naturalRatio) return { aspectRatio: String(clampRatio(naturalRatio)) };
+  if (width && height && width > 0 && height > 0) return { aspectRatio: String(clampRatio(width / height)) };
+  if (aspectRatio && aspectRatio.trim()) return { aspectRatio: aspectRatio.replace(':', '/').trim() };
   return { aspectRatio: '3 / 4' };
 }
 
@@ -81,8 +54,11 @@ export default React.memo(function ProductCard({
   const cardHoverControl = getControl('card_hover_preview');
   const [loaded, setLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [useOriginalImage, setUseOriginalImage] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [naturalRatio, setNaturalRatio] = useState<string | null>(null);
+  const [naturalRatio, setNaturalRatio] = useState<number | null>(null);
+  const [isPickingSize, setIsPickingSize] = useState(false);
+  const [justAdded, setJustAdded] = useState(false);
 
   // Algorithmic color resolution & SKU derivation
   const variantInfo = useMemo(
@@ -119,7 +95,7 @@ export default React.memo(function ProductCard({
 
   const { width, height } = product;
   const dynamicRatioStyle = useMemo(() => {
-    return getDeterministicAspectRatio(product.aspect_ratio, width, height, naturalRatio);
+    return getCardAspectRatio(product.aspect_ratio, width, height, naturalRatio);
   }, [product.aspect_ratio, width, height, naturalRatio]);
   const displayTitle = lang === 'ar' && product.title_ar ? product.title_ar : product.title;
   const isAr = lang === 'ar';
@@ -161,9 +137,33 @@ export default React.memo(function ProductCard({
 
   const availability = activeVariant?.availability ?? product.availability ?? 'in_stock';
 
+  const sizes = (activeVariant?.sizes || product.sizes || []).filter(Boolean);
+  const canQuickAdd = (availability === 'in_stock' || availability === 'limited') && activeVariant.price > 0;
+
+  // Same line shape as the product page's Add to Cart, so both merge into one cart line
+  const quickAdd = (size?: string) => {
+    addToCart({
+      productId: product.id,
+      title: displayTitle,
+      image: primaryImage || product.image_url,
+      price: activeVariant.price,
+      ...(size ? { size } : {}),
+      ...(variantInfo.hasMultipleColors ? { color: isAr ? activeVariant.colorNameAr : activeVariant.colorNameEn } : {}),
+    });
+    setIsPickingSize(false);
+    setJustAdded(true);
+    setTimeout(() => setJustAdded(false), 1400);
+  };
+
+  const handleQuickAddClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (sizes.length > 1) setIsPickingSize((v) => !v);
+    else quickAdd(sizes[0]);
+  };
+
   // Calculate discount percentage if offer
   const discountPct =
-    product.is_offer && product.original_price && product.original_price > product.price
+    product.is_offer && availability !== 'sold_out' && product.original_price && product.original_price > product.price
       ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
       : null;
 
@@ -171,7 +171,7 @@ export default React.memo(function ProductCard({
   let statusBadge = null;
   if (availability === 'sold_out') {
     statusBadge = {
-      text: isAr ? 'العرض منتهي' : 'Sold Out',
+      text: isAr ? 'نفدت الكمية' : 'Sold Out',
       classes: 'bg-black/75 dark:bg-black/85 text-white/80 border-white/10',
       dot: 'bg-neutral-400',
     };
@@ -190,15 +190,21 @@ export default React.memo(function ProductCard({
   }
 
   return (
-    <motion.article
-      custom={index}
-      initial="hidden"
-      animate="visible"
-      variants={cardVariants}
+    <article
       data-preload-product-id={product.id}
-      className="group cursor-pointer relative select-none touch-manipulation transform-gpu flex flex-col h-full"
+      className="group cursor-pointer relative rounded-2xl outline-none focus-visible:after:absolute focus-visible:after:inset-0 focus-visible:after:z-30 focus-visible:after:rounded-2xl focus-visible:after:pointer-events-none focus-visible:after:ring-3 focus-visible:after:ring-inset focus-visible:after:ring-[#004ad7] dark:focus-visible:after:ring-[#3b82f6] select-none touch-manipulation transform-gpu flex flex-col h-full"
       style={{ contain: 'paint layout', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
       onClick={handleCardClick}
+      role="button"
+      tabIndex={0}
+      aria-label={displayTitle}
+      onKeyDown={(e) => {
+        // Only the card itself; Enter on the inner wishlist button must not open the drawer
+        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          handleCardClick();
+        }
+      }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
@@ -223,7 +229,7 @@ export default React.memo(function ProductCard({
             <div className="relative h-full w-full overflow-hidden">
               {/* Primary Image with seamless opacity cross-fade on lazy load finish & smooth hover transition */}
               <img
-                src={primaryImage.trim()}
+                src={useOriginalImage ? primaryImage.trim() : cardImageUrl(primaryImage.trim())}
                 alt={displayTitle}
                 width={width ?? undefined}
                 height={height ?? undefined}
@@ -234,12 +240,12 @@ export default React.memo(function ProductCard({
                   setLoaded(true);
                   const target = e.currentTarget;
                   if (target.naturalWidth && target.naturalHeight) {
-                    setNaturalRatio(`${target.naturalWidth} / ${target.naturalHeight}`);
+                    setNaturalRatio(target.naturalWidth / target.naturalHeight);
                   }
                 }}
-                onError={() => setImgError(true)}
+                onError={() => (useOriginalImage ? setImgError(true) : setUseOriginalImage(true))}
                 className={`h-full w-full object-cover object-center transition-opacity duration-300 ${
-                  availability === 'sold_out' ? 'saturate-[85%]' : ''
+                  availability === 'sold_out' ? 'grayscale-[70%] brightness-95' : ''
                 } ${
                   loaded
                     ? isHovered && secondaryImage
@@ -252,7 +258,10 @@ export default React.memo(function ProductCard({
               {/* Secondary Image on Hover (Luxury Crossfade Transition) */}
               {cardHoverControl.visible && Boolean(secondaryImage?.trim()) ? (
                 <img
-                  src={secondaryImage!.trim()}
+                  src={cardImageUrl(secondaryImage!.trim())}
+                  onError={(e) => {
+                    if (e.currentTarget.src !== secondaryImage!.trim()) e.currentTarget.src = secondaryImage!.trim();
+                  }}
                   alt={`${displayTitle} - 2`}
                   loading="lazy"
                   decoding="async"
@@ -269,7 +278,7 @@ export default React.memo(function ProductCard({
               <svg className="w-12 h-12 stroke-[1.2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
-              <span className="mt-3 text-xs tracking-widest uppercase font-medium">VANT · ڤانت</span>
+              <span className="mt-3 text-xs tracking-widest uppercase font-medium">VANT · فانت</span>
             </div>
           )}
 
@@ -277,13 +286,13 @@ export default React.memo(function ProductCard({
           {cardBadgeControl.visible && (
             <div className="absolute top-2.5 sm:top-3 ltr:left-2.5 rtl:right-2.5 ltr:sm:left-3 rtl:sm:right-3 z-20 flex flex-col items-start gap-1 pointer-events-none select-none">
               {discountPct && (
-                <span className="inline-flex items-center rounded-full bg-[#004ad7] px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9.5px] sm:text-[10.5px] font-black text-white shadow-sm shadow-[#004ad7]/30 border border-white/20 backdrop-blur-xs">
+                <span className="inline-flex items-center rounded-full bg-[#004ad7] px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10.5px] font-black text-white shadow-sm shadow-[#004ad7]/30 border border-white/20">
                   %{discountPct}-
                 </span>
               )}
               {statusBadge && (
                 <span
-                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9px] sm:text-[10px] font-semibold tracking-wide backdrop-blur-md border shadow-2xs ${statusBadge.classes}`}
+                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-[10.5px] font-semibold tracking-wide border shadow-2xs ${statusBadge.classes}`}
                 >
                   <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusBadge.dot}`} />
                   <span>{statusBadge.text}</span>
@@ -297,7 +306,7 @@ export default React.memo(function ProductCard({
             <button
               type="button"
               onClick={handleHeartClick}
-              className={`absolute top-2.5 sm:top-3 ltr:right-2.5 rtl:left-2.5 ltr:sm:right-3 rtl:sm:left-3 z-20 flex h-8 w-8 sm:h-8.5 sm:w-8.5 md:h-10 md:w-10 lg:h-11 lg:w-11 items-center justify-center rounded-full transition-all duration-200 cursor-pointer backdrop-blur-md active:scale-90 hover:scale-105 group/heart ${
+              className={`absolute top-2.5 sm:top-3 ltr:right-2.5 rtl:left-2.5 ltr:sm:right-3 rtl:sm:left-3 z-20 flex h-9 w-9 before:absolute before:-inset-1 md:h-10 md:w-10 lg:h-11 lg:w-11 items-center justify-center rounded-full transition-all duration-200 cursor-pointer active:scale-90 hover:scale-105 group/heart ${
                 isWishlisted
                   ? 'bg-[#004ad7] dark:bg-[#3b82f6] text-white shadow-md shadow-[#004ad7]/25 border border-[#004ad7]/40 dark:border-[#3b82f6]/50'
                   : 'bg-white/90 dark:bg-[#12141a]/90 text-neutral-600 dark:text-neutral-300 hover:text-[#004ad7] dark:hover:text-[#3b82f6] hover:bg-white dark:hover:bg-[#181a22] border border-black/8 dark:border-white/12 shadow-2xs'
@@ -314,47 +323,95 @@ export default React.memo(function ProductCard({
               />
             </button>
           )}
+
+          {canQuickAdd && (
+            <button
+              type="button"
+              onClick={handleQuickAddClick}
+              aria-expanded={sizes.length > 1 ? isPickingSize : undefined}
+              aria-label={isAr ? `إضافة سريعة للسلة: ${displayTitle}` : `Quick add to cart: ${displayTitle}`}
+              title={isAr ? 'إضافة سريعة' : 'Quick add'}
+              className={`max-md:hidden absolute bottom-2.5 sm:bottom-3 ltr:right-2.5 rtl:left-2.5 ltr:sm:right-3 rtl:sm:left-3 z-20 flex h-9 w-9 before:absolute before:-inset-1 md:h-10 md:w-10 items-center justify-center rounded-full border shadow-2xs transition-all duration-200 active:scale-90 hover:scale-105 cursor-pointer ${
+                justAdded
+                  ? 'bg-emerald-600 border-emerald-600 text-white'
+                  : 'bg-white/90 dark:bg-[#12141a]/90 text-[#15171c] dark:text-white border-black/8 dark:border-white/12 hover:text-[#004ad7] dark:hover:text-[#3b82f6]'
+              } ${isPickingSize ? 'opacity-0 pointer-events-none' : ''}`}
+            >
+              {justAdded ? <Check className="h-4 w-4 stroke-[2.5]" /> : <ShoppingBag className="h-4 w-4 stroke-[2]" />}
+            </button>
+          )}
+
+          {/* Size picker for quick add: slides up over the bottom of the image */}
+          {isPickingSize && (
+            <motion.div
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              onClick={(e) => e.stopPropagation()}
+              className="absolute inset-x-0 bottom-0 z-30 bg-white/95 dark:bg-[#12141a]/95 border-t border-black/8 dark:border-white/10 p-2.5 sm:p-3 cursor-default"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] sm:text-xs font-semibold text-[#15171c] dark:text-white">{isAr ? 'اختر المقاس' : 'Choose size'}</span>
+                <button
+                  type="button"
+                  onClick={() => setIsPickingSize(false)}
+                  aria-label={isAr ? 'إغلاق' : 'Close'}
+                  className="flex h-8 w-8 -m-1.5 items-center justify-center rounded-full text-neutral-500 hover:text-[#15171c] dark:hover:text-white cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {sizes.map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => quickAdd(size)}
+                    className="min-w-10 h-10 px-2.5 rounded-lg border border-black/12 dark:border-white/15 text-xs font-bold text-[#15171c] dark:text-white hover:border-[#004ad7] hover:text-[#004ad7] dark:hover:border-[#3b82f6] dark:hover:text-[#3b82f6] active:scale-95 transition-colors cursor-pointer"
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
         </div>
 
         {/* Product Meta (Title, Category, Price) - Right-aligned in RTL, distinct hierarchy, and comfortable padding */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-20px" }}
-          transition={{ duration: 0.5, delay: 0.15, ease: "easeOut" }}
+        <div
           className="mt-2.5 sm:mt-3 md:mt-3.5 px-1 sm:px-1.5 md:px-2 pb-1.5 space-y-1.5 sm:space-y-2 rtl:text-right ltr:text-left"
         >
           {/* 1. Category name - Subtle, smaller, refined grayish color */}
           {cardCategoryControl.visible && (
             <div className="flex items-center rtl:justify-start ltr:justify-start">
-              <span className="text-[11px] sm:text-xs md:text-[12.5px] font-medium text-black/45 dark:text-white/45 tracking-tight line-clamp-1">
-                {lang === 'ar' && product.category_ar ? product.category_ar : product.category}
+              <span className="text-xs md:text-[12.5px] font-medium text-black/50 dark:text-white/45 tracking-tight line-clamp-1">
+                {CATEGORY_TRANSLATIONS[product.category]?.[lang] ?? (lang === 'ar' && product.category_ar ? product.category_ar : product.category)}
               </span>
             </div>
           )}
 
           {/* 2. Product Name - Prominent, strong visual weight */}
           <div className="flex items-start rtl:justify-start ltr:justify-start">
-            <h3 className="text-sm sm:text-[15px] md:text-base lg:text-[17px] font-extrabold text-[#15171c] dark:text-white leading-snug line-clamp-2 group-hover:text-[#004ad7] dark:group-hover:text-[#3b82f6] transition-colors">
+            <h3 className="text-[15px] md:text-base lg:text-[17px] font-extrabold text-[#15171c] dark:text-white leading-snug line-clamp-2 group-hover:text-[#004ad7] dark:group-hover:text-[#3b82f6] transition-colors">
               {displayTitle}
             </h3>
           </div>
 
           {/* 3. Price - Bold, distinct signature blue */}
           {cardPriceControl.visible && (
-            <div className="flex items-baseline gap-2 pt-0.5 rtl:justify-start ltr:justify-start">
-              <span className="font-mono font-black text-sm sm:text-base md:text-[17px] lg:text-lg text-[#004ad7] dark:text-[#3b82f6] tabular-nums tracking-tight">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 pt-0.5 rtl:justify-start ltr:justify-start">
+              <span className="font-mono font-black text-[15px] sm:text-base md:text-[17px] lg:text-lg text-[#004ad7] dark:text-[#3b82f6] tabular-nums tracking-tight whitespace-nowrap">
                 {formatPrice(activeVariant.price)}
               </span>
               {product.is_offer && product.original_price && product.original_price > activeVariant.price && (
-                <span className="text-[11px] sm:text-xs md:text-[13px] text-black/35 dark:text-white/35 line-through tabular-nums font-mono">
+                <span className="text-xs md:text-[13px] text-black/40 dark:text-white/35 line-through tabular-nums font-mono whitespace-nowrap">
                   {formatPrice(product.original_price)}
                 </span>
               )}
             </div>
           )}
-        </motion.div>
+        </div>
       </div>
-    </motion.article>
+    </article>
   );
 });

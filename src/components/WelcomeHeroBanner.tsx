@@ -146,6 +146,11 @@ export default function WelcomeHeroBanner({
     onExplore();
   };
 
+  // Subtle Scroll Parallax Effect for Inner Content
+  const { scrollY } = useScroll();
+  const contentY = useTransform(scrollY, [0, 350], [0, 50]);
+  const contentOpacity = useTransform(scrollY, [0, 300], [1, 0.3]);
+
   if (!heroVisibleControl.visible) {
     return null;
   }
@@ -156,10 +161,6 @@ export default function WelcomeHeroBanner({
   const btnText = isAr ? heroBtnControl.label_ar : heroBtnControl.label_en;
   const trendsHeadline = toWesternNumerals(isAr ? trendsTitleControl.label_ar : trendsTitleControl.label_en);
 
-  // Subtle Scroll Parallax Effect for Inner Content
-  const { scrollY } = useScroll();
-  const contentY = useTransform(scrollY, [0, 350], [0, 50]);
-  const contentOpacity = useTransform(scrollY, [0, 300], [1, 0.3]);
 
   return (
     <AnimatePresence initial={false}>
@@ -223,7 +224,7 @@ export default function WelcomeHeroBanner({
                     <button
                       type="button"
                       onClick={onDismiss}
-                      className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full text-[#15171c]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/10 hover:text-[#15171c] dark:hover:text-white transition-all active:scale-90 cursor-pointer"
+                      className="relative before:absolute before:-inset-2 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full text-[#15171c]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/10 hover:text-[#15171c] dark:hover:text-white transition-all active:scale-90 cursor-pointer"
                       aria-label={isAr ? 'إخفاء الواجهة' : 'Dismiss intro'}
                       title={isAr ? 'إخفاء' : 'Dismiss'}
                     >
@@ -234,13 +235,13 @@ export default function WelcomeHeroBanner({
 
                 {/* Editorial Statement & Brand Manifesto */}
                 {(heroTitleControl.visible || heroSubtitleControl.visible || heroBtnControl.visible) && (
-                  <div className="pt-3.5 sm:pt-5 flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6">
+                  <div className="pt-3 sm:pt-5 flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-6">
                     <div className="max-w-2xl">
                       {heroTitleControl.visible && (
                         <AnimatedText
                           text={headlineText}
                           as="h2"
-                          className={`text-xl sm:text-2xl md:text-[28px] lg:text-[32px] font-bold text-[#15171c] dark:text-white leading-snug sm:leading-[1.22] ${
+                          className={`text-lg sm:text-2xl md:text-[28px] lg:text-[32px] font-bold text-[#15171c] dark:text-white leading-snug sm:leading-[1.22] ${
                             isAr ? 'tracking-normal font-sans' : 'tracking-tight'
                           }`}
                         />
@@ -250,7 +251,7 @@ export default function WelcomeHeroBanner({
                           text={subtitleText}
                           as="p"
                           staggerDelay={0.02}
-                          className="mt-2 text-xs sm:text-sm md:text-[14.5px] text-[#15171c]/75 dark:text-white/75 leading-relaxed max-w-xl"
+                          className="hidden sm:block mt-2 text-xs sm:text-sm md:text-[14.5px] text-[#15171c]/75 dark:text-white/75 leading-relaxed max-w-xl"
                         />
                       )}
                     </div>

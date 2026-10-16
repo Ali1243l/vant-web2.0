@@ -24,7 +24,7 @@ export default function ShareModal({ isOpen, onClose, product, lang }: ShareModa
     : product ? `https://vant-fashion.com?item=${product.id}` : '';
 
   const shareText = isAr
-    ? `ڤانت — ${displayTitle} (${priceFormatted})\n${shareUrl}`
+    ? `فانت — ${displayTitle} (${priceFormatted})\n${shareUrl}`
     : `VANT — ${displayTitle} (${priceFormatted})\n${shareUrl}`;
 
   const handleCopyLink = async () => {
@@ -75,7 +75,7 @@ export default function ShareModal({ isOpen, onClose, product, lang }: ShareModa
   return (
     <AnimatePresence>
       {isOpen && product && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-3">
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center p-3">
           {/* Subtle Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -118,7 +118,9 @@ export default function ShareModal({ isOpen, onClose, product, lang }: ShareModa
               type="text"
               readOnly
               value={shareUrl}
-              className="flex-1 bg-transparent px-2 md:px-2.5 text-xs md:text-sm text-[#6b7280] dark:text-[#9ca3af] outline-none select-all truncate"
+              dir="ltr"
+              aria-label={isAr ? 'رابط القطعة' : 'Piece link'}
+              className="min-w-0 flex-1 bg-transparent px-2 md:px-2.5 text-xs md:text-sm text-[#6b7280] dark:text-[#9ca3af] outline-none select-all truncate"
             />
             <button
               type="button"
