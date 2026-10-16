@@ -148,11 +148,13 @@ export function useCatalogProducts() {
         // Ensure fallback products are active if database is empty
         setProducts((prev) => (prev.length > 0 ? prev : FALLBACK_CATALOG_PRODUCTS));
         setTotalProductsCount((prev) => (prev > 0 ? prev : FALLBACK_CATALOG_PRODUCTS.length));
+        setHasMore(false);
         hasLoadedOnceRef.current = true;
       }
     } catch {
       // Always guarantee products remain available from fallback cache
       setProducts((prev) => (prev.length > 0 ? prev : FALLBACK_CATALOG_PRODUCTS));
+      setHasMore(false);
     } finally {
       setLoading(false);
     }

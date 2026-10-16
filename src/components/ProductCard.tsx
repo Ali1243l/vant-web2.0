@@ -4,6 +4,7 @@ import { Heart, Tag, Check } from 'lucide-react';
 import type { Product, Language } from '../types';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { resolveProductColorVariants } from '../lib/productVariants';
+import { CATEGORY_TRANSLATIONS } from '../lib/constants';
 
 interface Props {
   product: Product;
@@ -338,7 +339,7 @@ export default React.memo(function ProductCard({
           {cardCategoryControl.visible && (
             <div className="flex items-center rtl:justify-start ltr:justify-start">
               <span className="text-[11px] sm:text-xs md:text-[12.5px] font-medium text-black/45 dark:text-white/45 tracking-tight line-clamp-1">
-                {lang === 'ar' && product.category_ar ? product.category_ar : product.category}
+                {CATEGORY_TRANSLATIONS[product.category]?.[lang] ?? (lang === 'ar' && product.category_ar ? product.category_ar : product.category)}
               </span>
             </div>
           )}

@@ -17,6 +17,7 @@ import { trackEvent } from './lib/analytics';
 import { useProducts } from './hooks/useProducts';
 import { useWishlist } from './hooks/useWishlist';
 import { productMatchesQuery } from './lib/search';
+import { CATEGORY_TRANSLATIONS } from './lib/constants';
 import { Heart, Loader2, Check, X, Sparkles, Gift, Percent, Tag, ArrowUpDown, LayoutGrid, Grid2X2 } from 'lucide-react';
 import type { Product, Language, Theme } from './types';
 
@@ -24,17 +25,6 @@ import type { Product, Language, Theme } from './types';
 const AdminDrawer = lazy(() => import('./components/AdminDrawer'));
 
 const ALL = 'All';
-
-const CATEGORY_TRANSLATIONS: Record<string, { en: string; ar: string }> = {
-  All: { en: 'All', ar: 'الكل' },
-  'T-Shirts': { en: 'T-Shirts', ar: 'تيشيرتات' },
-  'ملابس وأزياء': { en: 'Apparel & Fashion', ar: 'ملابس وأزياء' },
-  Outerwear: { en: 'Outerwear', ar: 'المعاطف والسترات' },
-  Tailoring: { en: 'Tailoring', ar: 'الأزياء الرسمية' },
-  Knitwear: { en: 'Knitwear', ar: 'التريكو والصوف' },
-  Footwear: { en: 'Footwear', ar: 'الأحذية' },
-  Accessories: { en: 'Accessories', ar: 'الإكسسوارات' },
-};
 
 function MainApp() {
   const {

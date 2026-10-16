@@ -35,7 +35,7 @@ export default function MasonryGrid({
   const gridClasses =
     layout === 'grid-2'
       ? 'grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 pb-4 pt-2 w-full max-w-5xl mx-auto'
-      : 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-5 md:gap-6 lg:gap-6 xl:gap-8 pb-4 pt-2 w-full max-w-screen-2xl mx-auto';
+      : 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5 md:gap-6 lg:gap-6 xl:gap-8 pb-4 pt-2 w-full max-w-screen-2xl mx-auto';
 
   if (loading) {
     return (
