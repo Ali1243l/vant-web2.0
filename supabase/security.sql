@@ -127,10 +127,12 @@ CREATE POLICY "Admins update product-images" ON storage.objects FOR UPDATE TO au
 CREATE POLICY "Admins delete from product-images" ON storage.objects FOR DELETE TO authenticated
     USING (bucket_id = 'product-images' AND public.is_admin());
 
--- 6. Old public files that held customer emails or visit data -----------------
-DELETE FROM storage.objects
-WHERE bucket_id = 'product-images'
-  AND name IN ('config/newsletter_subscribers.json', 'config/newsletter_campaigns.json', 'telemetry/events_stream.json');
+-- 6. Old public files with customer emails or visit data
+-- Supabase blocks SQL deletes on storage.objects, so remove these by hand in
+-- Storage > product-images (the dashboard, not the SQL editor):
+--   config/newsletter_subscribers.json
+--   config/newsletter_campaigns.json
+--   telemetry/events_stream.json
 
 -- Check: this should return true when run while signed in as the admin in the app,
 -- and the next line should list exactly one row (your admin).
