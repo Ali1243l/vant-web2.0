@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { motion, type Variants } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Heart, Check, ShoppingBag, X } from 'lucide-react';
 import type { Product, Language } from '../types';
 import { useSiteControls } from '../context/SiteControlsContext';
@@ -16,59 +16,24 @@ interface Props {
   onOpen: (p: Product) => void;
 }
 
-const cardVariants: Variants = {
-  hidden: {
-    opacity: 0,
-  },
-  visible: {
-    opacity: 1,
-    transition: {
-      duration: 0.28,
-      ease: 'easeOut',
-    },
-  },
-};
 
-const MIN_RATIO = 0.6;
-const MAX_RATIO = 1.25;
+const MIN_RATIO = 0.45;
+const MAX_RATIO = 1.8;
+const clampRatio = (r: number) => Math.min(MAX_RATIO, Math.max(MIN_RATIO, r));
 
 /**
- * Resolves a 100% stable, deterministic aspect ratio (never changes after initial render).
- * This completely prevents layout shifts, column reflows, and jumping during fast scrolling.
+ * Each card follows its own photo: the real loaded proportions win; the stored ratio or
+ * dimensions only hold the space until the image arrives, then 3:4 as a last resort.
  */
-function getDeterministicAspectRatio(
+function getCardAspectRatio(
   aspectRatio?: string,
   width?: number | null,
   height?: number | null,
-  naturalRatio?: string | null
+  naturalRatio?: number | null
 ): { aspectRatio: string } {
-  // 1. Explicit aspect_ratio from database
-  if (aspectRatio && aspectRatio.trim()) {
-    return { aspectRatio: aspectRatio.replace(':', '/').trim() };
-  }
-
-  // 2. Explicit dimensions from database if within luxury lookbook bounds
-  if (width && height && width > 0 && height > 0) {
-    const val = width / height;
-    if (val >= MIN_RATIO && val <= MAX_RATIO) {
-      return { aspectRatio: `${width} / ${height}` };
-    }
-  }
-
-  // 3. Natural ratio from uploaded file clamped to lookbook standards (never collapse into flat strips)
-  if (naturalRatio) {
-    const parts = naturalRatio.split('/').map((s) => parseFloat(s.trim()));
-    if (parts.length === 2 && parts[0] > 0 && parts[1] > 0) {
-      const val = parts[0] / parts[1];
-      if (val >= MIN_RATIO && val <= MAX_RATIO) {
-        return { aspectRatio: naturalRatio };
-      }
-      // Out-of-range photos are clamped rather than dropped to 3:4, so each card still follows its image
-      return { aspectRatio: String(Math.min(MAX_RATIO, Math.max(MIN_RATIO, val))) };
-    }
-  }
-
-  // 4. Default clean editorial portrait proportion for luxury fashion lookbook (3:4)
+  if (naturalRatio) return { aspectRatio: String(clampRatio(naturalRatio)) };
+  if (width && height && width > 0 && height > 0) return { aspectRatio: String(clampRatio(width / height)) };
+  if (aspectRatio && aspectRatio.trim()) return { aspectRatio: aspectRatio.replace(':', '/').trim() };
   return { aspectRatio: '3 / 4' };
 }
 
@@ -89,7 +54,7 @@ export default React.memo(function ProductCard({
   const [loaded, setLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [naturalRatio, setNaturalRatio] = useState<string | null>(null);
+  const [naturalRatio, setNaturalRatio] = useState<number | null>(null);
   const [isPickingSize, setIsPickingSize] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
 
@@ -128,7 +93,7 @@ export default React.memo(function ProductCard({
 
   const { width, height } = product;
   const dynamicRatioStyle = useMemo(() => {
-    return getDeterministicAspectRatio(product.aspect_ratio, width, height, naturalRatio);
+    return getCardAspectRatio(product.aspect_ratio, width, height, naturalRatio);
   }, [product.aspect_ratio, width, height, naturalRatio]);
   const displayTitle = lang === 'ar' && product.title_ar ? product.title_ar : product.title;
   const isAr = lang === 'ar';
@@ -223,11 +188,7 @@ export default React.memo(function ProductCard({
   }
 
   return (
-    <motion.article
-      custom={index}
-      initial="hidden"
-      animate="visible"
-      variants={cardVariants}
+    <article
       data-preload-product-id={product.id}
       className="group cursor-pointer relative rounded-2xl outline-none focus-visible:after:absolute focus-visible:after:inset-0 focus-visible:after:z-30 focus-visible:after:rounded-2xl focus-visible:after:pointer-events-none focus-visible:after:ring-3 focus-visible:after:ring-inset focus-visible:after:ring-[#004ad7] dark:focus-visible:after:ring-[#3b82f6] select-none touch-manipulation transform-gpu flex flex-col h-full"
       style={{ contain: 'paint layout', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
@@ -277,7 +238,7 @@ export default React.memo(function ProductCard({
                   setLoaded(true);
                   const target = e.currentTarget;
                   if (target.naturalWidth && target.naturalHeight) {
-                    setNaturalRatio(`${target.naturalWidth} / ${target.naturalHeight}`);
+                    setNaturalRatio(target.naturalWidth / target.naturalHeight);
                   }
                 }}
                 onError={() => setImgError(true)}
@@ -412,11 +373,7 @@ export default React.memo(function ProductCard({
         </div>
 
         {/* Product Meta (Title, Category, Price) - Right-aligned in RTL, distinct hierarchy, and comfortable padding */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-20px" }}
-          transition={{ duration: 0.5, delay: 0.15, ease: "easeOut" }}
+        <div
           className="mt-2.5 sm:mt-3 md:mt-3.5 px-1 sm:px-1.5 md:px-2 pb-1.5 space-y-1.5 sm:space-y-2 rtl:text-right ltr:text-left"
         >
           {/* 1. Category name - Subtle, smaller, refined grayish color */}
@@ -448,8 +405,8 @@ export default React.memo(function ProductCard({
               )}
             </div>
           )}
-        </motion.div>
+        </div>
       </div>
-    </motion.article>
+    </article>
   );
 });

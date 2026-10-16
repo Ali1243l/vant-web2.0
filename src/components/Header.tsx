@@ -49,6 +49,8 @@ export default function Header({
 
   const [scrolled, setScrolled] = useState(false);
   const [showCategories, setShowCategories] = useState(true);
+  // Overflow stays clipped while the row animates, then opens so the filter dropdown can spill out
+  const [categoriesSettled, setCategoriesSettled] = useState(true);
   const cartCount = useCartCount();
   const [isCartBouncing, setIsCartBouncing] = useState(false);
 
@@ -346,33 +348,19 @@ export default function Header({
             </motion.div>
 
             {/* 2. Collapsible CategoryFilter Bar */}
-            <AnimatePresence initial={false}>
-              {showCategories && children && (
-                <motion.div
-                  key="header-category-filter-wrapper"
-                  initial={{ height: 0, opacity: 0, overflow: 'hidden' }}
-                  animate={{
-                    height: 'auto',
-                    opacity: 1,
-                    overflow: 'visible',
-                  }}
-                  exit={{
-                    height: 0,
-                    opacity: 0,
-                    overflow: 'hidden',
-                  }}
-                  transition={{
-                    duration: 0.32,
-                    ease: [0.16, 1, 0.3, 1],
-                  }}
-                  className="w-full overflow-visible"
-                >
-                  <div className="w-full pb-2 pt-0.5 overflow-visible">
-                    {children}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* CSS grid-rows collapse, not framer height:auto: measuring auto height makes framer reset window scroll, which killed smooth scrolls like back-to-top */}
+            {children && (
+              <div
+                className="grid grid-cols-[minmax(0,1fr)] transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
+                style={{ gridTemplateRows: showCategories ? '1fr' : '0fr', opacity: showCategories ? 1 : 0 }}
+                onTransitionEnd={(e) => e.propertyName === 'grid-template-rows' && setCategoriesSettled(showCategories)}
+                inert={!showCategories}
+              >
+                <div className={`min-h-0 ${showCategories && categoriesSettled ? 'overflow-visible' : 'overflow-hidden'}`}>
+                  <div className="w-full pb-2 pt-0.5 overflow-visible">{children}</div>
+                </div>
+              </div>
+            )}
           </div>
         </motion.div>
       </header>

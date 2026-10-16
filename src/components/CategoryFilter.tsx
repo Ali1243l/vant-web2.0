@@ -67,6 +67,8 @@ export default function CategoryFilter({
   };
 
   // Container-isolated scroll: smoothly centers active category inside tabs bar
+  // On (re)mount — the header remounts this row when you scroll up — jump instantly: a smooth scroll here cancels the page's own smooth scroll (back-to-top stopped after ~25px)
+  const hasCenteredRef = useRef(false);
   useEffect(() => {
     if (!activeRef.current || !tabsContainerRef.current) return;
     const container = tabsContainerRef.current;
@@ -78,8 +80,9 @@ export default function CategoryFilter({
 
     container.scrollBy({
       left: offset,
-      behavior: 'smooth',
+      behavior: hasCenteredRef.current ? 'smooth' : 'auto',
     });
+    hasCenteredRef.current = true;
   }, [active, isOffersOnly]);
 
   // Close dropdown on outside click or deliberate scroll

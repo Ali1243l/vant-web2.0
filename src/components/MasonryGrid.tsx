@@ -2,8 +2,6 @@ import React, { useEffect, useState } from 'react';
 import type { Product, Language } from '../types';
 import ProductCard from './ProductCard';
 import SkeletonCard from './SkeletonCard';
-import PremiumGlowWrapper from './ui/PremiumGlowWrapper';
-import BlurFade from './ui/BlurFade';
 
 interface Props {
   products: Product[];
@@ -75,19 +73,22 @@ export default function MasonryGrid({
     );
   }
 
+  // Plain CSS fade + hover shadow: the old per-card blur filter and spring wrappers made scrolling and loading heavy
   const renderCard = (p: Product, i: number) => (
-    <BlurFade key={`blur-fade-${p.id}`} delay={(i % 4) * 0.08} duration={0.6}>
-      <PremiumGlowWrapper>
-        <ProductCard
-          product={p}
-          index={i}
-          lang={lang}
-          isWishlisted={isWishlisted ? isWishlisted(p.id) : false}
-          onToggleWishlist={onToggleWishlist}
-          onOpen={handleOpen}
-        />
-      </PremiumGlowWrapper>
-    </BlurFade>
+    <div
+      key={p.id}
+      className="animate-fade-up rounded-2xl md:rounded-3xl overflow-hidden shadow-sm md:hover:shadow-xl md:hover:shadow-black/10 dark:md:hover:shadow-black/50 transition-shadow duration-300"
+      style={{ animationDelay: `${(i % 4) * 60}ms` }}
+    >
+      <ProductCard
+        product={p}
+        index={i}
+        lang={lang}
+        isWishlisted={isWishlisted ? isWishlisted(p.id) : false}
+        onToggleWishlist={onToggleWishlist}
+        onOpen={handleOpen}
+      />
+    </div>
   );
 
   if (layout === 'grid-4') {

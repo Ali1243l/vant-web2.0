@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, useSpring } from 'framer-motion';
+import { motion, useMotionValue, animate } from 'framer-motion';
 
 export interface MobileTouchZoomProps {
   children: React.ReactNode;
@@ -18,36 +18,42 @@ const MAX_SCALE = 4;
 export const MobileTouchZoom: React.FC<MobileTouchZoomProps> = ({ children, zoomFactor = 2.2, className = '' }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomed, setZoomed] = useState(false);
-  const scale = useSpring(1, { stiffness: 320, damping: 30 });
-  const x = useSpring(0, { stiffness: 320, damping: 30 });
-  const y = useSpring(0, { stiffness: 320, damping: 30 });
+  // Plain motion values so pan and pinch track the finger 1:1; only zoom in/out is animated
+  const scale = useMotionValue(1);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const ease = { type: 'tween', duration: 0.22, ease: [0.16, 1, 0.3, 1] } as const;
 
   const lastTap = useRef(0);
   const start = useRef({ x: 0, y: 0 });
   const last = useRef({ x: 0, y: 0 });
   const pinch = useRef<{ dist: number; scale: number } | null>(null);
 
-  const setPan = (nx: number, ny: number, s: number) => {
+  const panLimits = (s: number) => {
     const r = containerRef.current?.getBoundingClientRect();
-    if (!r) return;
-    const mx = (r.width * (s - 1)) / 2;
-    const my = (r.height * (s - 1)) / 2;
+    return r ? { mx: (r.width * (s - 1)) / 2, my: (r.height * (s - 1)) / 2 } : { mx: 0, my: 0 };
+  };
+
+  const setPan = (nx: number, ny: number, s: number) => {
+    const { mx, my } = panLimits(s);
     x.set(clamp(nx, -mx, mx));
     y.set(clamp(ny, -my, my));
   };
 
   const reset = () => {
-    scale.set(1);
-    x.set(0);
-    y.set(0);
+    animate(scale, 1, ease);
+    animate(x, 0, ease);
+    animate(y, 0, ease);
     setZoomed(false);
   };
 
   const zoomAt = (clientX: number, clientY: number) => {
     const r = containerRef.current?.getBoundingClientRect();
     if (!r) return;
-    scale.set(zoomFactor);
-    setPan(-(clientX - r.left - r.width / 2) * (zoomFactor - 1), -(clientY - r.top - r.height / 2) * (zoomFactor - 1), zoomFactor);
+    const { mx, my } = panLimits(zoomFactor);
+    animate(scale, zoomFactor, ease);
+    animate(x, clamp(-(clientX - r.left - r.width / 2) * (zoomFactor - 1), -mx, mx), ease);
+    animate(y, clamp(-(clientY - r.top - r.height / 2) * (zoomFactor - 1), -my, my), ease);
     setZoomed(true);
   };
 
@@ -128,7 +134,7 @@ export const MobileTouchZoom: React.FC<MobileTouchZoomProps> = ({ children, zoom
       className={`relative overflow-hidden select-none ${className}`}
       style={{ touchAction: zoomed ? 'none' : 'pan-y' }}
     >
-      <motion.div style={{ scale, x, y }} className="w-full h-full origin-center flex items-center justify-center">
+      <motion.div style={{ scale, x, y }} className="w-full h-full origin-center flex items-center justify-center will-change-transform">
         {children}
       </motion.div>
     </div>
