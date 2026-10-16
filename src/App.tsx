@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, type ComponentType, useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from './components/Header';
 import CategoryFilter, { type AvailabilityFilterType } from './components/CategoryFilter';
@@ -22,7 +22,10 @@ import { Heart, Loader2, Check, X, Sparkles, Gift, Percent, Tag, ArrowUpDown, La
 import type { Product, Language, Theme } from './types';
 
 // Admin (charts, newsletter studio, etc.) is a separate chunk so shoppers never download it
-const AdminDrawer = lazy(() => import('./components/AdminDrawer'));
+// A failed chunk download (offline, flaky network) renders nothing instead of crashing the storefront
+const AdminDrawer = lazy<ComponentType<{ lang: Language }>>(() =>
+  import('./components/AdminDrawer').catch(() => ({ default: () => null }))
+);
 
 const ALL = 'All';
 
