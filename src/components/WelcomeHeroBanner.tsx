@@ -234,13 +234,13 @@ export default function WelcomeHeroBanner({
 
                 {/* Editorial Statement & Brand Manifesto */}
                 {(heroTitleControl.visible || heroSubtitleControl.visible || heroBtnControl.visible) && (
-                  <div className="pt-3.5 sm:pt-5 flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6">
+                  <div className="pt-3 sm:pt-5 flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-6">
                     <div className="max-w-2xl">
                       {heroTitleControl.visible && (
                         <AnimatedText
                           text={headlineText}
                           as="h2"
-                          className={`text-xl sm:text-2xl md:text-[28px] lg:text-[32px] font-bold text-[#15171c] dark:text-white leading-snug sm:leading-[1.22] ${
+                          className={`text-lg sm:text-2xl md:text-[28px] lg:text-[32px] font-bold text-[#15171c] dark:text-white leading-snug sm:leading-[1.22] ${
                             isAr ? 'tracking-normal font-sans' : 'tracking-tight'
                           }`}
                         />
@@ -250,7 +250,7 @@ export default function WelcomeHeroBanner({
                           text={subtitleText}
                           as="p"
                           staggerDelay={0.02}
-                          className="mt-2 text-xs sm:text-sm md:text-[14.5px] text-[#15171c]/75 dark:text-white/75 leading-relaxed max-w-xl"
+                          className="hidden sm:block mt-2 text-xs sm:text-sm md:text-[14.5px] text-[#15171c]/75 dark:text-white/75 leading-relaxed max-w-xl"
                         />
                       )}
                     </div>

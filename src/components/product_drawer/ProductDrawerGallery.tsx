@@ -381,7 +381,7 @@ export const ProductDrawerGallery: React.FC<ProductDrawerGalleryProps> = ({
             </button>
 
             {/* Floating Image Counter Badge */}
-            <div className="absolute top-3 left-3 z-20 flex items-center gap-1 rounded-full bg-black/60 dark:bg-black/75 px-2.5 py-0.5 text-[10.5px] font-mono font-semibold tracking-wide text-white/95 backdrop-blur-md border border-white/15 shadow-xs select-none">
+            <div className="absolute top-3 ltr:left-3 rtl:right-3 z-20 flex items-center gap-1 rounded-full bg-black/60 dark:bg-black/75 px-2.5 py-0.5 text-[10.5px] font-mono font-semibold tracking-wide text-white/95 backdrop-blur-md border border-white/15 shadow-xs select-none">
               <span className="text-[#60a5fa] font-bold">{activeImageIndex + 1}</span>
               <span className="text-white/35">/</span>
               <span className="text-white/75">{images.length}</span>

@@ -103,11 +103,11 @@ export const CartInteractionWrapper: React.FC<CartInteractionWrapperProps> = ({
         targetEl = document.querySelector(cartTargetSelector);
       }
       if (!targetEl) {
+        // The header cart is hidden on phones, where the bottom nav cart takes over
         targetEl =
-          document.querySelector('#header-cart-icon') ||
-          document.querySelector('#floating-cart-icon') ||
-          document.querySelector('header button[aria-label*="سلة"]') ||
-          document.querySelector('header button[aria-label*="Cart"]');
+          Array.from(document.querySelectorAll('#header-cart-icon, #floating-cart-icon')).find(
+            (el) => el.checkVisibility?.({ visibilityProperty: true }) ?? true
+          ) || null;
       }
 
       let endX = window.innerWidth - 60;

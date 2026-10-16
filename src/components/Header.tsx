@@ -4,6 +4,7 @@ import { Search, Sun, Moon, Globe, Heart, ShoppingCart } from 'lucide-react';
 import type { Language, Theme } from '../types';
 import { useSiteControls } from '../context/SiteControlsContext';
 import SearchOverlay from './SearchOverlay';
+import { useCartCount } from '../lib/cart';
 
 interface Props {
   children?: ReactNode;
@@ -49,38 +50,17 @@ export default function Header({
   const [scrolled, setScrolled] = useState(false);
   const [showCategories, setShowCategories] = useState(true);
   const [kineticLang, setKineticLang] = useState<'en' | 'ar'>(lang);
-  const [cartCount, setCartCount] = useState<number>(() => {
-    try {
-      const stored = localStorage.getItem('vant_cart_count');
-      return stored ? parseInt(stored, 10) : 0;
-    } catch {
-      return 0;
-    }
-  });
+  const cartCount = useCartCount();
   const [isCartBouncing, setIsCartBouncing] = useState(false);
 
   useEffect(() => {
-    const handleCartUpdate = (e: Event) => {
-      const customEv = e as CustomEvent;
-      if (customEv.detail && typeof customEv.detail.count === 'number') {
-        setCartCount(customEv.detail.count);
-      } else {
-        try {
-          const stored = localStorage.getItem('vant_cart_count');
-          setCartCount(stored ? parseInt(stored, 10) : 0);
-        } catch {}
-      }
-    };
-
     const handleCartBounce = () => {
       setIsCartBouncing(true);
       setTimeout(() => setIsCartBouncing(false), 600);
     };
 
-    window.addEventListener('vant-cart-update', handleCartUpdate);
     window.addEventListener('vant-cart-bounce', handleCartBounce);
     return () => {
-      window.removeEventListener('vant-cart-update', handleCartUpdate);
       window.removeEventListener('vant-cart-bounce', handleCartBounce);
     };
   }, []);
@@ -175,7 +155,8 @@ export default function Header({
               }`}
             >
               {/* Left Actions (Search Icon, Shopping Cart, Wishlist) */}
-              <div className="flex items-center justify-start gap-1.5 sm:gap-2.5 min-w-[110px] sm:min-w-[140px] [direction:ltr]">
+              {/* On phones these actions live in MobileBottomNav; invisible keeps the logo centred */}
+              <div className="flex items-center justify-start gap-1.5 sm:gap-2.5 min-w-[110px] sm:min-w-[140px] [direction:ltr] max-md:invisible">
                 {searchControl.visible && (
                   <button
                     type="button"

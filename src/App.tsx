@@ -8,6 +8,7 @@ import Footer from './components/Footer';
 import MasonryGrid from './components/MasonryGrid';
 import ProductDrawer from './components/ProductDrawer';
 import CartDrawer from './components/CartDrawer';
+import MobileBottomNav from './components/MobileBottomNav';
 import ImagePreloader from './components/ImagePreloader';
 import BackToTop from './components/BackToTop';
 import SplashLoader from './components/SplashLoader';
@@ -364,7 +365,45 @@ function MainApp() {
     }
   }, [category, isOffersOnly, availabilityFilter]);
 
-  const closeDrawer = useCallback(() => setSelected(null), []);
+  // Each open product gets its own ?item=<id> URL: shared links open it, and the phone back button closes it
+  const openProduct = useCallback((p: Product) => {
+    setSelected(p);
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('item') === String(p.id)) return;
+    url.searchParams.set('item', String(p.id));
+    window.history.pushState({ vantItem: p.id }, '', url);
+  }, []);
+
+  const closeDrawer = useCallback(() => {
+    setSelected(null);
+    if (window.history.state?.vantItem !== undefined) {
+      window.history.back();
+    } else {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('item');
+      window.history.replaceState(null, '', url);
+    }
+  }, []);
+
+  const findItemFromUrl = useCallback(() => {
+    const id = new URL(window.location.href).searchParams.get('item');
+    // shortcut: only finds products already loaded (first page); fetch by id if links to older items matter
+    return id ? products.find((p) => String(p.id) === id) ?? null : null;
+  }, [products]);
+
+  useEffect(() => {
+    const onPopState = () => setSelected(findItemFromUrl());
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [findItemFromUrl]);
+
+  const deepLinkHandledRef = useRef(false);
+  useEffect(() => {
+    if (deepLinkHandledRef.current || loading || products.length === 0) return;
+    deepLinkHandledRef.current = true;
+    const fromUrl = findItemFromUrl();
+    if (fromUrl) setSelected(fromUrl);
+  }, [loading, products, findItemFromUrl]);
 
   const showSplash = !hasFinishedSplash || isPreviewSplash;
   const showMaintenance = siteSettings.maintenance_mode && !isAdminUnlocked && !isPreviewMaintenance;
@@ -418,7 +457,7 @@ function MainApp() {
         </>
       ) : (
         <div
-          className={`relative min-h-[100dvh] w-full max-w-full overflow-x-clip flex flex-col font-sans transition-colors duration-300 ${
+          className={`relative min-h-[100dvh] w-full max-w-full overflow-x-clip flex flex-col font-sans max-md:pb-[calc(3.5rem+env(safe-area-inset-bottom))] transition-colors duration-300 ${
             theme === 'dark' ? 'bg-[#0d0f12] text-[#f3f4f6]' : 'bg-[#f8f9fa] text-[#15171c]'
           }`}
         >
@@ -633,7 +672,7 @@ function MainApp() {
                 });
               }}
               onOpen={(p) => {
-                setSelected(p);
+                openProduct(p);
                 trackEvent('product_view', {
                   productId: p.id,
                   productTitle: p.title_ar || p.title,
@@ -689,6 +728,21 @@ function MainApp() {
 
       {/* Floating Back to Top Button */}
       <BackToTop lang={lang} />
+
+      <MobileBottomNav
+        lang={lang}
+        isWishlistOnly={isWishlistOnly}
+        wishlistCount={wishlistCount}
+        isCartOpen={isCartOpen}
+        onHome={() => {
+          setIsWishlistOnly(false);
+          setSearchQuery('');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onSearch={() => setIsSearchOpen(true)}
+        onToggleWishlist={() => setIsWishlistOnly((prev) => !prev)}
+        onOpenCart={() => setIsCartOpen(true)}
+      />
 
       {/* Responsive Luxury Detail Modal / Sheet */}
       <ProductDrawer product={selected} lang={lang} onClose={closeDrawer} />

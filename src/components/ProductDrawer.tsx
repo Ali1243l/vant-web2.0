@@ -428,19 +428,15 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: '100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="pointer-events-auto relative z-10 flex flex-col md:flex-row w-full max-w-5xl lg:max-w-6xl h-[92vh] sm:h-[90vh] md:h-[84vh] md:max-h-[800px] bg-[#f8f9fa] dark:bg-[#0d0f12] border-t md:border border-black/10 dark:border-white/10 rounded-t-[28px] sm:rounded-t-[32px] md:rounded-[32px] overflow-y-auto md:overflow-hidden no-scrollbar shadow-2xl"
+              className="pointer-events-auto relative z-10 flex flex-col md:flex-row w-full max-w-5xl lg:max-w-6xl h-[100dvh] max-sm:pt-[env(safe-area-inset-top)] sm:h-[90vh] md:h-[84vh] md:max-h-[800px] bg-[#f8f9fa] dark:bg-[#0d0f12] border-t md:border border-black/10 dark:border-white/10 sm:rounded-t-[32px] md:rounded-[32px] overflow-y-auto md:overflow-hidden no-scrollbar shadow-2xl"
             >
-              {/* Mobile Top Drag Indicator */}
-              <div className="md:hidden flex items-center justify-center pt-2 pb-0.5 shrink-0 w-full select-none touch-none">
-                <div className="h-1.5 w-10 rounded-full bg-black/20 dark:bg-white/25" />
-              </div>
 
               {/* Close Button */}
               <button
                 type="button"
                 onClick={onClose}
                 ref={closeButtonRef}
-                className="absolute top-2.5 right-3 rtl:right-auto rtl:left-3 md:top-4.5 md:right-4.5 md:rtl:right-auto md:rtl:left-4.5 z-50 p-2 sm:p-2.5 bg-white/90 dark:bg-[#1a1e28]/90 hover:bg-white dark:hover:bg-[#1a1e28] rounded-full hover:scale-105 transition-all cursor-pointer backdrop-blur-md border border-black/6 dark:border-white/10 shadow-xs text-black dark:text-white"
+                className="absolute top-[calc(0.625rem+env(safe-area-inset-top))] sm:top-2.5 right-3 rtl:right-auto rtl:left-3 md:top-4.5 md:right-4.5 md:rtl:right-auto md:rtl:left-4.5 z-50 p-2 sm:p-2.5 bg-white/90 dark:bg-[#1a1e28]/90 hover:bg-white dark:hover:bg-[#1a1e28] rounded-full hover:scale-105 transition-all cursor-pointer backdrop-blur-md border border-black/6 dark:border-white/10 shadow-xs text-black dark:text-white"
                 aria-label={lang === 'ar' ? 'إغلاق' : 'Close'}
               >
                 <X className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-black dark:text-white" />

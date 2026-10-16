@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 export interface CartItem {
   id: string;
   /** One cart line per product + size + color */
@@ -38,3 +40,13 @@ export function writeCart(items: CartItem[]) {
 }
 
 export const cartTotal = (items: CartItem[]) => items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+
+export function useCartCount() {
+  const [count, setCount] = useState(() => readCart().reduce((sum, i) => sum + i.quantity, 0));
+  useEffect(() => {
+    const onUpdate = () => setCount(readCart().reduce((sum, i) => sum + i.quantity, 0));
+    window.addEventListener('vant-cart-update', onUpdate);
+    return () => window.removeEventListener('vant-cart-update', onUpdate);
+  }, []);
+  return count;
+}
