@@ -146,6 +146,11 @@ export default function WelcomeHeroBanner({
     onExplore();
   };
 
+  // Subtle Scroll Parallax Effect for Inner Content
+  const { scrollY } = useScroll();
+  const contentY = useTransform(scrollY, [0, 350], [0, 50]);
+  const contentOpacity = useTransform(scrollY, [0, 300], [1, 0.3]);
+
   if (!heroVisibleControl.visible) {
     return null;
   }
@@ -156,10 +161,6 @@ export default function WelcomeHeroBanner({
   const btnText = isAr ? heroBtnControl.label_ar : heroBtnControl.label_en;
   const trendsHeadline = toWesternNumerals(isAr ? trendsTitleControl.label_ar : trendsTitleControl.label_en);
 
-  // Subtle Scroll Parallax Effect for Inner Content
-  const { scrollY } = useScroll();
-  const contentY = useTransform(scrollY, [0, 350], [0, 50]);
-  const contentOpacity = useTransform(scrollY, [0, 300], [1, 0.3]);
 
   return (
     <AnimatePresence initial={false}>

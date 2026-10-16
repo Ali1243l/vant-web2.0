@@ -3,7 +3,8 @@ export const config = {
 };
 
 // Link-preview bots (WhatsApp, Instagram, Telegram...) don't run JS, so vercel.json sends them here
-// for ?item= links and they get the piece's own photo, name and price instead of the generic card.
+// for ?item= links and they get the piece's own photo, name and price; the bare home link gets the store card
+// with an absolute image URL, which most preview bots require.
 
 const escapeHtml = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -30,11 +31,11 @@ export async function loadProduct(id: string) {
   };
 }
 
-export function renderPreview(pageUrl: string, product: Awaited<ReturnType<typeof loadProduct>>) {
+export function renderPreview(pageUrl: string, product: Awaited<ReturnType<typeof loadProduct>>, fallbackImage: string) {
   const title = product ? `${product.title} | VANT فانت` : 'VANT | فانت';
   const price = product?.price ? `${Math.round(product.price).toLocaleString('en-US')} د.ع` : '';
-  const description = [price, product?.description].filter(Boolean).join(' · ').slice(0, 200) || 'كتالوج فانت للأزياء';
-  const image = product?.image || 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1600&q=80';
+  const description = [price, product?.description].filter(Boolean).join(' · ').slice(0, 200) || 'أزياء مختارة، توصيل لكل العراق والدفع عند الاستلام';
+  const image = product?.image || fallbackImage;
   const t = escapeHtml(title);
   const d = escapeHtml(description);
   const u = escapeHtml(pageUrl);
@@ -52,7 +53,7 @@ export function renderPreview(pageUrl: string, product: Awaited<ReturnType<typeo
 export default async function handler(req: any, res: any) {
   const host = req.headers['x-forwarded-host'] || req.headers.host || 'vant-web.vercel.app';
   const id = String(req.query?.item || '');
-  const pageUrl = `https://${host}/?item=${encodeURIComponent(id)}`;
+  const pageUrl = id ? `https://${host}/?item=${encodeURIComponent(id)}` : `https://${host}/`;
   let product = null;
   try {
     product = await loadProduct(id);
@@ -61,5 +62,5 @@ export default async function handler(req: any, res: any) {
   }
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=86400');
-  res.status(200).send(renderPreview(pageUrl, product));
+  res.status(200).send(renderPreview(pageUrl, product, `https://${host}/og-image.png`));
 }

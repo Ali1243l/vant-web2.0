@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, ShoppingBag, X, Plus, Minus, Trash2, MessageCircle, ArrowRight, ArrowLeft, History, RotateCcw, CheckCircle2 } from 'lucide-react';
 import type { Language } from '../types';
-import { DEFAULT_WHATSAPP_PHONE } from '../lib/constants';
+import { resolveWhatsappPhone } from '../lib/constants';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { submitStoreOrder } from '../lib/storage';
 import { readCart, writeCart, cartTotal, readOrders, saveOrder, reorder, type CartItem, type PastOrder } from '../lib/cart';
@@ -41,7 +41,7 @@ interface CartDrawerProps {
 export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang }) => {
   const { getControl, formatPrice } = useSiteControls();
   const whatsappPhoneControl = getControl('cfg_whatsapp_phone');
-  const whatsappPhone = whatsappPhoneControl?.actionValue || whatsappPhoneControl?.label_en || DEFAULT_WHATSAPP_PHONE;
+  const whatsappPhone = resolveWhatsappPhone(whatsappPhoneControl?.actionValue);
 
   const [cartItems, setCartItems] = useState<CartItem[]>(readCart);
   const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
@@ -143,6 +143,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
     text += `${isAr ? 'المحافظة' : 'City'}: ${details.city}\n`;
     text += `${isAr ? 'العنوان' : 'Address'}: ${details.address.trim()}\n`;
     if (details.notes.trim()) text += `${isAr ? 'ملاحظات' : 'Notes'}: ${details.notes.trim()}\n`;
+    // Coupons arrive by email link (?coupon=); orders go by WhatsApp, so the shop applies the code by hand
+    let coupon = '';
+    try {
+      coupon = localStorage.getItem('vant_applied_coupon') || '';
+    } catch {}
+    if (coupon) text += `${isAr ? 'كود الخصم' : 'Coupon code'}: ${coupon}\n`;
     text += isAr ? `الدفع عند الاستلام.` : `Cash on delivery.`;
 
     return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
@@ -279,6 +285,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
                   className="space-y-3.5"
                   onSubmit={(e) => {
                     e.preventDefault();
+                    if (!whatsappPhone) return; // no store number configured: keep the cart instead of sending it nowhere
                     try {
                       localStorage.setItem(DETAILS_KEY, JSON.stringify(details));
                     } catch {}
@@ -317,7 +324,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
                         autoComplete={autoComplete}
                         dir={type === 'tel' ? 'ltr' : undefined}
                         inputMode={type === 'tel' ? 'tel' : undefined}
-                        pattern={type === 'tel' ? '[0-9+ ]{10,15}' : undefined}
+                        pattern={type === 'tel' ? '[0-9٠-٩+ ]{10,15}' : undefined}
                         value={details[field]}
                         onChange={(e) => setDetails((d) => ({ ...d, [field]: e.target.value }))}
                         placeholder={type === 'tel' ? '07XX XXX XXXX' : undefined}
@@ -470,11 +477,19 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
                   </span>
                 </div>
 
+                {step === 'details' && !whatsappPhone && (
+                  <p role="alert" className="text-xs font-semibold text-red-600 dark:text-red-400">
+                    {isAr
+                      ? 'الطلبات متوقفة مؤقتاً لأن رقم واتساب المتجر مو مضبوط. تواصل ويانا من حساباتنا أسفل الصفحة.'
+                      : "Ordering is paused because the store's WhatsApp number isn't set. Reach us through the links at the bottom of the page."}
+                  </p>
+                )}
                 <button
                   type={step === 'details' ? 'submit' : 'button'}
+                  disabled={step === 'details' && !whatsappPhone}
                   form={step === 'details' ? 'checkout-details-form' : undefined}
                   onClick={step === 'cart' ? () => setStep('details') : undefined}
-                  className="flex h-12 w-full items-center justify-center gap-2.5 rounded-2xl bg-[#004ad7] hover:bg-[#003db3] dark:bg-[#3b82f6] dark:hover:bg-[#2563eb] text-white text-sm font-bold shadow-lg shadow-[#004ad7]/25 transition-all active:scale-[0.98] cursor-pointer"
+                  className="flex h-12 w-full items-center justify-center gap-2.5 rounded-2xl bg-[#004ad7] hover:bg-[#003db3] dark:bg-[#3b82f6] dark:hover:bg-[#2563eb] text-white text-sm font-bold shadow-lg shadow-[#004ad7]/25 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <MessageCircle className="h-5 w-5 fill-white/20 stroke-white stroke-[2]" />
                   <span>

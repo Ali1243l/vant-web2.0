@@ -3,11 +3,31 @@
     {
       "source": "/",
       "has": [
-        { "type": "query", "key": "item" },
+        {
+          "type": "query",
+          "key": "item"
+        },
         {
           "type": "header",
           "key": "user-agent",
           "value": ".*(WhatsApp|facebookexternalhit|Facebot|TelegramBot|Twitterbot|Slackbot|Discordbot|LinkedInBot|Pinterestbot|SkypeUriPreview|Applebot|Googlebot|bingbot).*"
+        }
+      ],
+      "destination": "/api/product-preview"
+    },
+    {
+      "source": "/",
+      "missing": [
+        {
+          "type": "query",
+          "key": "item"
+        }
+      ],
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(WhatsApp|facebookexternalhit|Facebot|TelegramBot|Twitterbot|Slackbot|Discordbot|LinkedInBot|Pinterestbot|SkypeUriPreview).*"
         }
       ],
       "destination": "/api/product-preview"

@@ -86,7 +86,7 @@ export default function Footer({ lang, onAdminTrigger }: Props) {
                   <span className="flex h-4 w-4 sm:h-4.5 sm:w-4.5 items-center justify-center text-[#15171c]/80 dark:text-white/80 group-hover:text-[#004ad7] dark:group-hover:text-[#3b82f6] transition-colors">
                     <SocialIconRenderer iconName={social.iconName} customSvg={social.customIconSvg} />
                   </span>
-                  <span className="font-mono text-[11px] sm:text-[11.5px] tracking-tight direction-ltr">
+                  <span className="font-mono text-[11px] sm:text-[11.5px] tracking-tight" dir="ltr">
                     {formatSocialDisplay(social)}
                   </span>
                 </a>

@@ -13,9 +13,11 @@ export default function AdminDrawer({ lang = 'ar' }: Props) {
   const isAr = lang === 'ar';
   const { isAdminOpen, setIsAdminOpen, isAdminUnlocked, unlockAdmin } = useSiteControls();
 
+  const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
-  const [passwordError, setPasswordError] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
   // Lock background page scrollbars completely when Admin Command Center is open
   useEffect(() => {
@@ -32,14 +34,19 @@ export default function AdminDrawer({ lang = 'ar' }: Props) {
     }
   }, [isAdminOpen]);
 
-  const handleUnlock = (e?: React.FormEvent) => {
+  const handleUnlock = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const success = unlockAdmin(passwordInput.trim());
-    if (success) {
-      setPasswordError(false);
+    if (isSigningIn) return;
+    setIsSigningIn(true);
+    const error = await unlockAdmin(emailInput, passwordInput);
+    setIsSigningIn(false);
+    if (!error) {
+      setPasswordError(null);
       setPasswordInput('');
+    } else if (error === 'not_configured') {
+      setPasswordError(isAr ? 'قاعدة البيانات غير مربوطة بهذي النسخة من الموقع' : 'This copy of the site has no database connected');
     } else {
-      setPasswordError(true);
+      setPasswordError(isAr ? 'الإيميل أو كلمة السر غلط' : 'Wrong email or password');
     }
   };
 
@@ -57,6 +64,9 @@ export default function AdminDrawer({ lang = 'ar' }: Props) {
           {!isAdminUnlocked ? (
             <AdminLockScreen
               isAr={isAr}
+              emailInput={emailInput}
+              setEmailInput={setEmailInput}
+              isSigningIn={isSigningIn}
               passwordInput={passwordInput}
               setPasswordInput={setPasswordInput}
               passwordError={passwordError}

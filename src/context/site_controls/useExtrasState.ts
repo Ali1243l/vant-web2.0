@@ -5,12 +5,10 @@ import { DEFAULT_ACTIVE_FOOTER_LINKS, type FooterSocialLink } from '../../data/s
 import { MasterSizeItem, DEFAULT_MASTER_SIZES } from '../../data/sizeGuide';
 import { saveSiteConfigToSupabase } from '../../lib/storage';
 import { SIZES_STORAGE_KEY, getStoredEnhancements } from './constants';
-import type { SiteControlItem, CurrencyType } from '../siteControlsTypes';
+import type { CurrencyType } from '../siteControlsTypes';
 
-export function useExtrasState(
-  currency: CurrencyType,
-  controls: Record<string, SiteControlItem>
-) {
+// Saves leave `controls` out on purpose: the cloud save merges, so the live controls (WhatsApp number etc.) stay intact
+export function useExtrasState(currency: CurrencyType) {
   // Trend Cards Studio State
   const [trendItems, setTrendItems] = useState<TrendItem[]>(() => {
     try {
@@ -71,7 +69,6 @@ export function useExtrasState(
       } catch {}
       saveSiteConfigToSupabase({
         currency,
-        controls,
         trendItems: nextTrends,
         socialLinks,
         enhancements: getStoredEnhancements(),
@@ -87,7 +84,6 @@ export function useExtrasState(
     } catch {}
     saveSiteConfigToSupabase({
       currency,
-      controls,
       trendItems: DEFAULT_FEATURED_TRENDS,
       socialLinks,
       enhancements: getStoredEnhancements(),
@@ -103,7 +99,6 @@ export function useExtrasState(
       } catch {}
       saveSiteConfigToSupabase({
         currency,
-        controls,
         trendItems,
         socialLinks: nextSocial,
         enhancements: getStoredEnhancements(),
@@ -120,7 +115,6 @@ export function useExtrasState(
       } catch {}
       saveSiteConfigToSupabase({
         currency,
-        controls,
         trendItems,
         socialLinks: nextSocial,
         enhancements: getStoredEnhancements(),
@@ -137,7 +131,6 @@ export function useExtrasState(
       } catch {}
       saveSiteConfigToSupabase({
         currency,
-        controls,
         trendItems,
         socialLinks: nextSocial,
         enhancements: getStoredEnhancements(),
@@ -154,7 +147,6 @@ export function useExtrasState(
       } catch {}
       saveSiteConfigToSupabase({
         currency,
-        controls,
         trendItems,
         socialLinks: nextSocial,
         enhancements: getStoredEnhancements(),
@@ -170,7 +162,6 @@ export function useExtrasState(
     } catch {}
     saveSiteConfigToSupabase({
       currency,
-      controls,
       trendItems,
       socialLinks: reordered,
       enhancements: getStoredEnhancements(),
@@ -184,7 +175,6 @@ export function useExtrasState(
     } catch {}
     saveSiteConfigToSupabase({
       currency,
-      controls,
       trendItems,
       socialLinks: DEFAULT_ACTIVE_FOOTER_LINKS,
       sizeGuideRows: masterSizes,
@@ -201,7 +191,6 @@ export function useExtrasState(
       } catch {}
       saveSiteConfigToSupabase({
         currency,
-        controls,
         trendItems,
         socialLinks,
         sizeGuideRows: next,
@@ -220,7 +209,6 @@ export function useExtrasState(
       } catch {}
       saveSiteConfigToSupabase({
         currency,
-        controls,
         trendItems,
         socialLinks,
         sizeGuideRows: next,
@@ -238,7 +226,6 @@ export function useExtrasState(
       } catch {}
       saveSiteConfigToSupabase({
         currency,
-        controls,
         trendItems,
         socialLinks,
         sizeGuideRows: next,
@@ -256,7 +243,6 @@ export function useExtrasState(
       } catch {}
       saveSiteConfigToSupabase({
         currency,
-        controls,
         trendItems,
         socialLinks,
         sizeGuideRows: next,
@@ -273,7 +259,6 @@ export function useExtrasState(
     } catch {}
     saveSiteConfigToSupabase({
       currency,
-      controls,
       trendItems,
       socialLinks,
       sizeGuideRows: reordered,
@@ -288,7 +273,6 @@ export function useExtrasState(
     } catch {}
     saveSiteConfigToSupabase({
       currency,
-      controls,
       trendItems,
       socialLinks,
       sizeGuideRows: DEFAULT_MASTER_SIZES,

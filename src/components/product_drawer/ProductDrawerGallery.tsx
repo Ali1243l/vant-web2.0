@@ -276,7 +276,7 @@ export const ProductDrawerGallery: React.FC<ProductDrawerGalleryProps> = ({
         >
           {images.length === 0 ? (
             <div className="flex h-full w-full flex-col items-center justify-center text-[#15171c]/40 dark:text-white/40">
-              <span className="text-xs tracking-widest uppercase font-medium">VANT · ڤانت</span>
+              <span className="text-xs tracking-widest uppercase font-medium">VANT · فانت</span>
             </div>
           ) : (
             <div
@@ -401,7 +401,7 @@ export const ProductDrawerGallery: React.FC<ProductDrawerGalleryProps> = ({
             <svg className="w-16 h-16 stroke-[1.2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
             </svg>
-            <span className="mt-3 text-xs tracking-widest uppercase font-medium">VANT · ڤانت</span>
+            <span className="mt-3 text-xs tracking-widest uppercase font-medium">VANT · فانت</span>
           </div>
         ) : (
           <div

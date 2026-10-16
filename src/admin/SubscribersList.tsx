@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import { useAdminBridge } from './useAdminBridge';
+import { dispatchCampaignEmail } from '../lib/newsletter';
 import { formatCurrency } from './format';
 import { Button } from './ui';
 import {
@@ -82,7 +83,7 @@ export const SubscribersList: React.FC = () => {
   // Dispatch & Simulation State
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
   const [isTestEmailModalOpen, setIsTestEmailModalOpen] = useState(false);
-  const [testEmailAddress, setTestEmailAddress] = useState('fs3211927@gmail.com');
+  const [testEmailAddress, setTestEmailAddress] = useState('');
   const [isSendingSimulation, setIsSendingSimulation] = useState(false);
   const [simulationProgress, setSimulationProgress] = useState(0);
   const [sentHistory, setSentHistory] = useState<SentCampaignRecord[]>(initialSentHistory);
@@ -182,12 +183,27 @@ export const SubscribersList: React.FC = () => {
   };
 
   // Dispatch Actions
-  const handleSendTestEmail = () => {
+  // Real sends go through /api/send-welcome, which holds the Resend key and checks the admin login
+  const sendCampaignTo = (email: string) =>
+    dispatchCampaignEmail({
+      recipientEmail: email,
+      customHeadline: campaignData.headline,
+      customMessage: campaignData.bodyText,
+      couponCode: campaignData.discountCode || undefined,
+      discountPercent: Number(campaignData.discountPercent) || undefined,
+      subject: campaignData.subject,
+      heroImage: campaignData.heroImage,
+      ctaText: campaignData.ctaText,
+      ctaUrl: campaignData.ctaUrl,
+    });
+
+  const handleSendTestEmail = async () => {
     setIsTestEmailModalOpen(false);
+    const res = await sendCampaignTo(testEmailAddress);
     showToast(
-      isAr
-        ? `تم إرسال معاينة تجريبية ناجحة إلى ${testEmailAddress}!`
-        : `Test preview dispatched to ${testEmailAddress}!`
+      res.emailSent
+        ? isAr ? `انرسلت رسالة تجريبية إلى ${testEmailAddress}` : `Test email sent to ${testEmailAddress}`
+        : isAr ? 'ما انرسلت. تأكد من مفتاح Resend على Vercel ومن تسجيل دخول الأدمن.' : 'Not sent. Check the Resend key on Vercel and the admin login.'
     );
   };
 
@@ -207,42 +223,38 @@ export const SubscribersList: React.FC = () => {
     showToast(isAr ? 'تم فتح تطبيق البريد مع إدراج إيميلات العملاء في BCC!' : 'Opened mail client with BCC recipients!');
   };
 
-  const handleBroadcastViaSimulator = (channel: 'resend' | 'simulation') => {
+  const handleBroadcastViaSimulator = async (channel: 'resend' | 'simulation') => {
     setIsSendingSimulation(true);
-    setSimulationProgress(10);
+    setSimulationProgress(0);
+    let sent = 0;
+    for (let i = 0; i < currentAudienceList.length; i++) {
+      const res = await sendCampaignTo(currentAudienceList[i].email);
+      if (res.emailSent) sent++;
+      setSimulationProgress(Math.round(((i + 1) / currentAudienceList.length) * 100));
+    }
+    setIsSendingSimulation(false);
+    setIsDispatchModalOpen(false);
 
-    const interval = setInterval(() => {
-      setSimulationProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsSendingSimulation(false);
-          setIsDispatchModalOpen(false);
-
-          const newRecord: SentCampaignRecord = {
-            id: `CAMP-${Math.floor(1000 + Math.random() * 9000)}`,
-            name: campaignData.headline || 'حملة ترويجية',
-            subject: campaignData.subject,
-            templateType: campaignData.templateType,
-            sentDate: new Date().toLocaleDateString('ar-IQ'),
-            recipientsCount: currentAudienceList.length,
-            openRate: Math.floor(45 + Math.random() * 35),
-            clickRate: Math.floor(18 + Math.random() * 20),
-            status: 'delivered',
-            channel: channel,
-            campaignData: { ...campaignData },
-          };
-
-          setSentHistory((prevHistory) => [newRecord, ...prevHistory]);
-          showToast(
-            isAr
-              ? `تم بث الحملة بنجاح إلى ${currentAudienceList.length} مشترك!`
-              : `Successfully broadcasted to ${currentAudienceList.length} subscribers!`
-          );
-          return 100;
-        }
-        return prev + 25;
-      });
-    }, 400);
+    const newRecord: SentCampaignRecord = {
+      id: `CAMP-${Date.now()}`,
+      name: campaignData.headline || 'حملة ترويجية',
+      subject: campaignData.subject,
+      templateType: campaignData.templateType,
+      sentDate: new Date().toLocaleDateString('en-GB'),
+      recipientsCount: sent,
+      // Open/click tracking isn't set up, so these stay at zero instead of showing made-up numbers
+      openRate: 0,
+      clickRate: 0,
+      status: sent > 0 ? 'delivered' : 'failed',
+      channel,
+      campaignData: { ...campaignData },
+    };
+    setSentHistory((prevHistory) => [newRecord, ...prevHistory]);
+    showToast(
+      isAr
+        ? `انرسلت إلى ${sent} من ${currentAudienceList.length} مشترك`
+        : `Sent to ${sent} of ${currentAudienceList.length} subscribers`
+    );
   };
 
   // History controls

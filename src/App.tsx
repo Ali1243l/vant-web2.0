@@ -19,7 +19,7 @@ import { trackEvent } from './lib/analytics';
 import { useProducts } from './hooks/useProducts';
 import { useWishlist } from './hooks/useWishlist';
 import { productMatchesQuery } from './lib/search';
-import { CATEGORY_TRANSLATIONS } from './lib/constants';
+import { CATEGORY_TRANSLATIONS, resolveWhatsappPhone } from './lib/constants';
 import { Heart, Loader2, Check, X, Gift, Tag, LayoutGrid, RectangleVertical, Share2 } from 'lucide-react';
 import type { Product, Language, Theme } from './types';
 
@@ -42,7 +42,6 @@ function MainApp() {
     isPreviewMaintenance,
     setIsPreviewMaintenance,
     isAdminUnlocked,
-    unlockAdmin,
     getControl,
     fetchProductById,
   } = useSiteControls();
@@ -193,6 +192,13 @@ function MainApp() {
     observer.observe(target);
     return () => observer.disconnect();
   }, [hasMore, loading, loadingMore, loadMore, isWishlistOnly, searchQuery]);
+
+  // Search, filters and wishlists must see the whole catalog, not just the pages scrolled so far
+  const isNarrowed =
+    !!searchQuery.trim() || category !== ALL || availabilityFilter !== 'all' || isOffersOnly || isWishlistOnly || !!sharedWishlist;
+  useEffect(() => {
+    if (isNarrowed && hasMore && !loading && !loadingMore) loadMore();
+  }, [isNarrowed, hasMore, loading, loadingMore, loadMore]);
 
   // Track initial page view telemetry
   useEffect(() => {
@@ -350,7 +356,7 @@ function MainApp() {
     };
 
     searchFiltered.forEach((p) => {
-      const a = p.availability || 'in_stock';
+      const a = p.availability === 'limited' ? 'in_stock' : p.availability || 'in_stock';
       if (a in counts) {
         counts[a as AvailabilityFilterType]++;
       }
@@ -378,7 +384,12 @@ function MainApp() {
       // 3. Availability Filter
       if (availabilityFilter !== 'all') {
         const itemAvailability = p.availability || 'in_stock';
-        if (itemAvailability !== availabilityFilter) {
+        // "Limited" pieces can still be bought, so they count as in stock
+        const matches =
+          availabilityFilter === 'in_stock'
+            ? itemAvailability === 'in_stock' || itemAvailability === 'limited'
+            : itemAvailability === availabilityFilter;
+        if (!matches) {
           return false;
         }
       }
@@ -487,6 +498,7 @@ function MainApp() {
 
   const showSplash = !hasFinishedSplash || isPreviewSplash;
   const showMaintenance = siteSettings.maintenance_mode && !isAdminUnlocked && !isPreviewMaintenance;
+  const maintenanceWhatsapp = resolveWhatsappPhone(getControl('cfg_whatsapp_phone')?.actionValue);
 
   return (
     <>
@@ -512,11 +524,7 @@ function MainApp() {
           maintenanceMessageAr={siteSettings.maintenance_message_ar}
           isPreview={true}
           onClosePreview={() => setIsPreviewMaintenance(false)}
-          onAdminUnlock={unlockAdmin}
-          onBypass={() => {
-            setIsPreviewMaintenance(false);
-            setIsAdminOpen(true);
-          }}
+          whatsappPhone={maintenanceWhatsapp}
         />
       )}
 
@@ -526,8 +534,7 @@ function MainApp() {
           <MaintenanceScreen
             maintenanceMessage={siteSettings.maintenance_message}
             maintenanceMessageAr={siteSettings.maintenance_message_ar}
-            onAdminUnlock={unlockAdmin}
-            onBypass={() => setIsAdminOpen(true)}
+            whatsappPhone={maintenanceWhatsapp}
           />
           {adminRequested && (
             <Suspense fallback={null}>
@@ -804,6 +811,15 @@ function MainApp() {
                   <span className="ms-2 text-xs font-medium text-[#6b7280] dark:text-[#9ca3af]">
                     {lang === 'ar' ? `${visible.length} قطعة` : `${visible.length} pieces`}
                   </span>
+                  {searchQuery.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="ms-2 rounded-full bg-black/[0.05] dark:bg-white/[0.08] px-2.5 py-1 text-[11px] font-semibold text-[#15171c] dark:text-white hover:bg-black/10 dark:hover:bg-white/15 cursor-pointer"
+                    >
+                      {lang === 'ar' ? 'مسح البحث' : 'Clear search'}
+                    </button>
+                  )}
                 </p>
                 <div role="group" aria-label={lang === 'ar' ? 'طريقة العرض' : 'View'} className="flex items-center gap-0.5 rounded-full bg-black/[0.04] dark:bg-white/[0.06] p-0.5">
                   {([

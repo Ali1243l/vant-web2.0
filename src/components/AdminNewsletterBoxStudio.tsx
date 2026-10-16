@@ -392,7 +392,7 @@ export default function AdminNewsletterBoxStudio({ isAr = true }: Props) {
                 {/* Title */}
                 <h3 className="text-base sm:text-lg font-bold tracking-tight text-[#15171c] dark:text-white leading-snug">
                   {previewAccountState === 'subscribed'
-                    ? previewLang === 'ar' ? 'حسابك مسجل ومشترك في ڤانت' : 'You Are Subscribed to VANT'
+                    ? previewLang === 'ar' ? 'حسابك مسجل ومشترك في فانت' : 'You Are Subscribed to VANT'
                     : previewLang === 'ar' ? titleAr : titleEn}
                 </h3>
 

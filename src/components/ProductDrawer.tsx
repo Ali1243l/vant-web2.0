@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { AnimatePresence, motion, animate, useMotionValue, useTransform } from 'framer-motion';
 import { X } from 'lucide-react';
 import type { Product, Language } from '../types';
-import { DEFAULT_WHATSAPP_PHONE } from '../lib/constants';
+import { resolveWhatsappPhone } from '../lib/constants';
 import ShareModal from './ShareModal';
 import ProductDrawerSkeleton from './ProductDrawerSkeleton';
 import { useSiteControls } from '../context/SiteControlsContext';
@@ -271,42 +271,30 @@ export default function ProductDrawer({ product, loading, lang, onClose, related
   const activePrice = activeVariant ? activeVariant.price : (product?.price ?? 0);
   const productCode = activeVariant?.sku || (product?.id ? `#${product.id}` : '');
   const formattedProductPrice = formatPrice(activePrice);
-  const colorSpecLabel = activeVariant ? `${activeVariant.colorNameAr} (${activeVariant.colorNameEn})` : '';
+  const colorSpecLabel = activeVariant && variantInfo?.hasMultipleColors ? `${activeVariant.colorNameAr} (${activeVariant.colorNameEn})` : '';
 
-  const whatsappMessage = lang === 'ar'
-    ? isSoldOut
-      ? selectedSize
-        ? `مرحباً ڤانت، أود الاستفسار عن إمكانية إعادة توفير قطعة "${displayTitle ?? ''}" - اللون: ${colorSpecLabel} بمقاس (${selectedSize}) (كود الموديل واللون: ${productCode} - السعر: ${formattedProductPrice})`
-        : `مرحباً ڤانت، أود الاستفسار عن إمكانية إعادة توفير قطعة "${displayTitle ?? ''}" - اللون: ${colorSpecLabel} (كود الموديل واللون: ${productCode} - السعر: ${formattedProductPrice})`
-      : availability === 'coming_soon'
-      ? selectedSize
-        ? `مرحباً ڤانت، أود حجز أسبقية لقطعة "${displayTitle ?? ''}" - اللون: ${colorSpecLabel} بمقاس (${selectedSize}) (كود الموديل واللون: ${productCode} - السعر: ${formattedProductPrice})`
-        : `مرحباً ڤانت، أود الاستفسار وحجز أسبقية لقطعة "${displayTitle ?? ''}" - اللون: ${colorSpecLabel} (كود الموديل واللون: ${productCode} - السعر: ${formattedProductPrice})`
-      : selectedSize
-      ? `مرحباً ڤانت، أود طلب قطعة "${displayTitle ?? ''}" - اللون: ${colorSpecLabel} بمقاس (${selectedSize}) (كود الموديل واللون: ${productCode} - السعر: ${formattedProductPrice})`
-      : `مرحباً ڤانت، أود الاستفسار والطلب لقطعة "${displayTitle ?? ''}" - اللون: ${colorSpecLabel} (كود الموديل واللون: ${productCode} - السعر: ${formattedProductPrice})`
-    : isSoldOut
-    ? selectedSize
-      ? `Hello Maison VANT, I would like to inquire about restocking "${displayTitle ?? ''}" - Color: ${colorSpecLabel} in size (${selectedSize}) (SKU: ${productCode} - Price: ${formattedProductPrice})`
-      : `Hello Maison VANT, I would like to inquire about restocking "${displayTitle ?? ''}" - Color: ${colorSpecLabel} (SKU: ${productCode} - Price: ${formattedProductPrice})`
+  const isArMsg = lang === 'ar';
+  const msgIntent = isSoldOut
+    ? isArMsg ? 'أود الاستفسار عن إعادة توفير قطعة' : 'I would like to know when this piece is back:'
     : availability === 'coming_soon'
-    ? selectedSize
-      ? `Hello Maison VANT, I would like to pre-register "${displayTitle ?? ''}" - Color: ${colorSpecLabel} for size (${selectedSize}) (SKU: ${productCode} - Price: ${formattedProductPrice})`
-      : `Hello Maison VANT, I would like to pre-register/inquire about "${displayTitle ?? ''}" - Color: ${colorSpecLabel} (SKU: ${productCode} - Price: ${formattedProductPrice})`
-    : selectedSize
-    ? `Hello Maison VANT, I would like to order "${displayTitle ?? ''}" - Color: ${colorSpecLabel} in size (${selectedSize}) (SKU: ${productCode} - Price: ${formattedProductPrice})`
-    : `Hello Maison VANT, I would like to order/inquire about "${displayTitle ?? ''}" - Color: ${colorSpecLabel} (SKU: ${productCode} - Price: ${formattedProductPrice})`;
+    ? isArMsg ? 'أود حجز أسبقية لقطعة' : 'I would like to reserve'
+    : isArMsg ? 'أود طلب قطعة' : 'I would like to order';
+  const msgColor = colorSpecLabel ? (isArMsg ? ` - اللون: ${colorSpecLabel}` : ` - Color: ${colorSpecLabel}`) : '';
+  const msgSize = selectedSize ? (isArMsg ? ` - المقاس: ${selectedSize}` : ` - Size: ${selectedSize}`) : '';
+  const whatsappMessage = isArMsg
+    ? `مرحباً فانت، ${msgIntent} "${displayTitle ?? ''}"${msgColor}${msgSize} (الكود: ${productCode} - السعر: ${formattedProductPrice})`
+    : `Hello VANT, ${msgIntent} "${displayTitle ?? ''}"${msgColor}${msgSize} (Code: ${productCode} - Price: ${formattedProductPrice})`;
 
   const whatsappText = encodeURIComponent(whatsappMessage);
-  const targetPhone = (whatsappPhoneControl?.actionValue || '').replace(/[^0-9]/g, '') || DEFAULT_WHATSAPP_PHONE;
+  const targetPhone = resolveWhatsappPhone(whatsappPhoneControl?.actionValue);
   const whatsappUrl = `https://wa.me/${targetPhone}?text=${whatsappText}`;
 
   const bespokeWhatsappText = encodeURIComponent(
     lang === 'ar'
-      ? `مرحباً ڤانت، أود الاستفسار عن خدمة التفصيل الخاص (Made-to-Measure) لقطعة "${displayTitle ?? ''}" (كود القطعة: ${productCode} - الطول: ${calcHeight} سم، الوزن: ${calcWeight} كغم، السعر: ${formattedProductPrice})`
-      : `Hello Maison VANT, I would like to inquire about Made-to-Measure bespoke tailoring for "${displayTitle ?? ''}" (Code: ${productCode} - Height: ${calcHeight} cm, Weight: ${calcWeight} kg, Price: ${formattedProductPrice})`
+      ? `مرحباً فانت، أود الاستفسار عن خدمة التفصيل الخاص (Made-to-Measure) لقطعة "${displayTitle ?? ''}" (كود القطعة: ${productCode} - الطول: ${calcHeight} سم، الوزن: ${calcWeight} كغم، السعر: ${formattedProductPrice})`
+      : `Hello VANT, I would like to inquire about Made-to-Measure bespoke tailoring for "${displayTitle ?? ''}" (Code: ${productCode} - Height: ${calcHeight} cm, Weight: ${calcWeight} kg, Price: ${formattedProductPrice})`
   );
-  const targetBespokePhone = (bespokePhoneControl?.actionValue || '').replace(/[^0-9]/g, '') || targetPhone;
+  const targetBespokePhone = bespokePhoneControl?.actionValue ? resolveWhatsappPhone(bespokePhoneControl.actionValue) : targetPhone;
   const bespokeWhatsappUrl = `https://wa.me/${targetBespokePhone}?text=${bespokeWhatsappText}`;
 
   const handleCopyTitle = async () => {

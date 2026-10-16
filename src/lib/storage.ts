@@ -9,34 +9,6 @@ export interface UploadedMediaItem {
 }
 
 /**
- * Fallback to public fast image CDN for 100% email client compatibility
- */
-export async function uploadToFreeCdn(fileOrBlob: Blob | File): Promise<string | null> {
-  try {
-    const formData = new FormData();
-    formData.append('source', fileOrBlob);
-    formData.append('key', '6d207e02198a847aa98d0a2a901485a5');
-    formData.append('action', 'upload');
-    formData.append('format', 'json');
-
-    const res = await fetch('https://freeimage.host/api/1/upload', {
-      method: 'POST',
-      body: formData,
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data?.image?.url) {
-        console.log('✓ Uploaded image to public CDN:', data.image.url);
-        return data.image.url;
-      }
-    }
-  } catch (e) {
-    console.warn('Free CDN upload notice:', e);
-  }
-  return null;
-}
-
-/**
  * Optimizes and compresses any image File into a high-definition Data URL
  * Scales down massive phone camera images (e.g. 10MB/4000px) to max 1400px width/height
  * while preserving high-end luxury color depth and sharpness.

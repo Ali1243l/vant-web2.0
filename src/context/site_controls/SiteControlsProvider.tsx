@@ -33,7 +33,6 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
     isAdminUnlocked,
     unlockAdmin,
     lockAdmin,
-    setAdminPin,
     siteSettings,
     setSiteSettings,
     updateSiteSettings,
@@ -88,7 +87,7 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
     toggleMasterSize,
     reorderMasterSizes,
     resetMasterSizesToDefault,
-  } = useExtrasState(currency, DEFAULT_SITE_CONTROLS);
+  } = useExtrasState(currency);
 
   const {
     controls,
@@ -376,7 +375,6 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
         isAdminUnlocked,
         unlockAdmin,
         lockAdmin,
-        setAdminPin,
         siteSettings,
         updateSiteSettings,
         isInitialSplashLoading,

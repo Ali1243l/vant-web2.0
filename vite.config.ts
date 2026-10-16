@@ -24,10 +24,7 @@ function resendEmailPlugin(): Plugin {
         req.on('end', async () => {
           try {
             const data = JSON.parse(body || '{}');
-            const apiKey =
-              process.env.RESEND_API_KEY ||
-              process.env.VITE_RESEND_API_KEY ||
-              're_DgBbp68L_6UUeE8DRtYyyTgFMSrd7qSQo';
+            const apiKey = process.env.RESEND_API_KEY || '';
 
             const toEmail = (data.email || data.to || '').trim().toLowerCase();
             const subject = data.subject || 'Welcome to VANT // Access Granted';

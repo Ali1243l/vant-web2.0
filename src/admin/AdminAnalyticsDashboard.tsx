@@ -1,3 +1,4 @@
+import { normalizePhone } from '../lib/constants';
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   DollarSign,
@@ -255,8 +256,9 @@ export const AdminAnalyticsDashboard: React.FC = () => {
   };
 
   const handleOpenWhatsApp = (phone: string, text: string) => {
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
-    const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+    // Visitors are anonymous, so `phone` is often just a label: let WhatsApp ask who to send it to
+    const cleanPhone = normalizePhone(phone);
+    const url = `https://wa.me/${cleanPhone.length >= 8 ? cleanPhone : ''}?text=${encodeURIComponent(text)}`;
     const link = document.createElement('a');
     link.href = url;
     link.target = '_blank';

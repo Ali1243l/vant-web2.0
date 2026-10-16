@@ -35,8 +35,6 @@ const STORAGE_KEY = 'vant_subscribers_list_v2';
 const CAMPAIGNS_KEY = 'vant_campaign_offers_v1';
 const CUSTOM_TEMPLATES_KEY = 'vant_custom_email_templates_v1';
 
-const SUPABASE_FILE_PATH = 'config/newsletter_subscribers.json';
-const SUPABASE_CAMPAIGNS_PATH = 'config/newsletter_campaigns.json';
 const SUPABASE_TEMPLATES_PATH = 'config/newsletter_templates.json';
 
 const DEFAULT_SUBSCRIBERS: NewsletterSubscriber[] = [];
@@ -144,26 +142,13 @@ export function getStoredSubscribers(): NewsletterSubscriber[] {
 }
 
 /**
- * Save subscribers to localStorage and upload to Supabase cloud storage
+ * Cache subscribers on this device. The list itself lives in the newsletter_subscribers table, which only
+ * the admin can read: it must never go to the public storage bucket.
  */
 export async function saveSubscribers(subscribers: NewsletterSubscriber[]): Promise<boolean> {
   try {
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(subscribers));
-    }
-
-    if (supabase) {
-      try {
-        const payload = JSON.stringify(subscribers, null, 2);
-        const blob = new Blob([payload], { type: 'application/json' });
-        await supabase.storage.from('product-images').upload(SUPABASE_FILE_PATH, blob, {
-          contentType: 'application/json',
-          cacheControl: '0',
-          upsert: true,
-        });
-      } catch (cloudErr) {
-        console.warn('Cloud sync for subscribers notice:', cloudErr);
-      }
     }
     return true;
   } catch (err) {
@@ -185,9 +170,6 @@ export async function syncSubscribersFromCloud(): Promise<NewsletterSubscriber[]
       .select('*')
       .order('created_at', { ascending: false });
 
-    console.log("Supabase Subscribers Fetch Result:", dbData);
-    console.log("Supabase Subscribers Fetch Error:", dbErr);
-
     if (!dbErr && Array.isArray(dbData)) {
       const dbList: NewsletterSubscriber[] = dbData
         .filter((row: any) => row && row.email)
@@ -207,32 +189,7 @@ export async function syncSubscribersFromCloud(): Promise<NewsletterSubscriber[]
       return dbList;
     }
   } catch (dbError) {
-    console.log("Supabase Subscribers Fetch Error:", dbError);
-  }
-
-  // 2. Query Supabase Cloud Storage config/newsletter_subscribers.json if table missing
-  try {
-    const { data: pubData } = supabase.storage.from('product-images').getPublicUrl(SUPABASE_FILE_PATH);
-    if (pubData?.publicUrl) {
-      const res = await fetch(`${pubData.publicUrl}?t=${Date.now()}`, { cache: 'no-store' });
-      if (res.ok) {
-        const cloudList: NewsletterSubscriber[] = await res.json();
-        if (Array.isArray(cloudList)) {
-          const list = cloudList
-            .filter((s) => s && s.email)
-            .map((s) => ({
-              ...s,
-              email: s.email.trim().toLowerCase(),
-            }));
-          if (typeof window !== 'undefined') {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-          }
-          return list;
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('Could not sync subscribers from cloud storage:', err);
+    console.warn('Supabase subscribers fetch failed:', dbError);
   }
 
   return [];
@@ -287,11 +244,15 @@ export async function addSubscriber(
         source: newSub.source,
         status: 'active',
       });
-      if (insertErr) {
-        console.warn('Supabase DB table insert notice (persisted in cloud storage):', insertErr.message);
+      // 23505 = already on the list, which is still a successful signup
+      if (insertErr && insertErr.code !== '23505') {
+        console.warn('Newsletter signup failed:', insertErr.message);
+        return { success: false, isNew: false, subscriber: newSub };
       }
+      if (insertErr) return { success: true, isNew: false, subscriber: newSub };
     } catch (e) {
-      console.warn('Supabase DB operation notice:', e);
+      console.warn('Newsletter signup failed:', e);
+      return { success: false, isNew: false, subscriber: newSub };
     }
   }
 
@@ -321,7 +282,7 @@ export async function removeSubscriber(idOrEmail: string): Promise<boolean> {
       await supabase
         .from('newsletter_subscribers')
         .delete()
-        .or(`email.ilike.${targetEmail},id.eq.${cleanKey}`);
+        .eq('email', targetEmail);
     } catch (e) {
       console.warn('Supabase delete subscriber error/notice:', e);
     }
@@ -336,6 +297,16 @@ export async function removeSubscriber(idOrEmail: string): Promise<boolean> {
     } catch {}
   }
   return ok;
+}
+
+/**
+ * A visitor leaving the list. Visitors can't touch the subscribers table directly (only the admin can),
+ * so this goes through the unsubscribe_newsletter() function in supabase/security.sql.
+ */
+export async function unsubscribeEmail(email: string): Promise<boolean> {
+  if (!supabase) return false;
+  const { error } = await supabase.rpc('unsubscribe_newsletter', { p_email: email.trim().toLowerCase() });
+  return !error;
 }
 
 /**
@@ -354,30 +325,10 @@ export function getSavedCampaigns(): CampaignOffer[] {
 }
 
 /**
- * Fetch past campaigns from Supabase cloud storage
+ * Campaign history stays on the admin's device: it names recipients, and the storage bucket is public.
  */
 export async function syncCampaignsFromCloud(): Promise<CampaignOffer[]> {
-  const localList = getSavedCampaigns();
-  if (!supabase) return localList;
-
-  try {
-    const { data: pubData } = supabase.storage.from('product-images').getPublicUrl(SUPABASE_CAMPAIGNS_PATH);
-    if (pubData?.publicUrl) {
-      const res = await fetch(`${pubData.publicUrl}?t=${Date.now()}`, { cache: 'no-store' });
-      if (res.ok) {
-        const cloudList: CampaignOffer[] = await res.json();
-        if (Array.isArray(cloudList)) {
-          if (typeof window !== 'undefined') {
-            localStorage.setItem(CAMPAIGNS_KEY, JSON.stringify(cloudList));
-          }
-          return cloudList;
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('Could not sync campaigns from cloud:', err);
-  }
-  return localList;
+  return getSavedCampaigns();
 }
 
 /**
@@ -396,20 +347,6 @@ export async function recordCampaign(campaign: Omit<CampaignOffer, 'id' | 'creat
       localStorage.setItem(CAMPAIGNS_KEY, JSON.stringify(updated));
     }
   } catch {}
-
-  if (supabase) {
-    try {
-      const payload = JSON.stringify(updated, null, 2);
-      const blob = new Blob([payload], { type: 'application/json' });
-      await supabase.storage.from('product-images').upload(SUPABASE_CAMPAIGNS_PATH, blob, {
-        contentType: 'application/json',
-        cacheControl: '0',
-        upsert: true,
-      });
-    } catch (e) {
-      console.warn('Campaign cloud sync notice:', e);
-    }
-  }
 
   return newCampaign;
 }
@@ -449,9 +386,9 @@ export function generateWelcomeEmailMailto(
   const subject = `Welcome to VANT // Access Granted (${couponCode})`;
   const storeUrl = typeof window !== 'undefined' ? window.location.origin : DEFAULT_STORE_URL;
 
-  const intro = customMessage || 'تم تفعيل اشتراكك بنجاح في القائمة الحصرية لـ ڤانت. يسعدنا تقديم رمز الخصم الترحيبي الخاص بك:';
+  const intro = customMessage || 'تم تفعيل اشتراكك بنجاح في القائمة الحصرية لـ فانت. يسعدنا تقديم رمز الخصم الترحيبي الخاص بك:';
 
-  const body = `أهلاً بك في ڤانت (VANT).
+  const body = `أهلاً بك في فانت (VANT).
 
 ${intro}
 
@@ -465,7 +402,7 @@ ${intro}
 - يمكنك استخدامه مع أي قطعة من التشكيلة المتوفرة أو التفصيل الخاص.
 
 مع أطيب التحيات،
-فريق ڤانت للأزياء الحصرية`;
+فريق فانت للأزياء الحصرية`;
 
   const encodedSubject = encodeURIComponent(subject);
   const encodedBody = encodeURIComponent(body);
@@ -502,7 +439,7 @@ export async function dispatchCampaignEmail(params: {
 
   const couponCode = (params.couponCode || tpl?.discountCode || 'VANT-WELCOME-15').toUpperCase();
   const discountPercent = params.discountPercent ?? tpl?.discountPercent ?? 15;
-  const headline = params.customHeadline || tpl?.headline || 'أهلاً بك في ڤانت // WELCOME TO THE ARCHIVE';
+  const headline = params.customHeadline || tpl?.headline || 'أهلاً بك في فانت // WELCOME TO THE ARCHIVE';
   const message = params.customMessage || tpl?.message || 'Your exclusive access is granted. Use the code below for your first curation.';
   const subject = params.subject || tpl?.subject || `Welcome to VANT // Access Granted (${couponCode})`;
   const badgeText = params.badgeText || tpl?.badgeText || 'CONFIDENTIAL // VIP ACCESS';
@@ -553,13 +490,15 @@ export async function dispatchCampaignEmail(params: {
   });
 
   let emailSent = false;
-  const resendApiKey = 're_DgBbp68L_6UUeE8DRtYyyTgFMSrd7qSQo';
+  // The Resend key lives only on the server (RESEND_API_KEY on Vercel); the browser never sees it
+  const accessToken = supabase ? (await supabase.auth.getSession()).data.session?.access_token : undefined;
 
   // 2. Dispatch via Serverless Function
   try {
     const serverlessRes = await fetch('/api/send-welcome', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      // The server only uses custom HTML/subject/links when this is a signed-in admin
+      headers: { 'Content-Type': 'application/json', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
       body: JSON.stringify({
         email: cleanEmail,
         couponCode,
@@ -579,54 +518,7 @@ export async function dispatchCampaignEmail(params: {
       }),
     });
 
-    if (serverlessRes.ok) {
-      emailSent = true;
-    } else {
-      // Direct Resend API fallback
-      const directRes = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${resendApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: 'VANT Archive <onboarding@resend.dev>',
-          to: [cleanEmail],
-          subject,
-          html: customHtml,
-        }),
-      });
-
-      if (directRes.ok) {
-        emailSent = true;
-      } else {
-        // Fallback for formsubmit
-        const formSubmitRes = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(cleanEmail)}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            Origin: 'https://vant.fashion',
-            Referer: 'https://vant.fashion/',
-          },
-          body: JSON.stringify({
-            _subject: subject,
-            _template: 'box',
-            _captcha: 'false',
-            'العلامة_التجارية': 'VANT — دار الأزياء والتصاميم الحصرية',
-            'عنوان_العرض': headline,
-            'تفاصيل_الرسالة': message,
-            'كود_الخصم_الحصري': couponCode,
-            'نسبة_الخصم': `${discountPercent}% على مشترياتك`,
-            'رابط_المتجر_والتسوق': ctaUrl,
-            'البريد_المعتمد': cleanEmail,
-          }),
-        });
-        if (formSubmitRes.ok) {
-          emailSent = true;
-        }
-      }
-    }
+    emailSent = serverlessRes.ok && !(await serverlessRes.json().catch(() => ({}))).previewOnly;
   } catch (e) {
     console.warn('Dispatch campaign error:', e);
   }
@@ -645,7 +537,7 @@ export async function dispatchCampaignEmail(params: {
   } catch {}
 
   return {
-    success: true,
+    success: emailSent,
     emailSent,
     subject,
     body: `${headline}\n\n${message}\n\nكود الخصم: ${couponCode}`,
@@ -732,12 +624,6 @@ export async function uploadCampaignImageFile(file: File): Promise<string> {
       return `${supabaseUrl}/storage/v1/object/public/${finalPath}`;
     }
 
-    // 2. If Supabase returned a data: URL or failed, upload to free public CDN
-    const { uploadToFreeCdn } = await import('./storage');
-    const freeCdnUrl = await uploadToFreeCdn(fileToUpload);
-    if (freeCdnUrl && (freeCdnUrl.startsWith('http://') || freeCdnUrl.startsWith('https://'))) {
-      return freeCdnUrl;
-    }
   } catch (err) {
     console.warn('Upload image notice:', err);
   }

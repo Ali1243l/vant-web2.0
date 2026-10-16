@@ -8,29 +8,25 @@ import { MaintenanceModeCard } from './settings/MaintenanceModeCard';
 import { SplashStudioCard } from './settings/SplashStudioCard';
 import { HeroBannerCard } from './settings/HeroBannerCard';
 import { StoreSecurityCard } from './settings/StoreSecurityCard';
-import { NotificationsCard } from './settings/NotificationsCard';
-import { SplashPreviewModal } from './settings/SplashPreviewModal';
+import { useSiteControls } from '../context/SiteControlsContext';
 
 export const SettingsView: React.FC = () => {
-  const { lang, siteSettings, updateSiteSettings, pin, setPin, setCurrentStore } = useAdminBridge();
+  const { lang, siteSettings, updateSiteSettings, setCurrentStore } = useAdminBridge();
   const isAr = lang === 'ar';
 
   // Local form state cloned from siteSettings
   const [formData, setFormData] = useState<SiteSettings>(siteSettings);
-  const [tempPin, setTempPin] = useState<string>(pin || siteSettings.pin || '1234');
-  const [showPin, setShowPin] = useState(false);
 
   // UI state
   const [isSaving, setIsSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ text: string; sub?: string } | null>(null);
-  const [isTestSplashOpen, setIsTestSplashOpen] = useState(false);
+  const { setIsPreviewSplash } = useSiteControls();
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
   const [bannerUploadNotice, setBannerUploadNotice] = useState<string | null>(null);
 
   // Sync when siteSettings change externally
   useEffect(() => {
     setFormData(siteSettings);
-    if (siteSettings.pin) setTempPin(siteSettings.pin);
   }, [siteSettings]);
 
   // Handle setting updates
@@ -66,17 +62,8 @@ export const SettingsView: React.FC = () => {
     setIsSaving(true);
 
     try {
-      // Validate pin
-      const finalPin = tempPin.length === 4 ? tempPin : pin;
-      setPin(finalPin);
       setCurrentStore(formData.storeName);
-
-      const payload = {
-        ...formData,
-        pin: finalPin,
-      };
-
-      const res = await updateSiteSettings(payload);
+      const res = await updateSiteSettings(formData);
 
       showToast(
         isAr ? 'تم حفظ كافة إعدادات المتجر بنجاح' : 'All store settings saved successfully',
@@ -182,7 +169,7 @@ export const SettingsView: React.FC = () => {
           isAr={isAr}
           formData={formData}
           handleChange={handleChange}
-          onOpenTestSplash={() => setIsTestSplashOpen(true)}
+          onOpenTestSplash={() => setIsPreviewSplash(true)}
         />
 
         {/* SECTION 3: STORE FRONT BANNERS (HERO BANNER) */}
@@ -197,17 +184,6 @@ export const SettingsView: React.FC = () => {
 
         {/* SECTION 4: STORE IDENTITY & SECURITY */}
         <StoreSecurityCard
-          isAr={isAr}
-          formData={formData}
-          handleChange={handleChange}
-          tempPin={tempPin}
-          setTempPin={setTempPin}
-          showPin={showPin}
-          setShowPin={setShowPin}
-        />
-
-        {/* SECTION 5: NOTIFICATIONS */}
-        <NotificationsCard
           isAr={isAr}
           formData={formData}
           handleChange={handleChange}
@@ -231,14 +207,6 @@ export const SettingsView: React.FC = () => {
           </Button>
         </div>
       </form>
-
-      {/* FULL-SCREEN CINEMATIC TEST SPLASH SCREEN OVERLAY */}
-      <SplashPreviewModal
-        isOpen={isTestSplashOpen}
-        onClose={() => setIsTestSplashOpen(false)}
-        isAr={isAr}
-        formData={formData}
-      />
     </div>
   );
 };

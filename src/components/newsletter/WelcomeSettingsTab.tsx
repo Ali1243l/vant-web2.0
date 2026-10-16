@@ -19,7 +19,7 @@ export const WelcomeSettingsTab: React.FC<WelcomeSettingsTabProps> = ({
 }) => {
   const { siteSettings, updateSiteSettings } = useSiteControls();
 
-  const [welcomeTitleAr, setWelcomeTitleAr] = useState(siteSettings.welcome_title_ar || 'أهلاً بك في ڤانت!');
+  const [welcomeTitleAr, setWelcomeTitleAr] = useState(siteSettings.welcome_title_ar || 'أهلاً بك في فانت!');
   const [welcomeTitleEn, setWelcomeTitleEn] = useState(siteSettings.welcome_title_en || 'Welcome to VANT!');
   const [welcomeMessageAr, setWelcomeMessageAr] = useState(
     siteSettings.welcome_message_ar ||

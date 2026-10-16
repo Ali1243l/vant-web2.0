@@ -4,7 +4,6 @@ import { AdminProvider, useAdminBridge } from './useAdminBridge';
 import { AdminHeader } from './AdminHeader';
 import { AdminDrawer } from './AdminDrawer';
 import { Nav } from './Nav';
-import { LockScreen } from './LockScreen';
 import { AdminAnalyticsDashboard } from './AdminAnalyticsDashboard';
 import { ProductsManager } from './ProductsManager';
 import { AdminOffersManager } from './AdminOffersManager';
@@ -35,8 +34,6 @@ function MainLayout({ onClose }: AdminAppProps) {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none">
-      {/* Lock Screen Component */}
-      <LockScreen />
 
       {/* Mobile Drawer */}
       <AdminDrawer onClose={onClose} />
