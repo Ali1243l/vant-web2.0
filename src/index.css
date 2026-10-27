@@ -145,8 +145,8 @@ html.dark ::-webkit-scrollbar-thumb {
 /* The category rail keeps its layout slot while its surface detaches. */
 .store-category-rail nav { padding: 3px 0; }
 .store-category-rail nav > div { padding-inline: 8px; }
-.store-category-rail.is-detached [role="tab"],
-.store-category-rail.is-detached button[aria-haspopup] { min-height: 32px; height: 32px; padding-block: 4px; }
+.store-header[data-detached="true"] .store-category-rail [role="tab"],
+.store-header[data-detached="true"] .store-category-rail button[aria-haspopup] { min-height: 32px; height: 32px; padding-block: 4px; }
 .hero-background { --hero-rgb: var(--hero-light-rgb); --hero-angle: var(--hero-desktop-angle); --hero-gradient: var(--hero-desktop-gradient); }
 .dark .hero-background { --hero-rgb: var(--hero-dark-rgb); }
 .hero-background-image { object-position: var(--hero-image-position); }

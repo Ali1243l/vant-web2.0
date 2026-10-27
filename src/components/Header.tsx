@@ -1,9 +1,10 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, useRef, type ReactNode } from 'react';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent, useReducedMotion } from 'framer-motion';
 import { Search, Sun, Moon, Globe, Heart, ShoppingCart } from 'lucide-react';
 import type { Language, Theme } from '../types';
 import { useSiteControls } from '../context/SiteControlsContext';
 import SearchOverlay from './SearchOverlay';
+import { INITIAL_HEADER_SCROLL, nextHeaderScroll } from '../lib/headerScroll';
 
 interface Props {
   children?: ReactNode;
@@ -47,6 +48,8 @@ export default function Header({
   const logoControl = getControl('brand_kinetic_logo');
 
   const [scrolled, setScrolled] = useState(false);
+  const [showCategories, setShowCategories] = useState(true);
+  const scrollState = useRef(INITIAL_HEADER_SCROLL);
   const reduceMotion = useReducedMotion();
   const [kineticLang, setKineticLang] = useState<'en' | 'ar'>(lang);
   const [cartCount, setCartCount] = useState<number>(() => {
@@ -85,14 +88,17 @@ export default function Header({
     };
   }, []);
 
-  // A fixed-height sticky rail prevents resize/scroll feedback loops.
   const { scrollY } = useScroll();
-  useMotionValueEvent(scrollY, 'change', (latest) => {
-    if (latest > 96) setScrolled(true);
-    else if (latest < 32) setScrolled(false);
-  });
-
-  useEffect(() => { setScrolled(window.scrollY > 96); }, []);
+  const updateScrollState = (position: number) => {
+    if (document.documentElement.style.overflow === 'hidden') return;
+    const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    const next = nextHeaderScroll(scrollState.current, Math.min(position, maxScroll));
+    scrollState.current = next;
+    setScrolled(next.detached);
+    setShowCategories(next.categoriesVisible);
+  };
+  useMotionValueEvent(scrollY, 'change', updateScrollState);
+  useEffect(() => { updateScrollState(window.scrollY); }, []);
 
   useEffect(() => {
     setKineticLang(lang);
@@ -107,21 +113,27 @@ export default function Header({
 
   return (
     <>
-      <header data-store-header data-detached={scrolled} className="store-header sticky -top-14 sm:-top-16 z-40 w-full">
-        <div className="border-b border-black/5 bg-white/95 dark:border-white/5 dark:bg-[#0d0f12]/95">
+      <header data-store-header data-detached={scrolled} className="store-header pointer-events-none sticky top-0 z-40 h-[120px] w-full shrink-0 sm:h-[136px]">
+        <motion.div
+          data-store-toolbar
+          initial={false}
+          animate={{ width: scrolled ? 'calc(100% - 24px)' : '100%', maxWidth: scrolled ? 1100 : 1440, y: scrolled ? 8 : 0, borderRadius: scrolled ? 20 : 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.16, 1, 0.3, 1] }}
+          className={`pointer-events-auto mx-auto border bg-white/95 backdrop-blur-xl dark:bg-[#0d0f12]/95 ${scrolled ? 'border-black/10 shadow-lg dark:border-white/15' : 'border-transparent border-b-black/5 dark:border-b-white/5'}`}
+        >
             <div
               dir="ltr"
               style={{ direction: 'ltr' }}
-              className="mx-auto flex h-14 w-full max-w-[1440px] items-center justify-between px-3 sm:h-16 sm:px-6"
+              className={`mx-auto flex w-full items-center justify-between px-2 sm:px-6 transition-[height] duration-200 motion-reduce:transition-none ${scrolled ? 'h-12 sm:h-14' : 'h-14 sm:h-16'}`}
             >
               {/* Left Actions (Search Icon, Shopping Cart, Wishlist) */}
-              <div className="flex items-center justify-start gap-1.5 sm:gap-2.5 min-w-[110px] sm:min-w-[140px] [direction:ltr]">
+              <div className="flex items-center justify-start gap-0 sm:gap-2.5 min-w-[110px] sm:min-w-[140px] [direction:ltr]">
                 {searchControl.visible && (
                   <button
                     type="button"
                     onClick={() => onToggleSearch(true)}
                     className={`flex items-center justify-center rounded-full text-[#15171c]/80 dark:text-white/80 transition-all hover:bg-black/5 dark:hover:bg-white/10 active:scale-95 cursor-pointer ${
-                      scrolled ? 'h-8 w-8' : 'h-9 w-9'
+                      'h-11 w-11'
                     }`}
                     aria-label={lang === 'ar' ? 'فتح شريط البحث' : 'Open search'}
                     title={lang === 'ar' ? searchControl.label_ar : searchControl.label_en}
@@ -137,7 +149,7 @@ export default function Header({
                     id="header-cart-icon"
                     onClick={onOpenCart}
                     className={`relative flex items-center justify-center rounded-full transition-all active:scale-90 cursor-pointer ${
-                      scrolled ? 'h-8 w-8' : 'h-9 w-9'
+                      'h-11 w-11'
                     } ${
                       isCartOpen
                         ? 'bg-[#004ad7] text-white shadow-md shadow-[#004ad7]/30'
@@ -176,7 +188,7 @@ export default function Header({
                     type="button"
                     onClick={onToggleWishlistOnly}
                     className={`relative flex items-center justify-center rounded-full transition-all active:scale-90 cursor-pointer ${
-                      scrolled ? 'h-8 w-8' : 'h-9 w-9'
+                      'h-11 w-11'
                     } ${
                       isWishlistOnly
                         ? 'bg-[#004ad7]/15 dark:bg-[#3b82f6]/20 text-[#004ad7] dark:text-[#3b82f6]'
@@ -226,13 +238,13 @@ export default function Header({
               )}
 
               {/* Right Actions (Lang, Theme) */}
-              <div className="flex items-center justify-end gap-1.5 sm:gap-2.5 min-w-[80px] sm:min-w-[110px] [direction:ltr]">
+              <div className="flex items-center justify-end gap-0 sm:gap-2.5 min-w-[80px] sm:min-w-[110px] [direction:ltr]">
                 {themeControl.visible && (
                   <button
                     type="button"
                     onClick={onToggleTheme}
                     className={`relative flex items-center justify-center rounded-full text-[#15171c]/80 dark:text-white/80 transition-all hover:bg-black/5 dark:hover:bg-white/10 active:scale-90 cursor-pointer ${
-                      scrolled ? 'h-8 w-8' : 'h-9 w-9'
+                      'h-11 w-11'
                     }`}
                     aria-label={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
                   >
@@ -269,7 +281,7 @@ export default function Header({
                     type="button"
                     onClick={onToggleLang}
                     className={`group flex items-center gap-1.5 rounded-full border border-black/8 dark:border-white/15 bg-white/70 dark:bg-white/10 px-2.5 text-[11px] sm:text-xs font-bold tracking-wide text-[#15171c] dark:text-white transition-all hover:bg-black/5 dark:hover:bg-white/15 active:scale-95 cursor-pointer shadow-2xs ${
-                      scrolled ? 'h-7.5 sm:h-8' : 'h-8 sm:h-8.5'
+                      'h-11 min-w-11'
                     }`}
                     aria-label={lang === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
                   >
@@ -278,7 +290,7 @@ export default function Header({
                       initial={{ scale: 0.72, rotate: -30 }}
                       animate={{ scale: 1, rotate: 0 }}
                       transition={{ type: 'spring', stiffness: 420, damping: 22 }}
-                      className="inline-flex items-center justify-center text-black/60 dark:text-white/70 group-hover:text-black dark:group-hover:text-white"
+                      className="hidden sm:inline-flex items-center justify-center text-black/60 dark:text-white/70 group-hover:text-black dark:group-hover:text-white"
                     >
                       <Globe className="h-3.5 w-3.5" />
                     </motion.span>
@@ -288,21 +300,21 @@ export default function Header({
               </div>
             </div>
 
-        </div>
-        {/* Reserve rail height while only its inner surface changes size. */}
         {children && (
-          <div className="store-category-slot flex h-[64px] sm:h-[72px] items-start justify-center pt-1.5 sm:pt-2">
-            <motion.div
-              data-category-rail
-              initial={false}
-              animate={{ width: scrolled ? 'calc(100% - 24px)' : '100%', maxWidth: scrolled ? 960 : 1440, y: scrolled ? 4 : 0 }}
-              transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.16, 1, 0.3, 1] }}
-              className={`store-category-rail min-w-0 ${scrolled ? 'is-detached rounded-2xl border border-black/10 bg-white/95 shadow-lg dark:border-white/15 dark:bg-[#0d0f12]/95 backdrop-blur-xl' : 'border border-transparent bg-white/80 dark:bg-[#0d0f12]/80'}`}
-            >
-              {children}
-            </motion.div>
-          </div>
+          <motion.div
+            data-store-categories
+            aria-hidden={!showCategories}
+            inert={!showCategories}
+            initial={false}
+            animate={{ height: showCategories ? 'auto' : 0, opacity: showCategories ? 1 : 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.22, ease: [0.16, 1, 0.3, 1] }}
+            style={{ overflow: showCategories ? 'visible' : 'hidden' }}
+            className="store-category-rail w-full"
+          >
+            {children}
+          </motion.div>
         )}
+        </motion.div>
       </header>
 
       {/* 3. Isolated Search Overlay Component (fixed inset-0 z-[1000]) */}
