@@ -19,6 +19,7 @@ import {
   X,
   ExternalLink,
   Layers,
+  Menu,
 } from 'lucide-react';
 import { useAdminBridge, AdminView } from './useAdminBridge';
 import { Button } from './ui';
@@ -37,6 +38,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   const {
     activeView,
     setActiveView,
+    setIsDrawerOpen,
     lock,
     lang,
     toggleLang,
@@ -70,18 +72,18 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const viewTitles: Record<AdminView, { ar: string; en: string }> = {
-    dashboard: { ar: 'لوحة التحليلات وسلوك الزوار', en: 'Dashboard & Deep Analytics' },
-    orders: { ar: 'إدارة الطلبات والكونسيرج الملكي', en: 'Order Management & VIP Concierge' },
+    dashboard: { ar: 'نظرة عامة', en: 'Dashboard & Deep Analytics' },
+    orders: { ar: 'الطلبات', en: 'Order Management & VIP Concierge' },
     products: { ar: 'إدارة المنتجات والكتالوج', en: 'Product Catalog & Inventory' },
-    sizes: { ar: 'دليل المقاسات والأبعاد الهندسية', en: 'Master Size Guide & Specs' },
-    offers: { ar: 'العروض وقسائم الخصم الحصرية', en: 'Offers & Promo Codes' },
-    banners: { ar: 'البانرات واستوديو وسائط المتجر', en: 'Banners, Media & Specs Studio' },
+    sizes: { ar: 'دليل المقاسات', en: 'Master Size Guide & Specs' },
+    offers: { ar: 'العروض والخصومات', en: 'Offers & Promo Codes' },
+    banners: { ar: 'البانر والترحيب', en: 'Banners, Media & Specs Studio' },
     welcome_modal: { ar: 'نافذة الترحيب وكوبون الزوار', en: 'Welcome Modal & VIP Voucher' },
-    subscribers: { ar: 'استوديو النشرات والحملات البريدية', en: 'Campaign Studio & Subscribers' },
-    controls: { ar: 'أزرار وخصائص تفاعل المتجر', en: 'Buttons & Interactive Controls' },
+    subscribers: { ar: 'المشتركون والحملات', en: 'Campaign Studio & Subscribers' },
+    controls: { ar: 'عناصر المتجر', en: 'Buttons & Interactive Controls' },
     social: { ar: 'روابط المنصات وقنوات التواصل', en: 'Social Media & Footer Links' },
     backup: { ar: 'تصدير البيانات والنسخ الاحتياطي', en: 'Multi-Format Export & Backup Hub' },
-    settings: { ar: 'الإعدادات العامة وهوية المتجر', en: 'Master Site Controls & Settings' },
+    settings: { ar: 'الإعدادات', en: 'Master Site Controls & Settings' },
     security: { ar: 'الأمان ورمز دخول الإدارة', en: 'Security & Access Key' },
     widgets: { ar: 'استوديو الأدوات والوحدات المعيارية', en: 'Widgets Studio & UI Tools' },
   };
@@ -166,27 +168,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
 
       {/* Left section: Category Pill + View Title */}
       <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-        <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-lg text-[10.5px] font-mono font-bold uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700/60">
-          {isAr
-            ? (activeView === 'products' || activeView === 'sizes' || activeView === 'banners' || activeView === 'welcome_modal'
-                ? 'المشاريع'
-                : activeView === 'dashboard' || activeView === 'orders' || activeView === 'offers'
-                ? 'المحفظة'
-                : activeView === 'widgets'
-                ? 'الأدوات'
-                : activeView === 'security'
-                ? 'الأمان'
-                : 'الـ API')
-            : (activeView === 'products' || activeView === 'sizes' || activeView === 'banners' || activeView === 'welcome_modal'
-                ? 'PROJECTS'
-                : activeView === 'dashboard' || activeView === 'orders' || activeView === 'offers'
-                ? 'WALLET'
-                : activeView === 'widgets'
-                ? 'WIDGETS'
-                : activeView === 'security'
-                ? 'SECURITY'
-                : 'API')}
-        </span>
+        <button type="button" onClick={() => setIsDrawerOpen(true)} className="lg:hidden shrink-0 rounded-lg p-2 text-slate-300 hover:bg-slate-800" aria-label={isAr ? 'فتح قائمة الإدارة' : 'Open admin menu'}><Menu className="h-5 w-5" /></button>
         <h1 className="text-sm sm:text-base font-bold text-white truncate">
           {isAr ? viewTitles[activeView]?.ar : viewTitles[activeView]?.en}
         </h1>
@@ -194,24 +176,6 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
 
       {/* Right section: Search, Widgets Studio, Action Button, Notifications, Lang, Lock, User Profile */}
       <div className="flex items-center gap-2 sm:gap-2.5">
-        {/* Quick Widgets Studio Button with Glowing Badge */}
-        <button
-          type="button"
-          onClick={() => setActiveView('widgets')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-xs ${
-            activeView === 'widgets'
-              ? 'bg-blue-600/25 text-blue-300 border-blue-500/50 shadow-[0_0_12px_rgba(59,130,246,0.3)]'
-              : 'bg-neutral-800/80 hover:bg-neutral-700 text-neutral-200 border-neutral-700 hover:border-blue-500/40'
-          }`}
-          title={isAr ? 'فتح استوديو الأدوات والوحدات' : 'Open Widgets Studio'}
-        >
-          <Layers className="w-3.5 h-3.5 text-blue-400" />
-          <span>{isAr ? 'الأدوات والوحدات' : 'Widgets'}</span>
-          <span className="text-[9px] px-1 py-0.2 rounded font-bold uppercase bg-blue-500/30 text-blue-300">
-            NEW
-          </span>
-        </button>
-
         {/* 1. Quick Search with Live Suggestions */}
         <div ref={searchContainerRef} className="relative hidden md:block w-48 lg:w-60">
           <Search className="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-slate-400" />

@@ -33,7 +33,7 @@ export const SPLASH_MOTIFS: MotifOption[] = [
     key: 'monogram',
     labelAr: 'المونوغرام الملكي (AR)',
     labelEn: 'Royal Monogram Emblem',
-    descAr: 'شعار دار الرافدين المحفور بماء الذهب',
+    descAr: 'شعار فانت المحفور بماء الذهب',
     descEn: 'Classic royal heraldic seal engraved in gold',
     icon: Compass,
   },
@@ -58,8 +58,8 @@ export const SPLASH_MOTIFS: MotifOption[] = [
 // Presets for splash screen text
 export const SPLASH_TEXT_PRESETS = [
   {
-    ar: 'دار الرافدين للأزياء • أصالة الحرفة العراقية',
-    en: 'Dar Al-Rafidain • Iraqi Haute Couture & Craftsmanship',
+    ar: 'فانت للأزياء • أصالة الحرفة العراقية',
+    en: 'VANT • Iraqi Haute Couture & Craftsmanship',
   },
   {
     ar: 'أناقة ملكية مستوحاة من عراقة بلاد الرافدين',

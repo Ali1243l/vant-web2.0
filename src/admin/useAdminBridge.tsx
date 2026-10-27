@@ -186,8 +186,8 @@ export interface AdminSiteSettings {
 export type SiteSettings = AdminSiteSettings;
 
 export const defaultSiteSettings: SiteSettings = {
-  storeName: 'دار ڤانت (Maison VANT)',
-  storeNameEn: 'Maison VANT | Editorial Haute Streetwear',
+  storeName: 'فانت (VANT)',
+  storeNameEn: 'VANT | Editorial Haute Streetwear',
   currency: 'IQD',
   emailAlerts: true,
   smsAlerts: false,
@@ -199,14 +199,14 @@ export const defaultSiteSettings: SiteSettings = {
   maintenanceEstimatedBack: 'خلال ساعتين (2 Hours)',
 
   splashMotif: 'hanger',
-  splashTextAr: 'دار ڤانت للأزياء • أصل التشكيلة والتريندات',
-  splashTextEn: 'Maison VANT • Editorial Streetwear Catalogue',
+  splashTextAr: 'فانت للأزياء • أصل التشكيلة والتريندات',
+  splashTextEn: 'VANT • Editorial Streetwear Catalogue',
   splashDurationMs: 2500,
 
   heroBannerBg: '',
   heroHeadlineAr: 'أصل التشكيلة والتريندات الحصرية',
   heroHeadlineEn: 'Curated Exclusive Collection & Trends',
-  heroSubtitleAr: 'استكشف التشكيلة الحصرية من دار ڤانت مباشرة من قاعدة البيانات.',
+  heroSubtitleAr: 'استكشف التشكيلة الحصرية من فانت مباشرة من قاعدة البيانات.',
   heroSubtitleEn: 'Explore curated haute streetwear pieces directly from our database.',
   heroBadgeAr: 'التشكيلة الحصرية • 2026',
   heroBadgeEn: 'Exclusive Archive • 2026',
@@ -218,7 +218,7 @@ export const defaultSiteSettings: SiteSettings = {
   whatsappOrdersName: 'خدمة العملاء والطلبات',
   whatsappConciergeNumber: '',
   whatsappConciergeName: 'كونسيرج الاستفسارات',
-  whatsappDefaultMsg: 'مرحباً، أود الاستفسار عن قطعة من دار ڤانت.',
+  whatsappDefaultMsg: 'مرحباً، أود الاستفسار عن قطعة من فانت.',
 };
 
 interface AdminContextType {
@@ -286,7 +286,10 @@ const defaultSubscribers: Subscriber[] = [];
 const defaultNotifications: NotificationItem[] = [];
 const defaultOrders: Order[] = [];
 
-const AdminContext = createContext<AdminContextType | null>(null);
+// Preserve context identity across Vite hot updates so the open admin stays mounted.
+const AdminContext: import('react').Context<AdminContextType | null> =
+  import.meta.hot?.data.adminContext ?? createContext<AdminContextType | null>(null);
+if (import.meta.hot) import.meta.hot.data.adminContext = AdminContext;
 
 export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const siteControls = useSiteControls();
@@ -316,9 +319,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setLang((prev) => (prev === 'ar' ? 'en' : 'ar'));
   }, []);
 
-  const currentStore = siteControls.siteSettings.welcome_title_ar || 'دار ڤانت (VANT)';
+  const currentStore = siteControls.controls.brand_kinetic_logo?.label_ar || 'فانت';
   const setCurrentStore = useCallback((name: string) => {
-    siteControls.updateSiteSettings({ welcome_title_ar: name });
+    siteControls.updateControl('brand_kinetic_logo', { label_ar: name });
   }, [siteControls]);
 
   // Bidirectional Product Adapter between StoreProduct and New Admin Product
@@ -818,8 +821,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const siteSettings: SiteSettings = useMemo(() => {
     const sc = siteControls.siteSettings;
     return {
-      storeName: sc.welcome_title_ar || 'دار ڤانت للأزياء الرفيعة',
-      storeNameEn: sc.welcome_title_en || 'Maison VANT Haute Couture',
+      storeName: siteControls.controls.brand_kinetic_logo?.label_ar || 'فانت',
+      storeNameEn: siteControls.controls.brand_kinetic_logo?.label_en || 'VANT',
       currency: siteControls.currencyCode || 'IQD',
       emailAlerts: true,
       smsAlerts: false,
@@ -848,7 +851,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       whatsappOrdersName: 'قسم إدارة واستلام الطلبات الفورية',
       whatsappConciergeNumber: siteControls.controls['cfg_bespoke_phone']?.actionValue || '+9647809876543',
       whatsappConciergeName: 'كونسيرج التفصيل الخاص والخياطة الراقية',
-      whatsappDefaultMsg: 'مرحباً، أود الاستفسار عن تفصيل قطعة خاصة من دار ڤانت.',
+      whatsappDefaultMsg: 'مرحباً، أود الاستفسار عن تفصيل قطعة خاصة من فانت.',
     };
   }, [siteControls.siteSettings, siteControls.currencyCode, siteControls.controls]);
 
@@ -864,10 +867,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       scPatch.maintenance_message = partial.maintenanceMessageEn;
     }
     if (partial.storeName !== undefined) {
-      scPatch.welcome_title_ar = partial.storeName;
+      siteControls.updateControl('brand_kinetic_logo', { label_ar: partial.storeName });
     }
     if (partial.storeNameEn !== undefined) {
-      scPatch.welcome_title_en = partial.storeNameEn;
+      siteControls.updateControl('brand_kinetic_logo', { label_en: partial.storeNameEn });
     }
     if (partial.splashTextAr !== undefined) {
       scPatch.loading_text_ar = partial.splashTextAr;

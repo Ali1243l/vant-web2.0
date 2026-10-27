@@ -61,14 +61,16 @@ export default function CategoryFilter({
     const container = tabsContainerRef.current;
     const activeEl = activeRef.current;
 
-    const containerRect = container.getBoundingClientRect();
-    const activeRect = activeEl.getBoundingClientRect();
-    const offset = (activeRect.left + activeRect.width / 2) - (containerRect.left + containerRect.width / 2);
-
-    container.scrollBy({
-      left: offset,
-      behavior: 'smooth',
-    });
+    const centerActive = (behavior: ScrollBehavior) => {
+      const containerRect = container.getBoundingClientRect();
+      const activeRect = activeEl.getBoundingClientRect();
+      const offset = (activeRect.left + activeRect.width / 2) - (containerRect.left + containerRect.width / 2);
+      if (Math.abs(offset) > 1) container.scrollBy({ left: offset, behavior });
+    };
+    centerActive(window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
+    const observer = new ResizeObserver(() => centerActive('auto'));
+    observer.observe(container);
+    return () => observer.disconnect();
   }, [active, isOffersOnly]);
 
   useScrollLock(isOpen);
@@ -250,7 +252,7 @@ export default function CategoryFilter({
                 }`}
               >
                 <SlidersHorizontal className="h-3.5 w-3.5 opacity-60" />
-                <span>{isAr ? currentOption.label_ar : currentOption.label_en}</span>
+                <span className="hidden sm:inline">{isAr ? currentOption.label_ar : currentOption.label_en}</span><span className="sm:hidden">{availability === 'all' ? (isAr ? 'التوفر' : 'Stock') : (isAr ? currentOption.label_ar : currentOption.label_en)}</span>
                 {currentOption.dot && (
                   <span className={`h-1.5 w-1.5 rounded-full ${currentOption.dot}`} />
                 )}

@@ -11,7 +11,7 @@
     min-height: 100dvh;
     width: 100%;
     max-width: 100vw;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
   body {
     background-color: #f8f9fa;
@@ -21,7 +21,8 @@
     min-height: 100dvh;
     width: 100%;
     max-width: 100vw;
-    overflow-x: hidden;
+    /* Clipping must not turn body into a non-scrolling sticky container. */
+    overflow-x: clip;
   }
   html.dark {
     color-scheme: dark;
@@ -140,4 +141,26 @@ html.dark ::-webkit-scrollbar-thumb {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 74, 215, 0.4);
+}
+/* The category rail keeps its layout slot while its surface detaches. */
+.store-category-rail nav { padding: 3px 0; }
+.store-category-rail nav > div { padding-inline: 8px; }
+.store-category-rail.is-detached [role="tab"],
+.store-category-rail.is-detached button[aria-haspopup] { min-height: 32px; height: 32px; padding-block: 4px; }
+.hero-background { --hero-rgb: var(--hero-light-rgb); --hero-angle: var(--hero-desktop-angle); --hero-gradient: var(--hero-desktop-gradient); }
+.dark .hero-background { --hero-rgb: var(--hero-dark-rgb); }
+.hero-background-image { object-position: var(--hero-image-position); }
+.hero-background-fade { background: var(--hero-gradient); }
+.hero-editorial { min-height: var(--hero-height, 280px); }
+[data-hero-preview-theme="light"] .hero-background { --hero-rgb: var(--hero-light-rgb); }
+[data-hero-preview-theme="dark"] .hero-background { --hero-rgb: var(--hero-dark-rgb); }
+.hero-preview-mobile .hero-background { --hero-angle: var(--hero-mobile-angle); --hero-gradient: var(--hero-mobile-gradient); }
+.hero-preview-mobile .hero-background-image { object-position: var(--hero-mobile-image-position); }
+.hero-preview-mobile .hero-editorial { min-height: var(--hero-mobile-height); }
+@media (max-width: 639px) {
+  .hero-background { --hero-angle: var(--hero-mobile-angle); --hero-gradient: var(--hero-mobile-gradient); }
+  .hero-background-image { object-position: var(--hero-mobile-image-position); }
+  .hero-editorial { min-height: var(--hero-mobile-height, 320px); }
+  .store-category-rail nav > div { padding-inline: 5px; }
+  .store-category-rail [role="tab"], .store-category-rail button[aria-haspopup] { padding-inline: 10px; }
 }

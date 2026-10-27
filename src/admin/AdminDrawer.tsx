@@ -13,7 +13,6 @@ export const AdminDrawer: React.FC<AdminDrawerProps> = ({ onClose }) => {
 
   const handleClose = () => {
     setIsDrawerOpen(false);
-    if (onClose) onClose();
   };
 
   useEffect(() => {
@@ -45,24 +44,11 @@ export const AdminDrawer: React.FC<AdminDrawerProps> = ({ onClose }) => {
       <div
         className={`fixed inset-y-0 ${
           isAr ? 'right-0' : 'left-0'
-        } max-w-xs w-full bg-slate-900 border-${
-          isAr ? 'l' : 'r'
-        } border-slate-800 shadow-2xl flex flex-col z-50 transform transition-transform duration-300 ease-out`}
+        } max-w-xs w-full bg-slate-900 ${isAr ? 'border-l' : 'border-r'} border-slate-800 shadow-2xl flex flex-col z-50 transform transition-transform duration-300 ease-out`}
       >
-        {/* Mobile close button header */}
-        <div className="absolute top-4 end-4 z-20">
-          <button
-            onClick={handleClose}
-            className="p-1.5 rounded-lg bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
-            aria-label="Close menu"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
         {/* Drawer navigation */}
         <div className="flex-1 overflow-y-auto">
-          <Nav onItemClick={handleClose} collapsed={false} />
+          <Nav onItemClick={handleClose} collapsed={false} onDismiss={handleClose} onCloseAdmin={() => { handleClose(); onClose?.(); }} />
         </div>
       </div>
     </div>

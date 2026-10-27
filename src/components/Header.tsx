@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef, type ReactNode } from 'react';
-import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
+import { useEffect, useState, type ReactNode } from 'react';
+import { motion, AnimatePresence, useScroll, useMotionValueEvent, useReducedMotion } from 'framer-motion';
 import { Search, Sun, Moon, Globe, Heart, ShoppingCart } from 'lucide-react';
 import type { Language, Theme } from '../types';
 import { useSiteControls } from '../context/SiteControlsContext';
@@ -47,7 +47,7 @@ export default function Header({
   const logoControl = getControl('brand_kinetic_logo');
 
   const [scrolled, setScrolled] = useState(false);
-  const [showCategories, setShowCategories] = useState(true);
+  const reduceMotion = useReducedMotion();
   const [kineticLang, setKineticLang] = useState<'en' | 'ar'>(lang);
   const [cartCount, setCartCount] = useState<number>(() => {
     try {
@@ -85,37 +85,14 @@ export default function Header({
     };
   }, []);
 
-  const prevScrollY = useRef(0);
-
-  // Motion scroll listener for the resizable navbar effect and scroll direction
+  // A fixed-height sticky rail prevents resize/scroll feedback loops.
   const { scrollY } = useScroll();
-
   useMotionValueEvent(scrollY, 'change', (latest) => {
-    const previous = prevScrollY.current;
-    prevScrollY.current = latest;
-
-    // Hysteresis deadband for scrolled/detached navbar state
-    if (latest > 50) {
-      setScrolled(true);
-    } else if (latest < 20) {
-      setScrolled(false);
-    }
-
-    // Direction-based reveal/collapse:
-    // When near top (<= 40px), always keep categories visible
-    // When scrolling down, smoothly hide categories to give maximum space for products
-    // When scrolling up, smoothly reveal categories
-    if (latest <= 40) {
-      setShowCategories(true);
-    } else {
-      const diff = latest - previous;
-      if (diff > 5) {
-        setShowCategories(false);
-      } else if (diff < -5) {
-        setShowCategories(true);
-      }
-    }
+    if (latest > 96) setScrolled(true);
+    else if (latest < 32) setScrolled(false);
   });
+
+  useEffect(() => { setScrolled(window.scrollY > 96); }, []);
 
   useEffect(() => {
     setKineticLang(lang);
@@ -130,49 +107,12 @@ export default function Header({
 
   return (
     <>
-      {/* Resizable Navbar Outer Wrapper */}
-      <header className="sticky top-0 z-40 w-full">
-        <motion.div
-          animate={{
-            width: scrolled ? '94%' : '100%',
-            borderRadius: scrolled ? '24px' : '0px',
-            y: scrolled ? 8 : 0,
-            boxShadow: scrolled
-              ? '0 12px 36px -10px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04)'
-              : 'none',
-            backgroundColor: scrolled
-              ? theme === 'dark'
-                ? 'rgba(13, 15, 18, 0.88)'
-                : 'rgba(255, 255, 255, 0.88)'
-              : theme === 'dark'
-              ? 'rgba(13, 15, 18, 0.8)'
-              : 'rgba(255, 255, 255, 0.8)',
-            borderColor: scrolled
-              ? theme === 'dark'
-                ? 'rgba(255, 255, 255, 0.14)'
-                : 'rgba(0, 0, 0, 0.1)'
-              : theme === 'dark'
-              ? 'rgba(255, 255, 255, 0.06)'
-              : 'rgba(0, 0, 0, 0.06)',
-          }}
-          transition={{
-            duration: 0.38,
-            ease: [0.16, 1, 0.3, 1],
-          }}
-          style={{
-            borderStyle: 'solid',
-            borderWidth: '1px',
-          }}
-          className="mx-auto max-w-7xl xl:max-w-[1440px] backdrop-blur-md transition-colors"
-        >
-          <div className="mx-auto w-full px-3 sm:px-6 overflow-visible">
-            {/* 1. Resizable Top Navigation Bar */}
+      <header data-store-header data-detached={scrolled} className="store-header sticky -top-14 sm:-top-16 z-40 w-full">
+        <div className="border-b border-black/5 bg-white/95 dark:border-white/5 dark:bg-[#0d0f12]/95">
             <div
               dir="ltr"
               style={{ direction: 'ltr' }}
-              className={`flex items-center justify-between w-full transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                scrolled ? 'h-11 sm:h-12' : 'h-14 sm:h-16'
-              }`}
+              className="mx-auto flex h-14 w-full max-w-[1440px] items-center justify-between px-3 sm:h-16 sm:px-6"
             >
               {/* Left Actions (Search Icon, Shopping Cart, Wishlist) */}
               <div className="flex items-center justify-start gap-1.5 sm:gap-2.5 min-w-[110px] sm:min-w-[140px] [direction:ltr]">
@@ -348,36 +288,21 @@ export default function Header({
               </div>
             </div>
 
-            {/* 2. Collapsible CategoryFilter Bar */}
-            <AnimatePresence initial={false}>
-              {showCategories && children && (
-                <motion.div
-                  key="header-category-filter-wrapper"
-                  initial={{ height: 0, opacity: 0, overflow: 'hidden' }}
-                  animate={{
-                    height: 'auto',
-                    opacity: 1,
-                    overflow: 'visible',
-                  }}
-                  exit={{
-                    height: 0,
-                    opacity: 0,
-                    overflow: 'hidden',
-                  }}
-                  transition={{
-                    duration: 0.32,
-                    ease: [0.16, 1, 0.3, 1],
-                  }}
-                  className="w-full overflow-visible"
-                >
-                  <div className="w-full pb-2 pt-0.5 overflow-visible">
-                    {children}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+        </div>
+        {/* Reserve rail height while only its inner surface changes size. */}
+        {children && (
+          <div className="store-category-slot flex h-[64px] sm:h-[72px] items-start justify-center pt-1.5 sm:pt-2">
+            <motion.div
+              data-category-rail
+              initial={false}
+              animate={{ width: scrolled ? 'calc(100% - 24px)' : '100%', maxWidth: scrolled ? 960 : 1440, y: scrolled ? 4 : 0 }}
+              transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.16, 1, 0.3, 1] }}
+              className={`store-category-rail min-w-0 ${scrolled ? 'is-detached rounded-2xl border border-black/10 bg-white/95 shadow-lg dark:border-white/15 dark:bg-[#0d0f12]/95 backdrop-blur-xl' : 'border border-transparent bg-white/80 dark:bg-[#0d0f12]/80'}`}
+            >
+              {children}
+            </motion.div>
           </div>
-        </motion.div>
+        )}
       </header>
 
       {/* 3. Isolated Search Overlay Component (fixed inset-0 z-[1000]) */}

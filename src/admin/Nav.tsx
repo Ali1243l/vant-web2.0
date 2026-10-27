@@ -8,18 +8,10 @@ import {
   Lock,
   Store,
   ExternalLink,
-  ChevronRight,
-  TrendingUp,
-  Sparkles,
   Sliders,
   X,
   Ruler,
   Image as ImageIcon,
-  Gift,
-  Globe,
-  Download,
-  KeyRound,
-  Layers,
 } from 'lucide-react';
 import { useAdminBridge, AdminView } from './useAdminBridge';
 
@@ -27,6 +19,7 @@ interface NavProps {
   onItemClick?: () => void;
   collapsed?: boolean;
   onCloseAdmin?: () => void;
+  onDismiss?: () => void;
 }
 
 interface NavSection {
@@ -38,140 +31,35 @@ interface NavSection {
     labelEn: string;
     icon: React.ElementType;
     count?: number;
-    badgeText?: string;
     isGlowingAmber?: boolean;
   }>;
 }
 
-export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onCloseAdmin }) => {
-  const { activeView, setActiveView, lang, products, offers, subscribers, orders = [], lock } = useAdminBridge();
+export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onCloseAdmin, onDismiss }) => {
+  const { activeView, setActiveView, lang, products, subscribers, orders = [], lock } = useAdminBridge();
 
   const isAr = lang === 'ar';
 
   const pendingOrdersCount = orders.filter((o) => o.status === 'pending_payment').length;
 
   const sections: NavSection[] = [
-    {
-      title: 'المشاريع والكتالوج (Projects)',
-      titleEn: 'PROJECTS & CATALOG',
-      items: [
-        {
-          id: 'products',
-          label: 'إدارة المنتجات والمشاريع',
-          labelEn: 'Products & Projects',
-          icon: Package,
-          count: products.length,
-        },
-        {
-          id: 'sizes',
-          label: 'دليل المقاسات والأبعاد',
-          labelEn: 'Size Guide & Specs',
-          icon: Ruler,
-        },
-        {
-          id: 'banners',
-          label: 'البانرات والوسائط',
-          labelEn: 'Banners & Media',
-          icon: ImageIcon,
-        },
-        {
-          id: 'welcome_modal',
-          label: 'النافذة الترحيبية والهدايا',
-          labelEn: 'Welcome Popup & Gift',
-          icon: Gift,
-        },
-      ],
-    },
-    {
-      title: 'المحفظة والمالية (Wallet)',
-      titleEn: 'WALLET & REVENUE',
-      items: [
-        {
-          id: 'dashboard',
-          label: 'الرئيسية وتحليلات الأرباح',
-          labelEn: 'Overview & Wallet Analytics',
-          icon: LayoutDashboard,
-        },
-        {
-          id: 'orders',
-          label: 'الطلبات والكونسيرج',
-          labelEn: 'Orders & Concierge',
-          icon: ShoppingBag,
-          count: pendingOrdersCount,
-          isGlowingAmber: pendingOrdersCount > 0,
-        },
-        {
-          id: 'offers',
-          label: 'العروض وقسائم الخصم',
-          labelEn: 'Offers & Promos',
-          icon: Tag,
-          count: offers.filter((o) => o.status === 'active').length,
-        },
-      ],
-    },
-    {
-      title: 'الوحدات والأدوات (Widgets)',
-      titleEn: 'WIDGETS & UI TOOLS',
-      items: [
-        {
-          id: 'widgets',
-          label: 'استوديو الأدوات والوحدات',
-          labelEn: 'Widgets Studio & UI Tools',
-          icon: Layers,
-          badgeText: 'New',
-        },
-      ],
-    },
-    {
-      title: 'الـ API والتكاملات (API & Cloud)',
-      titleEn: 'API & INTEGRATIONS',
-      items: [
-        {
-          id: 'controls',
-          label: 'أزرار وتفاعل الموقع',
-          labelEn: 'Buttons & Controls',
-          icon: Sliders,
-        },
-        {
-          id: 'subscribers',
-          label: 'النشرات والعملاء',
-          labelEn: 'Campaigns & Subscribers',
-          icon: Users,
-          count: subscribers.length,
-        },
-        {
-          id: 'social',
-          label: 'روابط التواصل والـ API',
-          labelEn: 'Social & External APIs',
-          icon: Globe,
-        },
-        {
-          id: 'backup',
-          label: 'النسخ الاحتياطي السحابي',
-          labelEn: 'Cloud Backup & JSON',
-          icon: Download,
-        },
-        {
-          id: 'settings',
-          label: 'إعدادات النظام العامة',
-          labelEn: 'System Settings',
-          icon: Store,
-        },
-      ],
-    },
-    {
-      title: 'الأمان والوصول (Security)',
-      titleEn: 'SECURITY & ACCESS',
-      items: [
-        {
-          id: 'security',
-          label: 'الأمان ورمز دخول الإدارة',
-          labelEn: 'Security & Access PIN',
-          icon: KeyRound,
-        },
-      ],
-    },
+    { title: 'المتجر', titleEn: 'STORE', items: [
+      { id: 'dashboard', label: 'نظرة عامة', labelEn: 'Overview', icon: LayoutDashboard },
+      { id: 'orders', label: 'الطلبات', labelEn: 'Orders', icon: ShoppingBag, count: pendingOrdersCount, isGlowingAmber: pendingOrdersCount > 0 },
+      { id: 'products', label: 'المنتجات', labelEn: 'Products', icon: Package, count: products.length },
+      { id: 'sizes', label: 'دليل المقاسات', labelEn: 'Size guide', icon: Ruler },
+      { id: 'offers', label: 'العروض والخصومات', labelEn: 'Offers & discounts', icon: Tag },
+    ]},
+    { title: 'الواجهة والتواصل', titleEn: 'STOREFRONT & AUDIENCE', items: [
+      { id: 'banners', label: 'البانر والترحيب', labelEn: 'Banner & welcome', icon: ImageIcon },
+      { id: 'controls', label: 'عناصر المتجر', labelEn: 'Store controls', icon: Sliders },
+      { id: 'subscribers', label: 'المشتركون والحملات', labelEn: 'Subscribers & campaigns', icon: Users, count: subscribers.length },
+    ]},
+    { title: 'الإدارة', titleEn: 'MANAGEMENT', items: [
+      { id: 'settings', label: 'الإعدادات', labelEn: 'Settings', icon: Store },
+    ]},
   ];
+  const selectedSection = ['social', 'backup', 'security'].includes(activeView) ? 'settings' : activeView === 'welcome_modal' ? 'banners' : activeView;
 
   const handleSelect = (viewId: AdminView) => {
     setActiveView(viewId);
@@ -181,7 +69,7 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
   };
 
   return (
-    <nav className="flex flex-col h-full select-none" aria-label="Main Navigation">
+    <nav className="flex flex-col h-full select-none" aria-label={isAr ? "قائمة إدارة فانت" : "VANT admin navigation"}>
       {/* Brand / Logo section */}
       <div className={`px-5 py-5 flex items-center justify-between border-b border-neutral-800/80 bg-neutral-950/40 ${collapsed ? 'justify-center px-2' : ''}`}>
         <div className="flex items-center gap-3">
@@ -191,20 +79,21 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
           {!collapsed && (
             <div className="flex flex-col overflow-hidden text-start">
               <span className="font-bold text-white text-base leading-tight truncate flex items-center gap-1.5">
-                <span>{isAr ? 'دار ڤانت (VANT)' : 'Maison VANT'}</span>
+                <span>{isAr ? 'فانت' : 'VANT'}</span>
                 <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] inline-block shrink-0 animate-pulse" />
               </span>
               <span className="text-xs text-neutral-400 truncate">
-                {isAr ? 'لوحة تحكم المتجر المتكاملة' : 'Admin Operations Hub'}
+                {isAr ? 'إدارة المتجر' : 'Store admin'}
               </span>
             </div>
           )}
         </div>
-        {!collapsed && onCloseAdmin && (
+        {!collapsed && (onCloseAdmin || onDismiss) && (
           <button
-            onClick={onCloseAdmin}
+            onClick={onDismiss || onCloseAdmin}
             className="p-1.5 rounded-xl text-neutral-400 hover:text-rose-400 hover:bg-neutral-800 transition-colors cursor-pointer"
-            title={isAr ? 'العودة للمتجر' : 'Return to Boutique'}
+            title={onDismiss ? (isAr ? 'إغلاق القائمة' : 'Close menu') : (isAr ? 'العودة للمتجر' : 'Return to store')}
+            aria-label={onDismiss ? (isAr ? 'إغلاق القائمة' : 'Close menu') : (isAr ? 'العودة للمتجر' : 'Return to store')}
           >
             <X className="w-4 h-4" />
           </button>
@@ -222,12 +111,13 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
             )}
             {sec.items.map((item) => {
               const Icon = item.icon;
-              const isActive = activeView === item.id;
+              const isActive = selectedSection === item.id;
 
               return (
                 <button
                   key={item.id}
                   onClick={() => handleSelect(item.id)}
+                  aria-current={isActive ? 'page' : undefined}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group text-start relative cursor-pointer ${
                     isActive
                       ? 'bg-indigo-600/15 text-indigo-300 border border-indigo-500/30 font-semibold shadow-xs'
@@ -261,11 +151,7 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
                     <div className="flex-1 flex items-center justify-between overflow-hidden">
                       <span className="truncate">{isAr ? item.label : item.labelEn}</span>
                       <div className="flex items-center gap-1.5">
-                        {item.badgeText && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase">
-                            {item.badgeText}
-                          </span>
-                        )}
+
                         {typeof item.count === 'number' && item.count > 0 && (
                           <span
                             className={`text-[11px] font-semibold px-2 py-0.5 rounded-full transition-all ${
@@ -305,9 +191,7 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
           {!collapsed && (
             <div className="flex-1 flex items-center justify-between">
               <span>{isAr ? 'قفل لوحة التحكم' : 'Lock Dashboard'}</span>
-              <span className="text-[10px] text-amber-400/80 border border-amber-500/30 px-1.5 py-0.5 rounded font-mono">
-                PIN
-              </span>
+
             </div>
           )}
         </button>

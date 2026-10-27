@@ -72,7 +72,7 @@ export const AdminSecurityView: React.FC = () => {
             </div>
             <p className="text-xs text-slate-400 mt-1">
               {isAr
-                ? 'تغيير رمز المرور والـ PIN الخاص بقفل ودخول لوحة إدارة دار ڤانت.'
+                ? 'تغيير رمز المرور والـ PIN الخاص بقفل ودخول لوحة إدارة فانت.'
                 : 'Update your personal master authentication PIN for accessing the administrative portal.'}
             </p>
           </div>

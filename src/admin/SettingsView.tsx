@@ -6,31 +6,24 @@ import { Button } from './ui';
 import { SettingsHeader } from './settings/SettingsHeader';
 import { MaintenanceModeCard } from './settings/MaintenanceModeCard';
 import { SplashStudioCard } from './settings/SplashStudioCard';
-import { HeroBannerCard } from './settings/HeroBannerCard';
 import { StoreSecurityCard } from './settings/StoreSecurityCard';
-import { NotificationsCard } from './settings/NotificationsCard';
 import { SplashPreviewModal } from './settings/SplashPreviewModal';
 
 export const SettingsView: React.FC = () => {
-  const { lang, siteSettings, updateSiteSettings, pin, setPin, setCurrentStore } = useAdminBridge();
+  const { lang, siteSettings, updateSiteSettings, setCurrentStore, setActiveView } = useAdminBridge();
   const isAr = lang === 'ar';
 
   // Local form state cloned from siteSettings
   const [formData, setFormData] = useState<SiteSettings>(siteSettings);
-  const [tempPin, setTempPin] = useState<string>(pin || siteSettings.pin || '1234');
-  const [showPin, setShowPin] = useState(false);
 
   // UI state
   const [isSaving, setIsSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ text: string; sub?: string } | null>(null);
   const [isTestSplashOpen, setIsTestSplashOpen] = useState(false);
-  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
-  const [bannerUploadNotice, setBannerUploadNotice] = useState<string | null>(null);
 
   // Sync when siteSettings change externally
   useEffect(() => {
     setFormData(siteSettings);
-    if (siteSettings.pin) setTempPin(siteSettings.pin);
   }, [siteSettings]);
 
   // Handle setting updates
@@ -66,15 +59,10 @@ export const SettingsView: React.FC = () => {
     setIsSaving(true);
 
     try {
-      // Validate pin
-      const finalPin = tempPin.length === 4 ? tempPin : pin;
-      setPin(finalPin);
       setCurrentStore(formData.storeName);
 
-      const payload = {
-        ...formData,
-        pin: finalPin,
-      };
+      // Credentials are changed only from the Security tab.
+      const { pin: _pin, ...payload } = formData;
 
       const res = await updateSiteSettings(payload);
 
@@ -92,71 +80,6 @@ export const SettingsView: React.FC = () => {
     }
   };
 
-  // Handle banner image upload with Supabase Storage support
-  const handleBannerUpload = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    const file = files[0];
-    if (!file.type.startsWith('image/')) {
-      setBannerUploadNotice(isAr ? 'يرجى اختيار ملف صورة صالح' : 'Please select a valid image file');
-      return;
-    }
-
-    setIsUploadingBanner(true);
-    setBannerUploadNotice(null);
-
-    const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
-    const supabaseKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
-
-    if (supabaseUrl && supabaseKey) {
-      try {
-        const fileName = `banner-${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
-        const uploadRes = await fetch(
-          `${supabaseUrl}/storage/v1/object/product-images/${fileName}`,
-          {
-            method: 'POST',
-            headers: {
-              apikey: supabaseKey,
-              Authorization: `Bearer ${supabaseKey}`,
-              'Content-Type': file.type,
-            },
-            body: file,
-          }
-        );
-
-        if (uploadRes.ok) {
-          const publicUrl = `${supabaseUrl}/storage/v1/object/public/product-images/${fileName}`;
-          handleChange('heroBannerBg', publicUrl);
-          setBannerUploadNotice(
-            isAr ? 'تم رفع البنر بنجاح إلى Supabase Storage' : 'Banner uploaded to Supabase Storage'
-          );
-          setIsUploadingBanner(false);
-          return;
-        }
-      } catch (err) {
-        console.warn('Supabase banner upload error, falling back to local preview:', err);
-      }
-    }
-
-    // Local data URL preview fallback
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      if (dataUrl) {
-        handleChange('heroBannerBg', dataUrl);
-        setBannerUploadNotice(
-          isAr
-            ? 'تم تحميل البنر للمعاينة المحلية الفورية'
-            : 'Banner loaded for instant local preview'
-        );
-      }
-      setIsUploadingBanner(false);
-    };
-    reader.onerror = () => {
-      setBannerUploadNotice(isAr ? 'فشل تحميل الصورة' : 'Failed to read image');
-      setIsUploadingBanner(false);
-    };
-    reader.readAsDataURL(file);
-  };
 
   return (
     <div className="space-y-8 max-w-5xl pb-16">
@@ -185,32 +108,21 @@ export const SettingsView: React.FC = () => {
           onOpenTestSplash={() => setIsTestSplashOpen(true)}
         />
 
-        {/* SECTION 3: STORE FRONT BANNERS (HERO BANNER) */}
-        <HeroBannerCard
-          isAr={isAr}
-          formData={formData}
-          handleChange={handleChange}
-          isUploadingBanner={isUploadingBanner}
-          bannerUploadNotice={bannerUploadNotice}
-          onBannerUpload={handleBannerUpload}
-        />
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 p-5">
+          <p className="text-sm text-slate-300">{isAr ? 'إعدادات الصورة والتدرّج والنصوص موجودة في صفحة البانر والترحيب.' : 'Image, fade and caption settings live in Banner & welcome.'}</p>
+          <Button type="button" onClick={() => setActiveView('banners')}>{isAr ? 'تخصيص البانر' : 'Customize banner'}</Button>
+        </div>
 
         {/* SECTION 4: STORE IDENTITY & SECURITY */}
         <StoreSecurityCard
           isAr={isAr}
           formData={formData}
           handleChange={handleChange}
-          tempPin={tempPin}
-          setTempPin={setTempPin}
-          showPin={showPin}
-          setShowPin={setShowPin}
-        />
-
-        {/* SECTION 5: NOTIFICATIONS */}
-        <NotificationsCard
-          isAr={isAr}
-          formData={formData}
-          handleChange={handleChange}
+          showSecurity={false}
+          tempPin=""
+          setTempPin={() => {}}
+          showPin={false}
+          setShowPin={() => {}}
         />
 
         {/* Bottom Save Bar */}

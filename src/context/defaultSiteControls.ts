@@ -254,6 +254,11 @@ export const DEFAULT_SITE_CONTROLS: Record<string, SiteControlItem> = {
     description_ar: 'الزر التفاعلي للانتقال إلى المعروضات والكتالوج',
     description_en: 'Button label linking to lookbook grid',
   },
+  banner_hero_appearance: {
+    id: 'banner_hero_appearance', category: 'hero_banner',
+    name_ar: 'تدرّج وصورة البانر', name_en: 'Banner image and fade',
+    visible: true, enabled: true, label_ar: 'المظهر', label_en: 'Appearance', actionValue: '{}',
+  },
   banner_hero_bg: {
     id: 'banner_hero_bg',
     category: 'hero_banner',

@@ -5,6 +5,10 @@ import type { Language } from '../types';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { toWesternNumerals } from '../admin/format';
 import AnimatedText from './ui/AnimatedText';
+import HeroBannerBackground from './HeroBannerBackground';
+import { HERO_BANNER_IMAGE } from '../lib/constants';
+import { HERO_APPEARANCE_CONTROL, parseHeroAppearance, heroBackgroundVariables } from '../lib/heroAppearance';
+import type { CSSProperties } from 'react';
 
 interface Props {
   lang: Language;
@@ -38,7 +42,7 @@ export function cleanTagText(str: string): string {
   return cleaned || str;
 }
 
-const DEFAULT_BANNER_BG = '';
+const DEFAULT_BANNER_BG = HERO_BANNER_IMAGE;
 
 export default function WelcomeHeroBanner({
   lang,
@@ -66,8 +70,8 @@ export default function WelcomeHeroBanner({
   const isAllCategory = !activeCategory || activeCategory === 'All' || activeCategory === 'الكل';
 
   const rawBg = (heroBgControl.actionValue || backgroundImageUrl || '').trim();
-  // If rawBg is an unsplash placeholder or empty, leave null so clean luxury backdrop renders
-  const bgImage = rawBg && !rawBg.includes('unsplash.com') ? rawBg : null;
+  const bgImage = rawBg || DEFAULT_BANNER_BG;
+  const appearance = parseHeroAppearance(getControl(HERO_APPEARANCE_CONTROL).actionValue);
   const activeTrendsList = Array.isArray(trendItems) ? trendItems : [];
   const trendsCount = activeTrendsList.length;
 
@@ -146,9 +150,6 @@ export default function WelcomeHeroBanner({
     onExplore();
   };
 
-  if (!heroVisibleControl.visible) {
-    return null;
-  }
 
   const headlineText = toWesternNumerals(isAr ? heroTitleControl.label_ar : heroTitleControl.label_en);
   const subtitleText = toWesternNumerals(isAr ? heroSubtitleControl.label_ar : heroSubtitleControl.label_en);
@@ -163,7 +164,7 @@ export default function WelcomeHeroBanner({
 
   return (
     <AnimatePresence initial={false}>
-      {isOpen && (
+      {isOpen && heroVisibleControl.visible && (
         <motion.section
           key="welcome-hero-banner"
           initial={{ opacity: 0, y: 20 }}
@@ -174,37 +175,18 @@ export default function WelcomeHeroBanner({
           aria-label={isAr ? 'أصل التشكيلة وتريندات الموسم' : 'Collection Foundation & Featured Trends'}
         >
           {/* Unified Haute-Couture Editorial Showcase Container - Max 70vh Height, Rounded 3xl */}
-          <div className="relative overflow-hidden rounded-3xl border border-black/8 dark:border-white/10 bg-white dark:bg-[#0d0f14] shadow-[0_8px_32px_rgba(0,0,0,0.04)] dark:shadow-[0_16px_48px_rgba(0,0,0,0.5)] max-h-[70vh] flex flex-col justify-between transition-colors duration-300">
+          <div className="relative overflow-hidden rounded-3xl border border-black/8 dark:border-white/10 bg-white dark:bg-[#0d0f14] shadow-[0_8px_32px_rgba(0,0,0,0.04)] dark:shadow-[0_16px_48px_rgba(0,0,0,0.5)] flex flex-col justify-between transition-colors duration-300">
             <motion.div
               style={{ y: contentY, opacity: contentOpacity }}
               className="w-full flex flex-col justify-between h-full"
             >
 
             {/* Top Section: Brand Manifesto & Editorial Background Layer */}
-            <div className="relative overflow-hidden p-4 sm:p-6 md:p-8">
-              {/* Background Image Layer: Vivid photograph softly feathering into website dark background */}
-              {bgImage?.trim() ? (
-                <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-                  <img
-                    src={bgImage.trim()}
-                    alt=""
-                    className={`h-full w-full object-cover transition-all duration-700 ${
-                      isAr ? 'object-left sm:object-left' : 'object-right sm:object-right'
-                    } opacity-90 sm:opacity-95 dark:opacity-85 dark:sm:opacity-90 contrast-[1.03] brightness-[1.01] scale-100 sm:scale-102`}
-                  />
-                  {/* Haute-Couture Cinematic Gradient Fade: Pure White / Pure Noir matching the site background */}
-                  <div
-                    className={`absolute inset-0 ${
-                      isAr
-                        ? 'bg-gradient-to-l from-white via-white/85 via-45% to-transparent to-90% dark:from-[#0d0f14] dark:via-[#0d0f14]/90 dark:via-45% dark:to-transparent dark:to-90%'
-                        : 'bg-gradient-to-r from-white via-white/85 via-45% to-transparent to-90% dark:from-[#0d0f14] dark:via-[#0d0f14]/90 dark:via-45% dark:to-transparent dark:to-90%'
-                    }`}
-                  />
-                </div>
-              ) : null}
+            <div data-hero-banner style={heroBackgroundVariables(appearance, isAr) as CSSProperties} className="hero-editorial relative flex flex-col justify-center overflow-hidden p-4 sm:p-6 md:p-8">
+              <HeroBannerBackground image={bgImage} settings={appearance} isAr={isAr} />
 
               {/* Content Layer */}
-              <div className="relative z-10">
+              <div className="relative z-10 hero-caption">
                 {/* Minimalist Top Meta Bar */}
                 {heroTagControl.visible && (
                   <div className="flex items-center justify-between pb-3 border-b border-black/8 dark:border-white/10">

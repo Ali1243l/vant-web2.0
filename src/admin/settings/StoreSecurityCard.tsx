@@ -5,6 +5,7 @@ import type { SiteSettings } from '../useAdminBridge';
 
 interface StoreSecurityCardProps {
   isAr: boolean;
+  showSecurity?: boolean;
   formData: SiteSettings;
   handleChange: <K extends keyof SiteSettings>(key: K, value: SiteSettings[K]) => void;
   tempPin: string;
@@ -15,6 +16,7 @@ interface StoreSecurityCardProps {
 
 export const StoreSecurityCard: React.FC<StoreSecurityCardProps> = ({
   isAr,
+  showSecurity = true,
   formData,
   handleChange,
   tempPin,
@@ -30,22 +32,22 @@ export const StoreSecurityCard: React.FC<StoreSecurityCardProps> = ({
         </div>
         <div>
           <h3 className="text-base font-bold text-white">
-            {isAr ? 'هوية المتجر والأمان الإداري' : 'Store Identity & Security Credentials'}
+            {isAr ? 'هوية المتجر' : 'Store identity'}
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
             {isAr
-              ? 'تحديث اسم المتجر المعروض، رابط النشر السحابي، ورمز PIN الآمن للوحة التحكم.'
-              : 'Update store branding, domain URL, and admin master PIN passkey.'}
+              ? 'تحديث اسم المتجر المعروض ورابط الموقع. إعدادات الدخول في تبويب الأمان.'
+              : 'Update store branding and public URL. Access settings are in the Security tab.'}
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Input
-          label={isAr ? 'اسم دار الأزياء / المتجر' : 'Storefront Name'}
+          label={isAr ? 'اسم المتجر' : 'Storefront Name'}
           value={formData.storeName || ''}
           onChange={(e) => handleChange('storeName', e.target.value)}
-          placeholder="دار الرافدين للأزياء"
+          placeholder="فانت"
           icon={Store}
         />
 
@@ -59,7 +61,7 @@ export const StoreSecurityCard: React.FC<StoreSecurityCardProps> = ({
       </div>
 
       {/* Security PIN Field */}
-      <div className="pt-2 border-t border-slate-800/60 max-w-md">
+      {showSecurity && <div className="pt-2 border-t border-slate-800/60 max-w-md">
         <label className="block text-xs font-semibold text-slate-300 mb-1.5 text-start">
           {isAr ? 'رمز PIN السري لوحة التحكم (Admin Master PIN)' : 'Admin Master PIN Passkey'}
         </label>
@@ -85,7 +87,7 @@ export const StoreSecurityCard: React.FC<StoreSecurityCardProps> = ({
             ? 'يستخدم هذا الرمز لإلغاء قفل لوحة التحكم فوراً عند الضغط على قفل اللوحة أو بعد فترات الخمول.'
             : 'Protects the administrative console from unauthorized access.'}
         </p>
-      </div>
+      </div>}
     </Card>
   );
 };

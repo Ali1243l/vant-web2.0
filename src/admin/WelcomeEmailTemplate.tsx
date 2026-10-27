@@ -27,9 +27,9 @@ export interface EmailCampaignData {
 
 export const defaultCampaignData: EmailCampaignData = {
   templateType: 'welcome',
-  subject: '🎉 مرحباً بك في دار ڤانت للأزياء الرفيعة! خصم 20% على طلبك الأول',
+  subject: '🎉 مرحباً بك في فانت للأزياء الرفيعة! خصم 20% على طلبك الأول',
   preheader: 'استخدم الكود WELCOME20 واستمتع بأرقى تشكيلات الكشمير والبدلات مع توصيل كونسيرج سريع.',
-  headline: 'أهلاً بك في دار ڤانت (Maison VANT)',
+  headline: 'أهلاً بك في فانت (VANT)',
   bodyText: 'يسعدنا جداً انضمامك إلى مجتمعنا الحصري. لتجربة تسوق لا تُنسى، نقدم لك هدية ترحيبية خاصة صالحة على جميع تشكيلات الأزياء الرفيعة والكشمير والأحذية الكلاسيكية.',
   discountCode: 'WELCOME20',
   discountPercent: '20% خصم فوري ترحيبي',
@@ -37,7 +37,7 @@ export const defaultCampaignData: EmailCampaignData = {
   ctaText: 'تسوق التشكيلة الملكية الآن',
   ctaUrl: 'https://store.example.com/shop',
   audience: 'active',
-  storeName: 'دار ڤانت للأزياء الرفيعة (Maison VANT)',
+  storeName: 'فانت للأزياء الرفيعة (VANT)',
   senderEmail: 'concierge@maison-vant.iq',
   expireDate: 'خلال 7 أيام من التسجيل',
   items: [

@@ -1,3 +1,4 @@
+import HeroAppearanceEditor from './HeroAppearanceEditor';
 import React, { useState, useRef } from 'react';
 import { useAdminBridge } from './useAdminBridge';
 import { useSiteControls } from '../context/SiteControlsContext';
@@ -139,12 +140,10 @@ export const AdminBannersView: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-white">
-                  {isAr ? 'البانرات واستوديو وسائط المتجر والمقاسات' : 'Banners, Media & Specs Studio'}
-                </h1>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400">
-                  {isAr ? 'دقة فائقة' : 'Ultra High-Res'}
-                </span>
+                <h2 className="text-xl font-bold text-white">
+                  {isAr ? 'البانر والتريندات' : 'Banner & trends'}
+                </h2>
+
               </div>
               <p className="text-xs text-slate-400 mt-1">
                 {isAr
@@ -170,13 +169,13 @@ export const AdminBannersView: React.FC = () => {
       </div>
 
       {/* High-Fashion Image Dimensions Specification Guide */}
-      <div className="bg-gradient-to-b from-amber-500/10 via-slate-900 to-slate-950 border border-amber-500/20 rounded-2xl p-6">
-        <div className="flex items-center gap-2 text-amber-400 mb-3">
+      <details className="bg-gradient-to-b from-amber-500/10 via-slate-900 to-slate-950 border border-amber-500/20 rounded-2xl p-6">
+        <summary className="flex cursor-pointer items-center gap-2 text-slate-300 mb-3">
           <Sparkles className="w-5 h-5" />
           <h2 className="text-sm font-bold uppercase tracking-wider">
-            {isAr ? 'دليل المقاسات والأبعاد المثالية للصور (Image Dimension Specifications)' : 'Master Image Sizing & Specs'}
+            {isAr ? 'الأبعاد الموصى بها للصور' : 'Recommended image sizes'}
           </h2>
-        </div>
+        </summary>
         <p className="text-xs text-slate-300 leading-relaxed mb-4">
           {isAr
             ? 'لضمان ظهور الصور بأعلى نقاوة وفخامة معمارية دون تشويه أو اقتصاص غير مرغوب، يمكنك رفع الملفات بأي حجم وسيقوم النظام بضبطها تلقائياً، مع التوصية بالأبعاد التالية:'
@@ -216,7 +215,7 @@ export const AdminBannersView: React.FC = () => {
             <div className="text-[11px] text-slate-400 font-mono">4:5 أو 1:1</div>
           </div>
         </div>
-      </div>
+      </details>
 
       {/* Card 1: Welcome Hero Banner Customizer */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
@@ -271,6 +270,21 @@ export const AdminBannersView: React.FC = () => {
               className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs outline-none focus:border-indigo-500"
             />
           </div>
+
+          {([
+            ['banner_hero_subtitle', 'الكابشن', 'Caption'],
+            ['banner_hero_tag', 'النص العلوي', 'Top label'],
+            ['banner_hero_btn', 'نص زر التصفح', 'Browse button label'],
+          ] as const).map(([id, ar, en]) => (
+            <React.Fragment key={id}>
+              {(['ar', 'en'] as const).map((language) => (
+                <label key={language} className="block space-y-1 text-xs text-slate-300">
+                  <span>{isAr ? ar : en} ({language === 'ar' ? 'العربية' : 'English'})</span>
+                  <input type="text" dir={language === 'ar' ? 'rtl' : 'ltr'} value={controls[id]?.[language === 'ar' ? 'label_ar' : 'label_en'] || ''} onChange={(e) => updateControl(id, { [language === 'ar' ? 'label_ar' : 'label_en']: e.target.value })} className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-white outline-none focus:border-blue-500" />
+                </label>
+              ))}
+            </React.Fragment>
+          ))}
 
           {/* Hero Banner File Upload Section */}
           <div className="md:col-span-2 space-y-3 pt-1">
@@ -402,26 +416,7 @@ export const AdminBannersView: React.FC = () => {
           </div>
         </div>
 
-        {/* Live Hero Backdrop Preview */}
-        {Boolean(controls['banner_hero_bg']?.actionValue?.trim()) && (
-          <div className="relative h-32 sm:h-44 rounded-xl overflow-hidden border border-slate-800">
-            <img
-              src={controls['banner_hero_bg'].actionValue!}
-              alt="Hero Preview"
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center p-4 text-center">
-              <div>
-                <span className="text-[10px] text-amber-400 font-bold uppercase tracking-widest block mb-1">
-                  {controls['banner_hero_tag']?.label_ar || 'ڤانت · كتالوج 2026'}
-                </span>
-                <h4 className="text-sm sm:text-base font-bold text-white">
-                  {controls['banner_hero_title']?.label_ar || 'الصياغة المعمارية للأزياء'}
-                </h4>
-              </div>
-            </div>
-          </div>
-        )}
+        <HeroAppearanceEditor isAr={isAr} />
       </div>
 
       {/* Card 2: Trend Items Studio (The focused element with full file uploading!) */}
