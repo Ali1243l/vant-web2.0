@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import type { Product, Language } from '../types';
@@ -25,6 +25,8 @@ interface Props {
 }
 
 export default function ProductDrawer({ product, loading, lang, onClose }: Props) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [slideDirection, setSlideDirection] = useState(1);
   const { getControl, formatPrice, masterSizes } = useSiteControls();
@@ -349,11 +351,19 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     }
   };
 
+  const productId = product?.id;
+  useEffect(() => {
+    if (!productId) return;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeRef.current?.focus({ preventScroll: true });
+    return () => { if (opener?.isConnected) opener.focus({ preventScroll: true }); };
+  }, [productId]);
+
   const isOpen = Boolean(product || loading);
   useScrollLock(isOpen);
 
   useEffect(() => {
-    if (!product) return;
+    if (!product || showShareModal) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -373,7 +383,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     return () => {
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [product, onClose, paginate, showSizeGuide]);
+  }, [product, onClose, paginate, showSizeGuide, showShareModal]);
 
   return (
     <AnimatePresence>
@@ -398,6 +408,23 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
             <motion.div
               key={`drawer-panel-${product.id}`}
               data-scroll-lock-scrollable
+              ref={panelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label={displayTitle}
+              tabIndex={-1}
+              onKeyDown={(event) => {
+                if (event.key !== 'Tab' || showShareModal) return;
+                const controls = Array.from(panelRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]') || []).filter((element) => element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden');
+                const first = controls[0];
+                const last = controls[controls.length - 1];
+                if (!first) { event.preventDefault(); return; }
+                if (event.shiftKey && (document.activeElement === first || document.activeElement === panelRef.current)) {
+                  event.preventDefault(); last.focus();
+                } else if (!event.shiftKey && document.activeElement === last) {
+                  event.preventDefault(); first.focus();
+                }
+              }}
               initial={{ y: '100%', opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: '100%', opacity: 0 }}
@@ -409,20 +436,23 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                 <div className="h-1.5 w-10 rounded-full bg-black/20 dark:bg-white/25" />
               </div>
 
-              {/* Close Button */}
+              {/* Keep the close control reachable while the mobile sheet scrolls. */}
+              <div className="sticky top-0 z-50 h-0 w-full shrink-0 md:absolute md:inset-x-0">
               <button
                 type="button"
+                ref={closeRef}
                 onClick={onClose}
-                className="absolute top-2.5 right-3 rtl:right-auto rtl:left-3 md:top-4.5 md:right-4.5 md:rtl:right-auto md:rtl:left-4.5 z-50 p-2 sm:p-2.5 bg-white/90 dark:bg-[#1a1e28]/90 hover:bg-white dark:hover:bg-[#1a1e28] rounded-full hover:scale-105 transition-all cursor-pointer backdrop-blur-md border border-black/6 dark:border-white/10 shadow-xs text-black dark:text-white"
+                className="absolute top-2.5 right-3 rtl:right-auto rtl:left-3 md:top-4.5 md:right-4.5 md:rtl:right-auto md:rtl:left-4.5 z-50 flex h-11 w-11 items-center justify-center bg-white/90 dark:bg-[#1a1e28]/90 hover:bg-white dark:hover:bg-[#1a1e28] rounded-full hover:scale-105 transition-all cursor-pointer backdrop-blur-md border border-black/6 dark:border-white/10 shadow-xs text-black dark:text-white"
                 aria-label={lang === 'ar' ? 'إغلاق' : 'Close'}
               >
                 <X className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-black dark:text-white" />
               </button>
+              </div>
 
               {/* 3. Bento Box Layout Container */}
-              <div className="flex flex-col md:flex-row w-full h-full p-2.5 sm:p-5 md:p-6 gap-2.5 sm:gap-4 md:gap-5">
+              <div className="flex flex-col md:flex-row w-full shrink-0 md:shrink min-h-0 md:h-full p-2.5 sm:p-5 md:p-6 gap-2.5 sm:gap-4 md:gap-5">
                 {/* Left Box: Product Image (Bento Box 1) */}
-                <div className="w-full md:w-[48%] h-[280px] xs:h-[320px] sm:h-[380px] md:h-full rounded-[18px] sm:rounded-[22px] md:rounded-[26px] bg-black/5 dark:bg-white/5 overflow-hidden relative shrink-0">
+                <div className="w-full md:w-[48%] h-[clamp(200px,34dvh,280px)] sm:h-[380px] md:h-full rounded-[18px] sm:rounded-[22px] md:rounded-[26px] bg-black/5 dark:bg-white/5 overflow-hidden relative shrink-0">
                   <ProductDrawerGallery
                     images={images}
                     product={product}
@@ -439,7 +469,6 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
 
                 {/* Right Column: Details & Actions */}
                 <div
-                  data-scroll-lock-scrollable
                   className="w-full md:w-[52%] flex flex-col gap-2.5 sm:gap-3.5 md:overflow-y-auto md:overscroll-contain md:h-full no-scrollbar md:pr-1.5 pb-2"
                 >
                   {/* Title & Price (Bento Box 2) */}

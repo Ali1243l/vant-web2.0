@@ -352,7 +352,7 @@ export const ProductDrawerGallery: React.FC<ProductDrawerGalleryProps> = ({
                 e.stopPropagation();
                 if (activeImageIndex > 0) paginate(-1);
               }}
-              className={`absolute left-2.5 sm:left-3.5 top-1/2 -translate-y-1/2 z-30 flex h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 lg:h-13 lg:w-13 items-center justify-center rounded-full bg-white/90 dark:bg-[#16191f]/90 text-[#15171c] dark:text-white backdrop-blur-md shadow-lg border border-black/10 dark:border-white/15 transition-all ${
+              className={`absolute left-2.5 sm:left-3.5 top-1/2 -translate-y-1/2 z-30 flex h-11 w-11 md:h-12 md:w-12 lg:h-13 lg:w-13 items-center justify-center rounded-full bg-white/90 dark:bg-[#16191f]/90 text-[#15171c] dark:text-white backdrop-blur-md shadow-lg border border-black/10 dark:border-white/15 transition-all ${
                 activeImageIndex > 0
                   ? 'hover:scale-110 active:scale-95 cursor-pointer opacity-100'
                   : 'opacity-0 pointer-events-none'
@@ -371,7 +371,7 @@ export const ProductDrawerGallery: React.FC<ProductDrawerGalleryProps> = ({
                 e.stopPropagation();
                 if (activeImageIndex < images.length - 1) paginate(1);
               }}
-              className={`absolute right-2.5 sm:right-3.5 top-1/2 -translate-y-1/2 z-30 flex h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 lg:h-13 lg:w-13 items-center justify-center rounded-full bg-white/90 dark:bg-[#16191f]/90 text-[#15171c] dark:text-white backdrop-blur-md shadow-lg border border-black/10 dark:border-white/15 transition-all ${
+              className={`absolute right-2.5 sm:right-3.5 top-1/2 -translate-y-1/2 z-30 flex h-11 w-11 md:h-12 md:w-12 lg:h-13 lg:w-13 items-center justify-center rounded-full bg-white/90 dark:bg-[#16191f]/90 text-[#15171c] dark:text-white backdrop-blur-md shadow-lg border border-black/10 dark:border-white/15 transition-all ${
                 activeImageIndex < images.length - 1
                   ? 'hover:scale-110 active:scale-95 cursor-pointer opacity-100'
                   : 'opacity-0 pointer-events-none'
@@ -391,7 +391,7 @@ export const ProductDrawerGallery: React.FC<ProductDrawerGalleryProps> = ({
             {/* Pagination Dots Indicator */}
             <div
               dir="ltr"
-              className="absolute bottom-3.5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 rounded-full bg-black/60 dark:bg-black/80 px-2.5 py-1 backdrop-blur-md border border-white/15 shadow-lg pointer-events-auto select-none [direction:ltr]"
+              className="absolute bottom-3.5 left-1/2 -translate-x-1/2 z-30 flex items-center max-w-[calc(100%-24px)] overflow-x-auto no-scrollbar gap-0 rounded-full bg-black/60 dark:bg-black/80 px-1 py-0 backdrop-blur-md border border-white/15 shadow-lg pointer-events-auto select-none [direction:ltr]"
             >
               {images.map((_, i) => {
                 const isCurrent = i === activeImageIndex;
@@ -406,7 +406,7 @@ export const ProductDrawerGallery: React.FC<ProductDrawerGalleryProps> = ({
                       setSlideDirection(i > activeImageIndex ? 1 : -1);
                       setActiveImageIndex(i);
                     }}
-                    className="relative flex items-center justify-center p-0.5 cursor-pointer focus:outline-none"
+                    className="relative flex h-11 w-11 shrink-0 items-center justify-center cursor-pointer focus-visible:outline-2 focus-visible:outline-blue-500 rounded-full"
                     aria-label={`Slide ${i + 1}`}
                   >
                     <motion.span

@@ -4,7 +4,6 @@ import { ChevronDown, Check, SlidersHorizontal, LayoutGrid } from 'lucide-react'
 import type { Language } from '../types';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { trackEvent } from '../lib/analytics';
-import { useScrollLock } from '../hooks/useScrollLock';
 
 export type AvailabilityFilterType = 'all' | 'in_stock' | 'coming_soon' | 'sold_out';
 
@@ -73,7 +72,7 @@ export default function CategoryFilter({
     return () => observer.disconnect();
   }, [active, isOffersOnly]);
 
-  useScrollLock(isOpen);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   // Close dropdown on outside click or Escape key
   useEffect(() => {
@@ -88,9 +87,12 @@ export default function CategoryFilter({
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         setIsOpen(false);
+        triggerRef.current?.focus({ preventScroll: true });
       }
     }
+    const closeOnScroll = () => setIsOpen(false);
 
+    window.addEventListener('scroll', closeOnScroll, { passive: true });
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('touchstart', handleClickOutside, { passive: true });
     window.addEventListener('keydown', handleKeyDown);
@@ -99,6 +101,7 @@ export default function CategoryFilter({
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('scroll', closeOnScroll);
     };
   }, [isOpen]);
 
@@ -149,12 +152,13 @@ export default function CategoryFilter({
     <nav aria-label="Categories & Filters" className="pb-1.5 pt-0 sm:pb-2 sm:pt-0.5 md:pb-2 md:pt-0.5 w-full max-w-full overflow-visible">
       {/* Centered, balanced luxury bar with seamless inline filter */}
       <div className="mx-auto flex max-w-7xl xl:max-w-[1440px] 2xl:max-w-[1536px] w-full items-center justify-center px-3 sm:px-6 md:px-8 overflow-visible">
-        <div className="flex items-center gap-1.5 sm:gap-2 md:gap-2.5 max-w-full overflow-visible">
+        <div className="flex items-center gap-1.5 sm:gap-2 md:gap-2.5 min-w-0 max-w-full overflow-visible">
           {/* 1. Category Tabs Track (Smooth Scroll, Perfectly Centered on Desktop) */}
           <div
             ref={tabsContainerRef}
             role="tablist"
-            className="no-scrollbar flex flex-nowrap items-center gap-1.5 sm:gap-2 md:gap-2.5 overflow-x-auto [scroll-snap-type:x_proximity] select-none py-1 md:py-1.5"
+            aria-label={isAr ? 'اسحب لتصفح التصنيفات' : 'Swipe to browse categories'}
+            className="store-category-track no-scrollbar min-w-0 flex flex-nowrap items-center gap-1.5 sm:gap-2 md:gap-2.5 overflow-x-auto [scroll-snap-type:x_proximity] select-none py-1 md:py-1.5"
           >
             {/* Special Offers & Discounts Button */}
             {onToggleOffersOnly && offersControl.visible && (
@@ -237,6 +241,7 @@ export default function CategoryFilter({
             <div className={`relative shrink-0 ${isOpen ? 'z-40' : 'z-20'}`} ref={dropdownRef}>
               <button
                 type="button"
+                ref={triggerRef}
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsOpen((prev) => !prev);
@@ -274,7 +279,7 @@ export default function CategoryFilter({
                     exit={{ opacity: 0, scale: 0.98, y: 6 }}
                     transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                     role="menu"
-                    className="absolute top-full mt-2 end-0 ltr:right-0 rtl:left-0 z-[100000] min-w-[240px] sm:min-w-[255px] md:min-w-[270px] rounded-2xl border border-black/10 dark:border-white/15 bg-white/95 dark:bg-[#12141a]/95 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.18),0_6px_18px_rgba(0,0,0,0.08)] dark:shadow-[0_24px_55px_rgba(0,0,0,0.9),0_6px_20px_rgba(0,0,0,0.6)] backdrop-blur-2xl text-[#15171c] dark:text-white max-w-[calc(100vw-32px)] will-change-transform transform-gpu ring-1 ring-black/5 dark:ring-white/10"
+                    className="absolute top-full mt-2 end-0 ltr:right-0 rtl:left-0 z-[100000] max-h-[min(420px,65dvh)] overflow-y-auto overscroll-contain min-w-[240px] sm:min-w-[255px] md:min-w-[270px] rounded-2xl border border-black/10 dark:border-white/15 bg-white/95 dark:bg-[#12141a]/95 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.18),0_6px_18px_rgba(0,0,0,0.08)] dark:shadow-[0_24px_55px_rgba(0,0,0,0.9),0_6px_20px_rgba(0,0,0,0.6)] backdrop-blur-2xl text-[#15171c] dark:text-white max-w-[calc(100vw-32px)] will-change-transform transform-gpu ring-1 ring-black/5 dark:ring-white/10"
                   >
                     {/* Header */}
                     <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-black/6 dark:border-white/8 mb-1.5">

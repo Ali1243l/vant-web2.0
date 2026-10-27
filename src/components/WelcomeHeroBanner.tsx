@@ -199,7 +199,7 @@ export default function WelcomeHeroBanner({
                     <button
                       type="button"
                       onClick={onDismiss}
-                      className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full text-[#15171c]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/10 hover:text-[#15171c] dark:hover:text-white transition-all active:scale-90 cursor-pointer"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#15171c]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/10 hover:text-[#15171c] dark:hover:text-white transition-all active:scale-90 cursor-pointer"
                       aria-label={isAr ? 'إخفاء الواجهة' : 'Dismiss intro'}
                       title={isAr ? 'إخفاء' : 'Dismiss'}
                     >
@@ -216,7 +216,7 @@ export default function WelcomeHeroBanner({
                         <AnimatedText
                           text={headlineText}
                           as="h2"
-                          className={`text-xl sm:text-2xl md:text-[28px] lg:text-[32px] font-bold text-[#15171c] dark:text-white leading-snug sm:leading-[1.22] ${
+                          className={`text-[18px] min-[375px]:text-xl sm:text-2xl md:text-[28px] lg:text-[32px] font-bold text-[#15171c] dark:text-white leading-snug sm:leading-[1.22] ${
                             isAr ? 'tracking-normal font-sans' : 'tracking-tight'
                           }`}
                         />
@@ -237,7 +237,7 @@ export default function WelcomeHeroBanner({
                         <button
                           type="button"
                           onClick={onExplore}
-                          className="group inline-flex items-center gap-2 rounded-full bg-[#15171c] hover:bg-black dark:bg-white dark:hover:bg-white/95 px-5 py-2.5 sm:px-6 sm:py-3 text-xs sm:text-sm font-bold text-white dark:text-[#15171c] transition-all active:scale-95 shadow-md hover:shadow-lg dark:shadow-[0_4px_20px_rgba(255,255,255,0.12)] border border-black/10 dark:border-white/20 cursor-pointer"
+                          className="group inline-flex items-center gap-2 rounded-full bg-[#15171c] hover:bg-black dark:bg-white dark:hover:bg-white/95 min-h-11 px-5 py-2.5 sm:px-6 sm:py-3 text-xs sm:text-sm font-bold text-white dark:text-[#15171c] transition-all active:scale-95 shadow-md hover:shadow-lg dark:shadow-[0_4px_20px_rgba(255,255,255,0.12)] border border-black/10 dark:border-white/20 cursor-pointer"
                         >
                           <span className={isAr ? 'tracking-normal' : 'tracking-wide'}>{btnText}</span>
                           <ArrowDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform duration-300 group-hover:translate-y-0.5" />
@@ -285,7 +285,7 @@ export default function WelcomeHeroBanner({
                   <button
                     type="button"
                     onClick={() => scrollTrends('left')}
-                    className="group flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full border border-black/10 dark:border-white/15 bg-white dark:bg-[#161922] text-[#15171c] dark:text-white shadow-2xs hover:bg-[#15171c] hover:text-white dark:hover:bg-white dark:hover:text-[#121419] active:scale-90 transition-all cursor-pointer"
+                    className="group flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/10 dark:border-white/15 bg-white dark:bg-[#161922] text-[#15171c] dark:text-white shadow-2xs hover:bg-[#15171c] hover:text-white dark:hover:bg-white dark:hover:text-[#121419] active:scale-90 transition-all cursor-pointer"
                     aria-label={isAr ? 'السابق' : 'Previous'}
                     title={isAr ? 'السابق' : 'Previous'}
                   >
@@ -294,7 +294,7 @@ export default function WelcomeHeroBanner({
                   <button
                     type="button"
                     onClick={() => scrollTrends('right')}
-                    className="group flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full border border-black/10 dark:border-white/15 bg-white dark:bg-[#161922] text-[#15171c] dark:text-white shadow-2xs hover:bg-[#15171c] hover:text-white dark:hover:bg-white dark:hover:text-[#121419] active:scale-90 transition-all cursor-pointer"
+                    className="group flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/10 dark:border-white/15 bg-white dark:bg-[#161922] text-[#15171c] dark:text-white shadow-2xs hover:bg-[#15171c] hover:text-white dark:hover:bg-white dark:hover:text-[#121419] active:scale-90 transition-all cursor-pointer"
                     aria-label={isAr ? 'التالي' : 'Next'}
                     title={isAr ? 'التالي' : 'Next'}
                   >

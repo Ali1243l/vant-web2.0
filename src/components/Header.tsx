@@ -117,14 +117,14 @@ export default function Header({
         <motion.div
           data-store-toolbar
           initial={false}
-          animate={{ width: scrolled ? 'calc(100% - 24px)' : '100%', maxWidth: scrolled ? 1100 : 1440, y: scrolled ? 8 : 0, borderRadius: scrolled ? 20 : 0 }}
-          transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.16, 1, 0.3, 1] }}
-          className={`pointer-events-auto mx-auto border bg-white/95 backdrop-blur-xl dark:bg-[#0d0f12]/95 ${scrolled ? 'border-black/10 shadow-lg dark:border-white/15' : 'border-transparent border-b-black/5 dark:border-b-white/5'}`}
+          animate={{ '--header-detach': scrolled ? 1 : 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.34, ease: [0.22, 1, 0.36, 1] }}
+          className="store-toolbar-surface pointer-events-auto mx-auto border bg-white/95 backdrop-blur-xl dark:bg-[#0d0f12]/95"
         >
             <div
               dir="ltr"
               style={{ direction: 'ltr' }}
-              className={`mx-auto flex w-full items-center justify-between px-2 sm:px-6 transition-[height] duration-200 motion-reduce:transition-none ${scrolled ? 'h-12 sm:h-14' : 'h-14 sm:h-16'}`}
+              className="store-toolbar-actions mx-auto flex w-full items-center justify-between px-2 sm:px-6"
             >
               {/* Left Actions (Search Icon, Shopping Cart, Wishlist) */}
               <div className="flex items-center justify-start gap-0 sm:gap-2.5 min-w-[110px] sm:min-w-[140px] [direction:ltr]">

@@ -39,7 +39,7 @@ export const DEFAULT_HERO_APPEARANCE: HeroAppearance = {
   lightColor: '#ffffff', darkColor: '#0d0f14',
   imageOpacity: 100, brightness: 100, contrast: 100, blur: 0, zoom: 100,
   positionX: 35, positionY: 50, mobilePositionX: 40, mobilePositionY: 50,
-  height: 280, mobileHeight: 320,
+  height: 280, mobileHeight: 280,
 };
 
 const bounds: Partial<Record<keyof HeroAppearance, [number, number]>> = {

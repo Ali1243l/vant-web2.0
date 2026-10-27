@@ -145,8 +145,20 @@ html.dark ::-webkit-scrollbar-thumb {
 /* The category rail keeps its layout slot while its surface detaches. */
 .store-category-rail nav { padding: 3px 0; }
 .store-category-rail nav > div { padding-inline: 8px; }
-.store-header[data-detached="true"] .store-category-rail [role="tab"],
-.store-header[data-detached="true"] .store-category-rail button[aria-haspopup] { min-height: 32px; height: 32px; padding-block: 4px; }
+/* One progress value drives the full toolbar, including its return to the page edge. */
+.store-toolbar-surface {
+  --header-detach: 0;
+  width: calc(100% - 24px * var(--header-detach));
+  max-width: calc(1440px - 340px * var(--header-detach));
+  transform: translateY(calc(8px * var(--header-detach)));
+  border-radius: calc(20px * var(--header-detach));
+  border-color: rgb(0 0 0 / calc(.1 * var(--header-detach)));
+  box-shadow: 0 10px 24px rgb(0 0 0 / calc(.12 * var(--header-detach)));
+}
+.dark .store-toolbar-surface { border-color: rgb(255 255 255 / calc(.15 * var(--header-detach))); }
+.store-toolbar-actions { height: calc(56px - 8px * var(--header-detach)); }
+.store-category-rail [role="tab"], .store-category-rail button[aria-haspopup] { min-height: 44px; }
+@media (min-width: 640px) { .store-toolbar-actions { height: calc(64px - 8px * var(--header-detach)); } }
 .hero-background { --hero-rgb: var(--hero-light-rgb); --hero-angle: var(--hero-desktop-angle); --hero-gradient: var(--hero-desktop-gradient); }
 .dark .hero-background { --hero-rgb: var(--hero-dark-rgb); }
 .hero-background-image { object-position: var(--hero-image-position); }
@@ -160,7 +172,11 @@ html.dark ::-webkit-scrollbar-thumb {
 @media (max-width: 639px) {
   .hero-background { --hero-angle: var(--hero-mobile-angle); --hero-gradient: var(--hero-mobile-gradient); }
   .hero-background-image { object-position: var(--hero-mobile-image-position); }
-  .hero-editorial { min-height: var(--hero-mobile-height, 320px); }
+  .hero-editorial { min-height: var(--hero-mobile-height, 280px); }
   .store-category-rail nav > div { padding-inline: 5px; }
   .store-category-rail [role="tab"], .store-category-rail button[aria-haspopup] { padding-inline: 10px; }
+}
+
+@media (max-width: 639px) {
+  .store-category-track { mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 12px), transparent); scroll-padding-inline: 12px; padding-inline: 12px; }
 }
