@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Copy, Check, MessageCircle, Send, Share2 } from 'lucide-react';
 import type { Product, Language } from '../types';
@@ -14,6 +15,27 @@ interface ShareModalProps {
 
 export default function ShareModal({ isOpen, onClose, product, lang }: ShareModalProps) {
   const [copied, setCopied] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isOpen || !product) return;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    dialogRef.current?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); onClose(); }
+      if (event.key !== 'Tab') return;
+      const buttons = Array.from(dialogRef.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') || []);
+      const first = buttons[0];
+      const last = buttons[buttons.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      if (opener?.isConnected) opener.focus({ preventScroll: true });
+    };
+  }, [isOpen, product?.id]);
+
   const isAr = lang === 'ar';
   useScrollLock(Boolean(isOpen && product));
 
@@ -74,10 +96,10 @@ export default function ShareModal({ isOpen, onClose, product, lang }: ShareModa
 
   const hasNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && product && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-3">
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center p-3">
           {/* Subtle Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -94,7 +116,9 @@ export default function ShareModal({ isOpen, onClose, product, lang }: ShareModa
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, y: 10 }}
             transition={{ type: 'spring', damping: 26, stiffness: 380 }}
+            ref={dialogRef}
             role="dialog"
+            aria-label={isAr ? 'مشاركة القطعة' : 'Share piece'}
             aria-modal="true"
             className="relative z-10 w-full max-w-[315px] sm:max-w-[335px] md:max-w-[380px] rounded-2xl md:rounded-[24px] border border-black/10 dark:border-white/15 bg-white dark:bg-[#181b22] p-3.5 sm:p-4 md:p-5 shadow-xl text-[#15171c] dark:text-[#f3f4f6]"
           >
@@ -107,7 +131,7 @@ export default function ShareModal({ isOpen, onClose, product, lang }: ShareModa
             <button
               type="button"
               onClick={onClose}
-              className="flex h-6 w-6 md:h-7 md:w-7 items-center justify-center rounded-full text-[#6b7280] dark:text-[#9ca3af] hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#6b7280] dark:text-[#9ca3af] hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
               aria-label={isAr ? 'إغلاق' : 'Close'}
             >
               <X className="h-3.5 w-3.5 md:h-4 md:w-4" />
@@ -181,6 +205,6 @@ export default function ShareModal({ isOpen, onClose, product, lang }: ShareModa
         </motion.div>
       </div>
     )}
-  </AnimatePresence>
+  </AnimatePresence>, document.body,
 );
 }

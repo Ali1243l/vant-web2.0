@@ -98,7 +98,7 @@ export const ProductSizeSection: React.FC<ProductSizeSectionProps> = ({
                 trackEvent('size_guide_open', { productId: product.id, title: displayTitle });
               }
             }}
-            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-black/[0.03] dark:bg-white/[0.05] border border-black/8 dark:border-white/10 text-xs font-semibold text-[#004ad7] dark:text-[#3b82f6] hover:bg-[#004ad7]/10 dark:hover:bg-[#3b82f6]/15 cursor-pointer transition-all active:scale-95"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 py-1.5 bg-black/[0.03] dark:bg-white/[0.05] border border-black/8 dark:border-white/10 text-xs font-semibold text-[#004ad7] dark:text-[#3b82f6] hover:bg-[#004ad7]/10 dark:hover:bg-[#3b82f6]/15 cursor-pointer transition-all active:scale-95"
           >
             <Ruler className="h-3.5 w-3.5" />
             <span>{lang === 'ar' ? sizeGuideControl.label_ar : sizeGuideControl.label_en}</span>
@@ -117,13 +117,14 @@ export const ProductSizeSection: React.FC<ProductSizeSectionProps> = ({
               <button
                 type="button"
                 onClick={() => onSizeClick(size)}
-                className={`flex h-10 min-w-[44px] sm:h-11 sm:min-w-[48px] md:h-11.5 md:min-w-[52px] px-3 sm:px-4 items-center justify-center rounded-xl md:rounded-2xl border text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer ${
+                className={`flex h-11 min-w-[44px] sm:h-11 sm:min-w-[48px] md:h-11.5 md:min-w-[52px] px-3 sm:px-4 items-center justify-center rounded-xl md:rounded-2xl border text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer ${
                   isSelected
                     ? 'border-[#004ad7] bg-[#004ad7] text-white shadow-md shadow-[#004ad7]/25 ring-2 ring-[#004ad7]/30 dark:border-[#3b82f6] dark:bg-[#3b82f6]'
                     : isAvailable
                     ? 'border-black/12 dark:border-white/15 bg-white dark:bg-[#20242c] text-[#15171c] dark:text-white hover:border-[#004ad7] dark:hover:border-[#3b82f6]'
                     : 'border-black/8 dark:border-white/8 bg-black/[0.02] dark:bg-white/[0.02] text-black/30 dark:text-white/25 line-through hover:border-black/20'
                 }`}
+                aria-pressed={isSelected}
                 aria-label={`${size} ${isAvailable ? 'available' : isSoldOut ? 'sold out' : 'out of stock'}`}
               >
                 {size}

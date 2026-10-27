@@ -59,7 +59,7 @@ export const ProductDetailsBadges: React.FC<ProductDetailsBadgesProps> = ({
                 <Truck className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <span className="font-bold text-xs text-[#15171c] dark:text-white block truncate">
+                <span className="font-bold text-xs text-[#15171c] dark:text-white block">
                   {isAr ? deliveryBadgeControl.label_ar : deliveryBadgeControl.label_en}
                 </span>
                 <span className="text-[10.5px] text-[#6b7280] dark:text-[#9ca3af] leading-normal block mt-0.5">
@@ -75,7 +75,7 @@ export const ProductDetailsBadges: React.FC<ProductDetailsBadgesProps> = ({
                 <Sparkles className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <span className="font-bold text-xs text-[#15171c] dark:text-white block truncate">
+                <span className="font-bold text-xs text-[#15171c] dark:text-white block">
                   {isAr ? craftBadgeControl.label_ar : craftBadgeControl.label_en}
                 </span>
                 <span className="text-[10.5px] text-[#6b7280] dark:text-[#9ca3af] leading-normal block mt-0.5">
@@ -94,7 +94,7 @@ export const ProductDetailsBadges: React.FC<ProductDetailsBadgesProps> = ({
             <button
               type="button"
               onClick={handleCopyTitle}
-              className="relative flex h-8 items-center gap-1.5 rounded-lg border border-black/8 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.04] hover:bg-black/[0.05] dark:hover:bg-white/8 px-2.5 text-[11px] text-[#15171c] dark:text-white hover:border-[#004ad7] dark:hover:border-[#3b82f6] hover:text-[#004ad7] dark:hover:text-[#3b82f6] transition-all active:scale-95 cursor-pointer font-medium select-none"
+              className="relative flex h-11 items-center gap-1.5 rounded-lg border border-black/8 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.04] hover:bg-black/[0.05] dark:hover:bg-white/8 px-2.5 text-[11px] text-[#15171c] dark:text-white hover:border-[#004ad7] dark:hover:border-[#3b82f6] hover:text-[#004ad7] dark:hover:text-[#3b82f6] transition-all active:scale-95 cursor-pointer font-medium select-none"
               title={isAr ? copyControl.label_ar : copyControl.label_en}
             >
               {copiedTitle ? (
@@ -117,7 +117,7 @@ export const ProductDetailsBadges: React.FC<ProductDetailsBadgesProps> = ({
             <button
               type="button"
               onClick={onOpenShareModal}
-              className="flex h-8 items-center gap-1.5 rounded-lg border border-black/8 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.04] hover:bg-black/[0.05] dark:hover:bg-white/8 px-2.5 text-[11px] text-[#15171c] dark:text-white hover:border-[#004ad7] dark:hover:border-[#3b82f6] hover:text-[#004ad7] dark:hover:text-[#3b82f6] transition-all active:scale-95 cursor-pointer font-medium select-none"
+              className="flex h-11 items-center gap-1.5 rounded-lg border border-black/8 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.04] hover:bg-black/[0.05] dark:hover:bg-white/8 px-2.5 text-[11px] text-[#15171c] dark:text-white hover:border-[#004ad7] dark:hover:border-[#3b82f6] hover:text-[#004ad7] dark:hover:text-[#3b82f6] transition-all active:scale-95 cursor-pointer font-medium select-none"
               title={isAr ? shareControl.label_ar : shareControl.label_en}
               aria-label={isAr ? shareControl.label_ar : shareControl.label_en}
             >

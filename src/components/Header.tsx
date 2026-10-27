@@ -124,10 +124,10 @@ export default function Header({
             <div
               dir="ltr"
               style={{ direction: 'ltr' }}
-              className="store-toolbar-actions mx-auto flex w-full items-center justify-between px-2 sm:px-6"
+              className="store-toolbar-actions mx-auto grid w-full grid-cols-[1fr_auto_1fr] items-center px-2 sm:px-6"
             >
               {/* Left Actions (Search Icon, Shopping Cart, Wishlist) */}
-              <div className="flex items-center justify-start gap-0 sm:gap-2.5 min-w-[110px] sm:min-w-[140px] [direction:ltr]">
+              <div className="flex items-center justify-start gap-0 sm:gap-2.5 min-w-0 [direction:ltr]">
                 {searchControl.visible && (
                   <button
                     type="button"
@@ -187,7 +187,7 @@ export default function Header({
                   <button
                     type="button"
                     onClick={onToggleWishlistOnly}
-                    className={`relative flex items-center justify-center rounded-full transition-all active:scale-90 cursor-pointer ${
+                    className={`relative hidden sm:flex items-center justify-center rounded-full transition-all active:scale-90 cursor-pointer ${
                       'h-11 w-11'
                     } ${
                       isWishlistOnly
@@ -209,7 +209,7 @@ export default function Header({
 
               {/* Logo (Center) */}
               {logoControl.visible && (
-                <div className="flex items-center justify-center">
+                <div className="store-brand-slot flex items-center justify-center">
                   <AnimatePresence mode="wait" initial={false}>
                     <motion.h1
                       key={kineticLang}
@@ -238,7 +238,7 @@ export default function Header({
               )}
 
               {/* Right Actions (Lang, Theme) */}
-              <div className="flex items-center justify-end gap-0 sm:gap-2.5 min-w-[80px] sm:min-w-[110px] [direction:ltr]">
+              <div className="flex items-center justify-end gap-0 sm:gap-2.5 min-w-0 [direction:ltr]">
                 {themeControl.visible && (
                   <button
                     type="button"
@@ -311,7 +311,16 @@ export default function Header({
             style={{ overflow: showCategories ? 'visible' : 'hidden' }}
             className="store-category-rail w-full"
           >
-            {children}
+            <div className="flex min-w-0 items-center gap-1 px-1 sm:block sm:px-0">
+              <div className="min-w-0 flex-1">{children}</div>
+              {wishlistControl.visible && onToggleWishlistOnly && (
+                <button type="button" onClick={onToggleWishlistOnly} aria-label={lang === 'ar' ? wishlistControl.label_ar : wishlistControl.label_en} aria-pressed={isWishlistOnly}
+                  className={`relative pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full sm:hidden ${isWishlistOnly ? 'bg-blue-500/15 text-blue-500' : 'text-black/65 dark:text-white/70'}`}>
+                  <Heart size={18} strokeWidth={1.8} className={isWishlistOnly ? 'fill-current' : ''} />
+                  {wishlistCount > 0 && <span className="absolute end-0 top-0 rounded-full bg-blue-600 px-1 text-[9px] font-bold text-white">{wishlistCount}</span>}
+                </button>
+              )}
+            </div>
           </motion.div>
         )}
         </motion.div>

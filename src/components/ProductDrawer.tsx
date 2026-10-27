@@ -1,10 +1,9 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import type { Product, Language } from '../types';
 import { DEFAULT_WHATSAPP_PHONE } from '../lib/constants';
 import ShareModal from './ShareModal';
-import ProductDrawerSkeleton from './ProductDrawerSkeleton';
+import ProductSheet from './product_drawer/ProductSheet';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { trackEvent } from '../lib/analytics';
 import { resolveProductColorVariants } from '../lib/productVariants';
@@ -25,10 +24,8 @@ interface Props {
 }
 
 export default function ProductDrawer({ product, loading, lang, onClose }: Props) {
-  const panelRef = useRef<HTMLDivElement>(null);
-  const closeRef = useRef<HTMLButtonElement>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [slideDirection, setSlideDirection] = useState(1);
+
   const { getControl, formatPrice, masterSizes } = useSiteControls();
 
   const whatsappControl = getControl('btn_product_whatsapp');
@@ -130,6 +127,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
       setSizeFeedback(null);
       setCopiedTitle(false);
       setShowSizeGuide(false);
+      setShowShareModal(false);
     }
   }, [product?.id]);
 
@@ -162,7 +160,6 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
   const paginate = useCallback(
     (newDirection: number) => {
       if (images.length <= 1) return;
-      setSlideDirection(newDirection);
       let targetIndex = activeImageIndex + newDirection;
       if (targetIndex < 0) targetIndex = 0;
       if (targetIndex >= images.length) targetIndex = images.length - 1;
@@ -351,14 +348,6 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     }
   };
 
-  const productId = product?.id;
-  useEffect(() => {
-    if (!productId) return;
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    closeRef.current?.focus({ preventScroll: true });
-    return () => { if (opener?.isConnected) opener.focus({ preventScroll: true }); };
-  }, [productId]);
-
   const isOpen = Boolean(product || loading);
   useScrollLock(isOpen);
 
@@ -366,6 +355,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     if (!product || showShareModal) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' && e.target instanceof Element && e.target.closest('input, textarea, select')) return;
       if (e.key === 'Escape') {
         if (showSizeGuide) {
           setShowSizeGuide(false);
@@ -388,92 +378,55 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
   return (
     <AnimatePresence>
       {loading && !product && (
-        <ProductDrawerSkeleton key="skeleton" lang={lang} onClose={onClose} />
+        <ProductSheet key="loading-product" title={lang === 'ar' ? 'جاري تحميل القطعة' : 'Loading piece'} lang={lang} onClose={onClose} busy>
+          <div className="product-detail-layout animate-pulse" aria-hidden="true">
+            <div className="m-4 h-80 rounded-xl bg-black/5 dark:bg-white/5" />
+            <div className="space-y-5 p-6"><div className="h-6 w-3/4 rounded bg-black/10 dark:bg-white/10" /><div className="h-8 w-1/2 rounded bg-black/10 dark:bg-white/10" /><div className="h-40 rounded bg-black/5 dark:bg-white/5" /></div>
+          </div>
+        </ProductSheet>
       )}
       {isOpen && product && (
-        <>
-          {/* 1. Backdrop (Click to close) */}
-          <motion.div
-            key="backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            onClick={onClose}
-            className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-md touch-none"
-          />
-
-          {/* 2. Modal Wrapper: Centered Modal on Desktop (fixed inset-0 flex items-center justify-center), Bottom Sheet on Mobile */}
-          <div className="fixed inset-0 z-[1001] flex items-end md:items-center justify-center p-0 md:p-6 lg:p-8 pointer-events-none">
-            <motion.div
-              key={`drawer-panel-${product.id}`}
-              data-scroll-lock-scrollable
-              ref={panelRef}
-              role="dialog"
-              aria-modal="true"
-              aria-label={displayTitle}
-              tabIndex={-1}
-              onKeyDown={(event) => {
-                if (event.key !== 'Tab' || showShareModal) return;
-                const controls = Array.from(panelRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]') || []).filter((element) => element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden');
-                const first = controls[0];
-                const last = controls[controls.length - 1];
-                if (!first) { event.preventDefault(); return; }
-                if (event.shiftKey && (document.activeElement === first || document.activeElement === panelRef.current)) {
-                  event.preventDefault(); last.focus();
-                } else if (!event.shiftKey && document.activeElement === last) {
-                  event.preventDefault(); first.focus();
-                }
-              }}
-              initial={{ y: '100%', opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: '100%', opacity: 0 }}
-              transition={{ type: 'spring', damping: 28, stiffness: 260, mass: 0.8 }}
-              className="pointer-events-auto relative z-10 flex flex-col md:flex-row w-full max-w-5xl lg:max-w-6xl h-[92dvh] sm:h-[90dvh] md:h-[84vh] md:max-h-[800px] bg-[#f8f9fa] dark:bg-[#0d0f12] border-t md:border border-black/10 dark:border-white/10 rounded-t-[28px] sm:rounded-t-[32px] md:rounded-[32px] overflow-y-auto overscroll-contain md:overflow-hidden no-scrollbar shadow-2xl will-change-transform"
-            >
-              {/* Mobile Top Drag Indicator */}
-              <div className="md:hidden flex items-center justify-center pt-2 pb-0.5 shrink-0 w-full select-none touch-none">
-                <div className="h-1.5 w-10 rounded-full bg-black/20 dark:bg-white/25" />
+        <ProductSheet
+          key={product.id} title={displayTitle || 'VANT'} lang={lang} onClose={onClose} suspended={showShareModal}
+          footer={
+            <div className="product-purchase-row">
+              <div className="hidden md:block min-w-0">
+                <p className="truncate text-sm font-semibold">{displayTitle}</p>
+                <p className="mt-1 text-xs text-black/50 dark:text-white/50">{selectedSize ? `${lang === 'ar' ? 'المقاس' : 'Size'} · ${selectedSize}` : (lang === 'ar' ? 'اختر المقاس المناسب' : 'Choose your size')}</p>
               </div>
-
-              {/* Keep the close control reachable while the mobile sheet scrolls. */}
-              <div className="sticky top-0 z-50 h-0 w-full shrink-0 md:absolute md:inset-x-0">
-              <button
-                type="button"
-                ref={closeRef}
-                onClick={onClose}
-                className="absolute top-2.5 right-3 rtl:right-auto rtl:left-3 md:top-4.5 md:right-4.5 md:rtl:right-auto md:rtl:left-4.5 z-50 flex h-11 w-11 items-center justify-center bg-white/90 dark:bg-[#1a1e28]/90 hover:bg-white dark:hover:bg-[#1a1e28] rounded-full hover:scale-105 transition-all cursor-pointer backdrop-blur-md border border-black/6 dark:border-white/10 shadow-xs text-black dark:text-white"
-                aria-label={lang === 'ar' ? 'إغلاق' : 'Close'}
-              >
-                <X className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-black dark:text-white" />
-              </button>
+              <div className="min-w-0 w-full md:max-w-md">
+                <ProductOrderButton
+                      whatsappControl={whatsappControl}
+                      whatsappUrl={whatsappUrl}
+                      product={product}
+                      displayTitle={displayTitle}
+                      activePrice={activePrice}
+                      color={colorSpecLabel}
+                      unavailable={availability === 'sold_out' || availability === 'coming_soon'}
+                      selectedSize={selectedSize}
+                      buttonLabel={buttonLabel}
+                      lang={lang}
+                    />
               </div>
-
-              {/* 3. Bento Box Layout Container */}
-              <div className="flex flex-col md:flex-row w-full shrink-0 md:shrink min-h-0 md:h-full p-2.5 sm:p-5 md:p-6 gap-2.5 sm:gap-4 md:gap-5">
-                {/* Left Box: Product Image (Bento Box 1) */}
-                <div className="w-full md:w-[48%] h-[clamp(200px,34dvh,280px)] sm:h-[380px] md:h-full rounded-[18px] sm:rounded-[22px] md:rounded-[26px] bg-black/5 dark:bg-white/5 overflow-hidden relative shrink-0">
-                  <ProductDrawerGallery
+            </div>
+          }
+        >
+          <div className="product-detail-layout">
+            <div className="product-detail-gallery">
+              <ProductDrawerGallery
                     images={images}
                     product={product}
                     displayTitle={displayTitle}
                     activeImageIndex={activeImageIndex}
                     setActiveImageIndex={setActiveImageIndex}
-                    slideDirection={slideDirection}
-                    setSlideDirection={setSlideDirection}
                     carouselNavVisible={carouselNavControl.visible}
                     lang={lang}
                     paginate={paginate}
                   />
-                </div>
-
-                {/* Right Column: Details & Actions */}
-                <div
-                  className="w-full md:w-[52%] flex flex-col gap-2.5 sm:gap-3.5 md:overflow-y-auto md:overscroll-contain md:h-full no-scrollbar md:pr-1.5 pb-2"
-                >
-                  {/* Title & Price (Bento Box 2) */}
-                  <div className="p-3.5 sm:p-5 rounded-[18px] sm:rounded-[22px] md:rounded-[24px] bg-white dark:bg-[#16191f] border border-black/6 dark:border-white/8 shadow-xs">
-                    <ProductHeaderInfo
+            </div>
+            <div className="product-detail-info min-w-0">
+              <section className="product-detail-section">
+                <ProductHeaderInfo
                       displayCategory={displayCategory}
                       statusBadgeClasses={statusBadgeClasses}
                       statusDotClass={statusDotClass}
@@ -487,11 +440,9 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                       availability={availability}
                       statusBannerText={statusBannerText}
                     />
-                  </div>
-
-                  {/* Sizes & Colors (Bento Box 3) */}
-                  <div className="p-3.5 sm:p-5 rounded-[18px] sm:rounded-[22px] md:rounded-[24px] bg-white dark:bg-[#16191f] border border-black/6 dark:border-white/8 shadow-xs flex flex-col gap-3 sm:gap-3.5">
-                    <ProductColorSelector
+              </section>
+              {(renderedSizes.length > 0 || variantInfo?.hasMultipleColors || Boolean(product.colors?.length)) && <section className="product-detail-section space-y-5">
+                <ProductColorSelector
                       variantInfo={variantInfo}
                       product={product}
                       lang={lang}
@@ -504,12 +455,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                         setActiveImageIndex(0);
                       }}
                     />
-
-                    {variantInfo && (variantInfo.hasMultipleColors || (Array.isArray(product?.colors) && product.colors.length > 0)) && renderedSizes.length > 0 && (
-                      <div className="h-px w-full bg-black/5 dark:bg-white/5" />
-                    )}
-
-                    <ProductSizeSection
+                <ProductSizeSection
                       renderedSizes={renderedSizes}
                       availableSizes={availableSizes}
                       selectedSize={selectedSize}
@@ -530,11 +476,9 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                       calcWeight={calcWeight}
                       setCalcWeight={setCalcWeight}
                     />
-                  </div>
-
-                  {/* Features/Info (Bento Box 4) */}
-                  <div className="p-3.5 sm:p-5 rounded-[18px] sm:rounded-[22px] md:rounded-[24px] bg-white dark:bg-[#16191f] border border-black/6 dark:border-white/8 shadow-xs">
-                    <ProductDetailsBadges
+              </section>}
+              <section className="product-detail-section">
+                <ProductDetailsBadges
                       shareControl={shareControl}
                       copyControl={copyControl}
                       deliveryBadgeControl={deliveryBadgeControl}
@@ -545,37 +489,12 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                       copiedTitle={copiedTitle}
                       onOpenShareModal={() => setShowShareModal(true)}
                     />
-                  </div>
-
-                  {/* Sticky Bottom Actions (Add to Cart & WhatsApp) */}
-                  <div className="sticky bottom-0 pt-2 pb-[calc(0.6rem+env(safe-area-inset-bottom,0px))] bg-gradient-to-t from-[#f8f9fa] dark:from-[#0d0f12] via-[#f8f9fa]/95 dark:via-[#0d0f12]/95 to-transparent mt-auto z-20">
-                    <ProductOrderButton
-                      whatsappControl={whatsappControl}
-                      whatsappUrl={whatsappUrl}
-                      product={product}
-                      displayTitle={displayTitle}
-                      activePrice={activePrice}
-                      color={colorSpecLabel}
-                      unavailable={availability === 'sold_out' || availability === 'coming_soon'}
-                      selectedSize={selectedSize}
-                      buttonLabel={buttonLabel}
-                      lang={lang}
-                    />
-                  </div>
-                </div>
-              </div>
-            </motion.div>
+              </section>
+            </div>
           </div>
-
-          {/* Share Modal Dialog */}
-          <ShareModal
-            isOpen={showShareModal}
-            onClose={() => setShowShareModal(false)}
-            product={product}
-            lang={lang}
-          />
-        </>
+        </ProductSheet>
       )}
+      <ShareModal isOpen={showShareModal && Boolean(product)} onClose={() => setShowShareModal(false)} product={product} lang={lang} />
     </AnimatePresence>
   );
 }

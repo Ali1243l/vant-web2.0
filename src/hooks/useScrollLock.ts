@@ -45,6 +45,8 @@ function findScrollableAncestor(target: EventTarget | null): HTMLElement | null 
 
 function handlePreventBackgroundWheel(e: WheelEvent) {
   if (activeLockCount <= 0) return;
+  // Native sheet content owns scrolling, including events originating on SVG icons.
+  if (e.target instanceof Element && e.target.closest('[data-scroll-lock-native]')) return;
   const scrollable = findScrollableAncestor(e.target);
   if (!scrollable) {
     if (e.cancelable) e.preventDefault();
@@ -92,6 +94,7 @@ function handleTouchStart(e: TouchEvent) {
 
 function handlePreventBackgroundTouchMove(e: TouchEvent) {
   if (activeLockCount <= 0 || e.touches.length > 1) return;
+  if (e.target instanceof Element && e.target.closest('[data-scroll-lock-native]')) return;
 
   const target = e.target;
   if (target instanceof HTMLElement && target.closest('input[type="range"]')) {
