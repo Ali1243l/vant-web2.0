@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Copy, Check, MessageCircle, Send, Share2 } from 'lucide-react';
 import type { Product, Language } from '../types';
 import { formatPrice } from '../lib/supabase';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface ShareModalProps {
 export default function ShareModal({ isOpen, onClose, product, lang }: ShareModalProps) {
   const [copied, setCopied] = useState(false);
   const isAr = lang === 'ar';
+  useScrollLock(Boolean(isOpen && product));
 
   const displayTitle = product ? (isAr && product.title_ar ? product.title_ar : product.title) : '';
   const priceFormatted = product ? formatPrice(product.price, lang) : '';

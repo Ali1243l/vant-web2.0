@@ -8,6 +8,7 @@ import ProductDrawerSkeleton from './ProductDrawerSkeleton';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { trackEvent } from '../lib/analytics';
 import { resolveProductColorVariants } from '../lib/productVariants';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 import ProductDrawerGallery from './product_drawer/ProductDrawerGallery';
 import ProductHeaderInfo from './product_drawer/ProductHeaderInfo';
@@ -348,10 +349,11 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     }
   };
 
+  const isOpen = Boolean(product || loading);
+  useScrollLock(isOpen);
+
   useEffect(() => {
     if (!product) return;
-    const prevBodyOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -369,12 +371,9 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
 
     window.addEventListener('keydown', onKeyDown);
     return () => {
-      document.body.style.overflow = prevBodyOverflow;
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [product, onClose, paginate, showSizeGuide]);
-
-  const isOpen = Boolean(product || loading);
 
   return (
     <AnimatePresence>
@@ -389,19 +388,21 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
             onClick={onClose}
-            className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-md"
+            className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-md touch-none"
           />
 
           {/* 2. Modal Wrapper: Centered Modal on Desktop (fixed inset-0 flex items-center justify-center), Bottom Sheet on Mobile */}
           <div className="fixed inset-0 z-[1001] flex items-end md:items-center justify-center p-0 md:p-6 lg:p-8 pointer-events-none">
             <motion.div
               key={`drawer-panel-${product.id}`}
+              data-scroll-lock-scrollable
               initial={{ y: '100%', opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: '100%', opacity: 0 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="pointer-events-auto relative z-10 flex flex-col md:flex-row w-full max-w-5xl lg:max-w-6xl h-[92vh] sm:h-[90vh] md:h-[84vh] md:max-h-[800px] bg-[#f8f9fa] dark:bg-[#0d0f12] border-t md:border border-black/10 dark:border-white/10 rounded-t-[28px] sm:rounded-t-[32px] md:rounded-[32px] overflow-y-auto md:overflow-hidden no-scrollbar shadow-2xl"
+              transition={{ type: 'spring', damping: 28, stiffness: 260, mass: 0.8 }}
+              className="pointer-events-auto relative z-10 flex flex-col md:flex-row w-full max-w-5xl lg:max-w-6xl h-[92dvh] sm:h-[90dvh] md:h-[84vh] md:max-h-[800px] bg-[#f8f9fa] dark:bg-[#0d0f12] border-t md:border border-black/10 dark:border-white/10 rounded-t-[28px] sm:rounded-t-[32px] md:rounded-[32px] overflow-y-auto overscroll-contain md:overflow-hidden no-scrollbar shadow-2xl will-change-transform"
             >
               {/* Mobile Top Drag Indicator */}
               <div className="md:hidden flex items-center justify-center pt-2 pb-0.5 shrink-0 w-full select-none touch-none">
@@ -421,7 +422,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
               {/* 3. Bento Box Layout Container */}
               <div className="flex flex-col md:flex-row w-full h-full p-2.5 sm:p-5 md:p-6 gap-2.5 sm:gap-4 md:gap-5">
                 {/* Left Box: Product Image (Bento Box 1) */}
-                <div className="w-full md:w-[48%] h-[260px] xs:h-[300px] sm:h-[380px] md:h-full rounded-[18px] sm:rounded-[22px] md:rounded-[26px] bg-black/5 dark:bg-white/5 overflow-hidden relative shrink-0">
+                <div className="w-full md:w-[48%] h-[280px] xs:h-[320px] sm:h-[380px] md:h-full rounded-[18px] sm:rounded-[22px] md:rounded-[26px] bg-black/5 dark:bg-white/5 overflow-hidden relative shrink-0">
                   <ProductDrawerGallery
                     images={images}
                     product={product}
@@ -437,7 +438,10 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                 </div>
 
                 {/* Right Column: Details & Actions */}
-                <div className="w-full md:w-[52%] flex flex-col gap-2.5 sm:gap-3.5 md:overflow-y-auto md:h-full no-scrollbar md:pr-1.5 pb-2">
+                <div
+                  data-scroll-lock-scrollable
+                  className="w-full md:w-[52%] flex flex-col gap-2.5 sm:gap-3.5 md:overflow-y-auto md:overscroll-contain md:h-full no-scrollbar md:pr-1.5 pb-2"
+                >
                   {/* Title & Price (Bento Box 2) */}
                   <div className="p-3.5 sm:p-5 rounded-[18px] sm:rounded-[22px] md:rounded-[24px] bg-white dark:bg-[#16191f] border border-black/6 dark:border-white/8 shadow-xs">
                     <ProductHeaderInfo
@@ -521,6 +525,9 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                       whatsappUrl={whatsappUrl}
                       product={product}
                       displayTitle={displayTitle}
+                      activePrice={activePrice}
+                      color={colorSpecLabel}
+                      unavailable={availability === 'sold_out' || availability === 'coming_soon'}
                       selectedSize={selectedSize}
                       buttonLabel={buttonLabel}
                       lang={lang}

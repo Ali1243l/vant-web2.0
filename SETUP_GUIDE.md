@@ -1,85 +1,57 @@
-# VANT Lookbook — Next.js 14 + Supabase Setup Guide
+# VANT — تشغيل المشروع وتجربته
 
-This guide details the exact terminal commands, dependency installation, and environment variables required to initialize the VANT mobile-first digital catalog on Next.js 14 (App Router) with Tailwind CSS, shadcn/ui, framer-motion, and Supabase.
+المشروع React 19 + TypeScript + Vite، وليس Next.js.
 
----
+## تشغيل النسخة المحلية
 
-### Step 1: Create Next.js 14 App with TypeScript & Tailwind CSS
-Run the following command in your terminal:
+استخدم Node.js 24 LTS أو أحدث. مدير التثبيت المعتمد هو npm.
 
-```bash
-npx create-next-app@latest vant-catalog \
-  --typescript \
-  --tailwind \
-  --eslint \
-  --app \
-  --src-dir \
-  --import-alias "@/*" \
-  --use-npm
+```powershell
+npm ci --ignore-scripts
+Copy-Item .env.example .env.local
+npm run dev
 ```
 
-Navigate into your project folder:
-```bash
-cd vant-catalog
+إذا كان `.env.local` موجوداً فلا تستبدله. افتح http://127.0.0.1:3000/ . التعديلات تظهر تلقائياً أثناء التشغيل. أوقف السيرفر بـ Ctrl+C. المنفذ ثابت؛ إذا كان مستخدماً يعرض التشغيل خطأ بدلاً من تغيير الرابط.
+
+اترك إعدادات Supabase فارغة لتجربة الكتالوج المحلي. بيانات التجربة تحفظ في المتصفح ولا تعني اتصالاً بقاعدة بيانات حية.
+
+## قاعدة البيانات والإيميل
+
+- `VITE_SUPABASE_URL` و`VITE_SUPABASE_ANON_KEY`: رابط المشروع ومفتاحه العام فقط؛ لا تضع service_role في المتصفح.
+- `VITE_WHATSAPP_PHONE`: رقم المتجر الدولي دون علامة +؛ الرقم الافتراضي تجريبي.
+- `RESEND_API_KEY`: سر على السيرفر فقط. تركه فارغاً يعطّل إرسال الإيميلات ويعيد فشلاً واضحاً.
+- `RESEND_FROM_EMAIL`: عنوان مرسل معتمد لدى Resend؛ عنوان onboarding الافتراضي له قيود الخدمة التجريبية.
+
+لا تضف `VITE_` إلى مفاتيح سرية. ملفات البيئة المحلية مستثناة من Git. غيّر مفاتيح الخدمة من حساب مزودها إذا سبق نشرها.
+
+**قبل ربط قاعدة حية:** راجع docs/PROJECT_REVIEW.md. ملفات SQL الحالية تمنح صلاحيات كتابة عامة، وقفل الإدارة الموجود محلي في المتصفح. لا تطبقها على متجر إنتاج قبل ترحيل المصادقة والصلاحيات.
+
+## التحقق
+
+```powershell
+npm run lint
+npm test
+npm run build
+# أو جميعها:
+npm run check
 ```
 
----
+الاختبارات تحاكي ردود مزود الإيميل ولا ترسل رسائل حقيقية. `lint` يفحص TypeScript؛ ليس فحص ESLint. فحص الثغرات يحتاج اتصالاً بالشبكة:
 
-### Step 2: Install Core Dependencies
-Install Framer Motion (animations & swipe gestures), Supabase client, Lucide icons, and Fuse.js (weighted fuzzy search):
-
-```bash
-npm install framer-motion @supabase/supabase-js lucide-react fuse.js clsx tailwind-merge
+```powershell
+npm audit --omit=dev
 ```
 
----
+## معاينة البناء والنشر
 
-### Step 3: Initialize shadcn/ui
-Initialize shadcn/ui with the neutral slate base:
-
-```bash
-npx shadcn@latest init
+```powershell
+npm run build
+npm run preview -- --host 127.0.0.1 --port 4173
 ```
 
-When prompted:
-- Style: Default
-- Base color: Slate
-- CSS variables: Yes
+معاينة البناء تخدم الملفات فقط ولا تشغّل API المحلي. وظيفة `api/send-welcome.ts` تحتاج بيئة استضافة تدعم وظائف Node، مثل Vercel؛ إعادة توجيه مسارات الواجهة تعتمد على إعداد الاستضافة. لا تضع مفتاح الإيميل في إعدادات متصفح Vite.
 
-Install essential shadcn components for bottom sheets, accordions, and dialogs:
-```bash
-npx shadcn@latest add dialog sheet accordion badge button
-```
+## سجل الدفعات
 
----
-
-### Step 4: Configure Supabase Client
-Create `.env.local` in the project root:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-public-key-here
-NEXT_PUBLIC_VANT_INSTAGRAM_HANDLE=vant.streetwear
-NEXT_PUBLIC_VANT_WHATSAPP_NUMBER=15550192834
-```
-
-Create your Supabase client helper at `src/lib/supabase.ts`:
-
-```typescript
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-```
-
----
-
-### Step 5: Database Schema
-Apply the SQL file in `supabase/schema.sql` inside your Supabase dashboard SQL Editor.
-This provisions:
-- `products` table with sizes and colors arrays, pricing, and category indexes
-- `product_media` table with foreign key cascade and display ordering
-- Row Level Security (RLS) policies granting public read permissions
-- Initial seed records for the VANT streetwear drop
+التفاصيل في CHANGELOG.md وأولويات العمل في docs/PROJECT_REVIEW.md. تُرفع الدفعات بعد الفحوص إلى GitHub للمراجعة؛ لا توجد مراقبة أو عمليات رفع مستمرة بعد انتهاء جلسة العمل.

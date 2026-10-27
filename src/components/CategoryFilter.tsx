@@ -4,6 +4,7 @@ import { ChevronDown, Check, SlidersHorizontal, LayoutGrid } from 'lucide-react'
 import type { Language } from '../types';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { trackEvent } from '../lib/analytics';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 export type AvailabilityFilterType = 'all' | 'in_stock' | 'coming_soon' | 'sold_out';
 
@@ -70,33 +71,32 @@ export default function CategoryFilter({
     });
   }, [active, isOffersOnly]);
 
-  // Close dropdown on outside click or deliberate scroll
+  useScrollLock(isOpen);
+
+  // Close dropdown on outside click or Escape key
   useEffect(() => {
     if (!isOpen) return;
 
-    const initialScrollY = window.scrollY;
-    const openTime = Date.now();
-
-    function handleClickOutside(event: MouseEvent) {
+    function handleClickOutside(event: MouseEvent | TouchEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     }
 
-    function handleScroll() {
-      // Don't close immediately on initial micro-scroll or scroll events right at opening
-      if (Date.now() - openTime < 250) return;
-      if (Math.abs(window.scrollY - initialScrollY) > 25) {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
         setIsOpen(false);
       }
     }
 
     document.addEventListener('mousedown', handleClickOutside);
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
+    window.addEventListener('keydown', handleKeyDown);
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
-      window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('touchstart', handleClickOutside);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
 

@@ -553,8 +553,6 @@ export async function dispatchCampaignEmail(params: {
   });
 
   let emailSent = false;
-  const resendApiKey = 're_DgBbp68L_6UUeE8DRtYyyTgFMSrd7qSQo';
-
   // 2. Dispatch via Serverless Function
   try {
     const serverlessRes = await fetch('/api/send-welcome', {
@@ -579,60 +577,14 @@ export async function dispatchCampaignEmail(params: {
       }),
     });
 
-    if (serverlessRes.ok) {
-      emailSent = true;
-    } else {
-      // Direct Resend API fallback
-      const directRes = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${resendApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: 'VANT Archive <onboarding@resend.dev>',
-          to: [cleanEmail],
-          subject,
-          html: customHtml,
-        }),
-      });
-
-      if (directRes.ok) {
-        emailSent = true;
-      } else {
-        // Fallback for formsubmit
-        const formSubmitRes = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(cleanEmail)}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            Origin: 'https://vant.fashion',
-            Referer: 'https://vant.fashion/',
-          },
-          body: JSON.stringify({
-            _subject: subject,
-            _template: 'box',
-            _captcha: 'false',
-            'العلامة_التجارية': 'VANT — دار الأزياء والتصاميم الحصرية',
-            'عنوان_العرض': headline,
-            'تفاصيل_الرسالة': message,
-            'كود_الخصم_الحصري': couponCode,
-            'نسبة_الخصم': `${discountPercent}% على مشترياتك`,
-            'رابط_المتجر_والتسوق': ctaUrl,
-            'البريد_المعتمد': cleanEmail,
-          }),
-        });
-        if (formSubmitRes.ok) {
-          emailSent = true;
-        }
-      }
-    }
+    const result = await serverlessRes.json();
+    emailSent = serverlessRes.ok && result.success === true && result.emailSent === true;
   } catch (e) {
     console.warn('Dispatch campaign error:', e);
   }
 
-  // 3. Record in campaign archive
-  try {
+  // Only archive confirmed sends; failed attempts must not inflate sent counts.
+  if (emailSent) try {
     await recordCampaign({
       title: `${tpl?.title || 'حملة بريدية خاصة'} · ${cleanEmail}`,
       subject,
@@ -645,7 +597,7 @@ export async function dispatchCampaignEmail(params: {
   } catch {}
 
   return {
-    success: true,
+    success: emailSent,
     emailSent,
     subject,
     body: `${headline}\n\n${message}\n\nكود الخصم: ${couponCode}`,

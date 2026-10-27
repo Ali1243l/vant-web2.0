@@ -26,7 +26,24 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
+    let body = req.body;
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch {
+        return res.status(400).json({ success: false, error: 'Invalid JSON body' });
+      }
+    }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return res.status(400).json({ success: false, error: 'Expected a JSON object' });
+    }
+    const textFields = ['email', 'to', 'couponCode', 'headline', 'welcomeTitle', 'message', 'welcomeMessage', 'badgeText', 'heroImage', 'imageUrl', 'heroImageUrl', 'image', 'welcomeImage', 'ctaText', 'ctaUrl', 'storeUrl', 'editionNote', 'subject', 'html'];
+    if (textFields.some((field) => body[field] !== undefined && typeof body[field] !== 'string')) {
+      return res.status(400).json({ success: false, error: 'Text fields must be strings' });
+    }
+    if (body.discountPercent !== undefined && (typeof body.discountPercent !== 'number' || !Number.isFinite(body.discountPercent) || body.discountPercent < 0 || body.discountPercent > 100)) {
+      return res.status(400).json({ success: false, error: 'Discount must be between 0 and 100' });
+    }
     const recipientEmail = (body.email || body.to || '').trim().toLowerCase();
     const couponCode = (body.couponCode || 'VANT-WELCOME-15').toUpperCase();
     const discountPercent = body.discountPercent ?? 15;
@@ -76,10 +93,7 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ success: false, error: 'Invalid recipient email address' });
     }
 
-    const resendApiKey =
-      process.env.RESEND_API_KEY ||
-      process.env.VITE_RESEND_API_KEY ||
-      're_DgBbp68L_6UUeE8DRtYyyTgFMSrd7qSQo';
+    const resendApiKey = process.env.RESEND_API_KEY;
 
     // Bulletproof HTML email with mobile image support & direct offers routing
     const htmlContent = body.html || `<!DOCTYPE html>
@@ -293,26 +307,29 @@ export default async function handler(req: any, res: any) {
     finalHtml = finalHtml.replace(/src=["']catalog\/([^"']+)["']/g, 'src="https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/$1"');
 
     if (!resendApiKey) {
-      return res.status(200).json({
-        success: true,
-        previewOnly: true,
-        message: 'Resend API key missing on server, simulated email dispatch successfully.',
-        subject,
-        htmlPreview: finalHtml,
+      return res.status(503).json({
+        success: false,
+        emailSent: false,
+        error: 'Email service is not configured',
       });
     }
 
     const resend = new Resend(resendApiKey);
 
-    const data = await resend.emails.send({
-      from: 'VANT Archive <onboarding@resend.dev>',
+    const { data, error } = await resend.emails.send({
+      from: process.env.RESEND_FROM_EMAIL || 'VANT Archive <onboarding@resend.dev>',
       to: [recipientEmail],
       subject,
       html: finalHtml,
     });
 
+    if (error) {
+      return res.status(502).json({ success: false, emailSent: false, error: 'Email provider rejected the request' });
+    }
+
     return res.status(200).json({
       success: true,
+      emailSent: true,
       message: 'Luxury Welcome Email sent successfully',
       data,
     });
@@ -320,7 +337,7 @@ export default async function handler(req: any, res: any) {
     console.error('Error in /api/send-welcome:', error);
     return res.status(500).json({
       success: false,
-      error: error.message || 'Internal Server Error',
+      error: 'Internal Server Error',
     });
   }
 }

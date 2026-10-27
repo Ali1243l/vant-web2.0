@@ -130,12 +130,13 @@ export const ProductDrawerGallery: React.FC<ProductDrawerGalleryProps> = ({
     if ((e.target as HTMLElement).closest('button, a, input, textarea')) {
       return;
     }
-    e.preventDefault();
-
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {
-      // Ignore
+    if (e.pointerType === 'mouse') {
+      e.preventDefault();
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        // Ignore
+      }
     }
 
     carouselPointerRef.current = {
@@ -244,7 +245,7 @@ export const ProductDrawerGallery: React.FC<ProductDrawerGalleryProps> = ({
   return (
     <div
       dir="ltr"
-      className="relative flex flex-col justify-center md:justify-between bg-black/[0.02] dark:bg-black/20 p-2 sm:p-4 md:p-7 lg:p-8 md:col-span-6 md:border-e md:border-black/5 md:dark:border-white/10 md:overflow-y-auto md:h-full [direction:ltr] no-scrollbar"
+      className="relative flex flex-col justify-center md:justify-between bg-black/[0.02] dark:bg-black/20 p-2 sm:p-4 md:p-6 h-full w-full md:overflow-y-auto md:overscroll-contain [direction:ltr] no-scrollbar"
     >
       {/* Main Active Image Viewport with Dynamic Proportional Aspect Ratio Matching Uploaded Image */}
       <div

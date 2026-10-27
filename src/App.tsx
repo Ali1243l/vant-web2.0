@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from './components/Header';
 import CategoryFilter, { type AvailabilityFilterType } from './components/CategoryFilter';
@@ -10,7 +10,6 @@ import ProductDrawer from './components/ProductDrawer';
 import CartDrawer from './components/CartDrawer';
 import ImagePreloader from './components/ImagePreloader';
 import BackToTop from './components/BackToTop';
-import AdminDrawer from './components/AdminDrawer';
 import SplashLoader from './components/SplashLoader';
 import MaintenanceScreen from './components/MaintenanceScreen';
 import { SiteControlsProvider, useSiteControls } from './context/SiteControlsContext';
@@ -22,6 +21,7 @@ import { Heart, Loader2, Check, X, Sparkles, Gift, Percent, Tag, ArrowUpDown, La
 import type { Product, Language, Theme } from './types';
 
 const ALL = 'All';
+const AdminDrawer = lazy(() => import('./components/AdminDrawer'));
 
 const CATEGORY_TRANSLATIONS: Record<string, { en: string; ar: string }> = {
   All: { en: 'All', ar: 'الكل' },
@@ -36,6 +36,7 @@ const CATEGORY_TRANSLATIONS: Record<string, { en: string; ar: string }> = {
 
 function MainApp() {
   const {
+    isAdminOpen,
     setIsAdminOpen,
     siteSettings,
     isInitialSplashLoading,
@@ -411,7 +412,7 @@ function MainApp() {
             onAdminUnlock={unlockAdmin}
             onBypass={() => setIsAdminOpen(true)}
           />
-          <AdminDrawer lang={lang} />
+          {isAdminOpen && <Suspense fallback={<div role="status" className="fixed inset-0 z-[9999] grid place-items-center bg-black/80 text-white">{lang === 'ar' ? 'جاري تحميل لوحة الإدارة…' : 'Loading admin…'}</div>}><AdminDrawer lang={lang} /></Suspense>}
         </>
       ) : (
         <div
@@ -694,7 +695,7 @@ function MainApp() {
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} lang={lang} />
 
       {/* Secret Admin Control Drawer (Triggered via Shift+A, typing 'admin', or footer 3-tap) */}
-      <AdminDrawer lang={lang} />
+      {isAdminOpen && <Suspense fallback={<div role="status" className="fixed inset-0 z-[9999] grid place-items-center bg-black/80 text-white">{lang === 'ar' ? 'جاري تحميل لوحة الإدارة…' : 'Loading admin…'}</div>}><AdminDrawer lang={lang} /></Suspense>}
     </div>
     )}
     </>

@@ -4,6 +4,8 @@ import { ShoppingCart, X, Plus, Minus, Trash2, MessageCircle, ArrowRight, ArrowL
 import type { Language } from '../types';
 import { DEFAULT_WHATSAPP_PHONE } from '../lib/constants';
 import { useSiteControls } from '../context/SiteControlsContext';
+import { useScrollLock } from '../hooks/useScrollLock';
+import { readCart, resolveWhatsAppPhone } from '../lib/cart';
 
 export interface CartItem {
   id: string;
@@ -24,12 +26,11 @@ interface CartDrawerProps {
 export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang }) => {
   const { getControl, formatPrice } = useSiteControls();
   const whatsappPhoneControl = getControl('cfg_whatsapp_phone');
-  const whatsappPhone = whatsappPhoneControl?.actionValue || whatsappPhoneControl?.label_en || DEFAULT_WHATSAPP_PHONE;
+  const whatsappPhone = resolveWhatsAppPhone(whatsappPhoneControl?.actionValue, DEFAULT_WHATSAPP_PHONE);
 
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     try {
-      const raw = localStorage.getItem('vant_cart_items');
-      return raw ? JSON.parse(raw) : [];
+      return readCart();
     } catch {
       return [];
     }
@@ -37,8 +38,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
 
   const syncCartState = () => {
     try {
-      const raw = localStorage.getItem('vant_cart_items');
-      setCartItems(raw ? JSON.parse(raw) : []);
+      setCartItems(readCart());
     } catch {}
   };
 
@@ -48,6 +48,17 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
     window.addEventListener('vant-cart-update', handleUpdate);
     return () => window.removeEventListener('vant-cart-update', handleUpdate);
   }, []);
+
+  useScrollLock(isOpen);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
 
   const isAr = lang === 'ar';
 
@@ -86,7 +97,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
     } catch {}
   };
 
-  const totalPrice = cartItems.reduce((sum, item) => sum + (item.price || 45000) * item.quantity, 0);
+  const totalPrice = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const totalCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   const generateWhatsAppUrl = () => {
@@ -97,7 +108,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
       : `Hello, I would like to order the following items from the collection:\n\n`;
 
     cartItems.forEach((item, idx) => {
-      const priceStr = formatPrice ? formatPrice(item.price || 45000) : `${((item.price || 45000) * item.quantity).toLocaleString()} د.ع`;
+      const priceStr = formatPrice ? formatPrice(item.price * item.quantity) : `${(item.price * item.quantity).toLocaleString()} د.ع`;
       text += `${idx + 1}. *${item.title}*\n`;
       if (item.size) text += `   - ${isAr ? 'المقاس' : 'Size'}: ${item.size}\n`;
       if (item.color) text += `   - ${isAr ? 'اللون' : 'Color'}: ${item.color}\n`;
@@ -122,7 +133,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-[9990] bg-black/60 backdrop-blur-md"
+            className="fixed inset-0 z-[9990] bg-black/60 backdrop-blur-md touch-none"
           />
 
           {/* Drawer Panel */}
@@ -160,7 +171,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
             </div>
 
             {/* Item List */}
-            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+            <div data-scroll-lock-scrollable className="flex-1 overflow-y-auto overscroll-contain px-5 py-4 space-y-4">
               {cartItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center py-12">
                   <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800/80 text-zinc-400 mb-4">
@@ -185,7 +196,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
                 </div>
               ) : (
                 cartItems.map((item) => {
-                  const itemPrice = item.price || 45000;
+                  const itemPrice = item.price;
                   const itemSubtotal = itemPrice * item.quantity;
                   const formattedSubtotal = formatPrice ? formatPrice(itemSubtotal) : `${itemSubtotal.toLocaleString()} د.ع`;
 
@@ -230,6 +241,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
                           <button
                             type="button"
                             onClick={() => updateQuantity(item.id, -1)}
+                            aria-label={isAr ? 'تقليل الكمية' : 'Decrease quantity'}
                             className="flex h-6 w-6 items-center justify-center rounded-lg text-zinc-600 dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
                           >
                             <Minus className="h-3 w-3" />
@@ -240,6 +252,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
                           <button
                             type="button"
                             onClick={() => updateQuantity(item.id, 1)}
+                            aria-label={isAr ? 'زيادة الكمية' : 'Increase quantity'}
                             className="flex h-6 w-6 items-center justify-center rounded-lg text-zinc-600 dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
                           >
                             <Plus className="h-3 w-3" />

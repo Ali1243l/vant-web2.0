@@ -25,7 +25,7 @@ export function useCatalogProducts() {
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
-  const [hasMore, setHasMore] = useState<boolean>(true);
+  const [hasMore, setHasMore] = useState<boolean>(false);
   const [totalProductsCount, setTotalProductsCount] = useState<number>(() => {
     return products.length || FALLBACK_CATALOG_PRODUCTS.length;
   });
@@ -140,18 +140,22 @@ export function useCatalogProducts() {
         setProducts(mapped);
         setTotalProductsCount(fetchedCount || mapped.length);
         setCurrentPage(1);
-        setHasMore((fetchedCount || mapped.length) > PAGE_SIZE);
+        setHasMore((fetchedCount ?? mapped.length) > mapped.length);
         setIsLiveDatabase(true);
         setLastSyncTime(new Date());
         hasLoadedOnceRef.current = true;
       } else {
         // Ensure fallback products are active if database is empty
+        setHasMore(false);
+        setIsLiveDatabase(false);
         setProducts((prev) => (prev.length > 0 ? prev : FALLBACK_CATALOG_PRODUCTS));
         setTotalProductsCount((prev) => (prev > 0 ? prev : FALLBACK_CATALOG_PRODUCTS.length));
         hasLoadedOnceRef.current = true;
       }
     } catch {
       // Always guarantee products remain available from fallback cache
+      setHasMore(false);
+      setIsLiveDatabase(false);
       setProducts((prev) => (prev.length > 0 ? prev : FALLBACK_CATALOG_PRODUCTS));
     } finally {
       setLoading(false);

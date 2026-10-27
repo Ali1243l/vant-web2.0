@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, History, Trash2, Sparkles } from 'lucide-react';
 import type { Language } from '../types';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 const SEARCH_HISTORY_KEY = 'vant_recent_searches';
 
@@ -62,6 +63,8 @@ export default function SearchOverlay({
       localStorage.removeItem(SEARCH_HISTORY_KEY);
     } catch {}
   };
+
+  useScrollLock(isOpen);
 
   useEffect(() => {
     if (isOpen) {

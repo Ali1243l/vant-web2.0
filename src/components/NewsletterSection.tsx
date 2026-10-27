@@ -22,6 +22,7 @@ import {
   dispatchWelcomeEmailCopy,
 } from '../lib/newsletter';
 import { useSiteControls } from '../context/SiteControlsContext';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 interface Props {
   lang: Language;
@@ -85,6 +86,10 @@ export default function NewsletterSection({ lang }: Props) {
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [copiedCoupon, setCopiedCoupon] = useState(false);
   const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
+
+  const isWelcomeModalVisible =
+    (showWelcomeModal || isPreviewWelcomeModal) && siteSettings.welcome_modal_enabled !== false;
+  useScrollLock(Boolean(showDeleteConfirmModal || isWelcomeModalVisible));
 
   // 1. Restore subscription by Local Device Storage and Client IP Detection
   useEffect(() => {

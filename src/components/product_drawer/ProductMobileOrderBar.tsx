@@ -82,6 +82,10 @@ export const ProductMobileOrderBar: React.FC<ProductMobileOrderBarProps> = ({
             <CartInteractionWrapper
               productTitle={displayTitle || product?.title}
               productImage={product?.image_url}
+              productId={product?.id}
+              productPrice={activePrice}
+              size={selectedSize || undefined}
+              disabled={!product || !selectedSize || product.availability === 'sold_out' || product.availability === 'coming_soon'}
               lang={lang}
               onAddToCart={handleAddToCartTrack}
             >

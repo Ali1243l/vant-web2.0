@@ -21,11 +21,20 @@ export const MobileTouchZoom: React.FC<MobileTouchZoomProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isTouching, setIsTouching] = useState(false);
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // Framer Motion Springs for fluid 60fps spring animations
   const scale = useSpring(1, { stiffness: 320, damping: 28 });
   const translateX = useSpring(0, { stiffness: 320, damping: 28 });
   const translateY = useSpring(0, { stiffness: 320, damping: 28 });
+
+  const clearHoldTimer = useCallback(() => {
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+  }, []);
 
   const updatePanPosition = useCallback(
     (clientX: number, clientY: number) => {
@@ -54,38 +63,62 @@ export const MobileTouchZoom: React.FC<MobileTouchZoomProps> = ({
 
   const handleTouchStart = useCallback(
     (e: React.TouchEvent<HTMLDivElement>) => {
-      if (e.touches.length !== 1) return;
-
-      setIsTouching(true);
-      scale.set(zoomFactor);
+      if (e.touches.length !== 1) {
+        clearHoldTimer();
+        return;
+      }
 
       const touch = e.touches[0];
-      updatePanPosition(touch.clientX, touch.clientY);
+      startPosRef.current = { x: touch.clientX, y: touch.clientY };
+      clearHoldTimer();
+
+      // Activate hold-to-zoom after a brief stationary press so normal swipes/scrolls remain effortless
+      holdTimerRef.current = setTimeout(() => {
+        setIsTouching(true);
+        scale.set(zoomFactor);
+        updatePanPosition(touch.clientX, touch.clientY);
+      }, 220);
     },
-    [scale, updatePanPosition, zoomFactor]
+    [clearHoldTimer, scale, updatePanPosition, zoomFactor]
   );
 
   const handleTouchMove = useCallback(
     (e: React.TouchEvent<HTMLDivElement>) => {
-      if (!isTouching || e.touches.length !== 1) return;
-
+      if (e.touches.length !== 1) return;
       const touch = e.touches[0];
+
+      if (!isTouching) {
+        const dx = Math.abs(touch.clientX - startPosRef.current.x);
+        const dy = Math.abs(touch.clientY - startPosRef.current.y);
+        if (dx > 8 || dy > 8) {
+          clearHoldTimer();
+        }
+        return;
+      }
+
       updatePanPosition(touch.clientX, touch.clientY);
     },
-    [isTouching, updatePanPosition]
+    [clearHoldTimer, isTouching, updatePanPosition]
   );
 
   const handleTouchEnd = useCallback(() => {
-    setIsTouching(false);
-    scale.set(1);
-    translateX.set(0);
-    translateY.set(0);
-  }, [scale, translateX, translateY]);
+    clearHoldTimer();
+    if (isTouching) {
+      setIsTouching(false);
+      scale.set(1);
+      translateX.set(0);
+      translateY.set(0);
+    }
+  }, [clearHoldTimer, isTouching, scale, translateX, translateY]);
 
-  // Lock document body / native page scroll during touch drag gesture
+  useEffect(() => {
+    return () => clearHoldTimer();
+  }, [clearHoldTimer]);
+
+  // Lock native scroll only while active hold-to-zoom is engaged
   useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
+    if (!el || !isTouching) return;
 
     const preventNativeScroll = (e: TouchEvent) => {
       if (e.touches.length === 1 && isTouching) {
@@ -95,7 +128,6 @@ export const MobileTouchZoom: React.FC<MobileTouchZoomProps> = ({
       }
     };
 
-    // Attach non-passive native touch listener to reliably prevent touch scroll
     el.addEventListener('touchmove', preventNativeScroll, { passive: false });
     return () => {
       el.removeEventListener('touchmove', preventNativeScroll);
@@ -109,8 +141,8 @@ export const MobileTouchZoom: React.FC<MobileTouchZoomProps> = ({
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
-      className={`relative overflow-hidden touch-none select-none ${className}`}
-      style={{ touchAction: 'none' }}
+      className={`relative overflow-hidden select-none ${isTouching ? 'touch-none' : 'touch-pan-y'} ${className}`}
+      style={{ touchAction: isTouching ? 'none' : 'pan-y' }}
     >
       <motion.div
         style={{
