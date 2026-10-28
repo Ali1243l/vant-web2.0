@@ -1,6 +1,39 @@
 // Run against /tests/fixtures/product-colors/index.html using a CUA tab at the viewport being checked.
 import assert from 'node:assert/strict';
 
+export async function checkColorRailNavigation(tab, lang = 'ar') {
+  const before = await tab.playwright.evaluate(() => ({
+    scroll: document.querySelector('.product-color-options').scrollLeft,
+    top: document.querySelector('[data-product-scroll]').scrollTop,
+    photo: document.querySelector('.product-gallery-track').getBoundingClientRect().top,
+  }));
+  const previousName = lang === 'ar' ? 'الألوان السابقة' : 'Previous colors';
+  const nextName = lang === 'ar' ? 'الألوان التالية' : 'Next colors';
+  await tab.playwright.getByRole('button', { name: nextName, exact: true }).click();
+  await tab.playwright.locator(`button[aria-label="${previousName}"]:not(:disabled)`).waitFor({ state: 'visible' });
+  const after = await tab.playwright.evaluate(() => ({
+    scroll: document.querySelector('.product-color-options').scrollLeft,
+    top: document.querySelector('[data-product-scroll]').scrollTop,
+    photo: document.querySelector('.product-gallery-track').getBoundingClientRect().top,
+  }));
+  assert.notEqual(after.scroll, before.scroll, 'next arrow must scroll the rail');
+  assert.equal(after.top, before.top, 'color navigation must not move product details');
+  assert.ok(Math.abs(after.photo - before.photo) < 1, 'the photo must remain stationary');
+  const last = tab.playwright.locator('.product-color-option').last();
+  await last.click();
+  assert.equal(await last.getAttribute('aria-pressed'), 'true');
+  await tab.playwright.locator(`button[aria-label="${nextName}"]:disabled`).waitFor({ state: 'visible' });
+  const visible = await tab.playwright.evaluate(() => {
+    const rail = document.querySelector('.product-color-options').getBoundingClientRect();
+    const selected = document.querySelector('.product-color-option[aria-pressed="true"]').getBoundingClientRect();
+    return selected.left >= rail.left - 1 && selected.right <= rail.right + 1;
+  });
+  assert.equal(visible, true, 'selected color must be fully visible');
+  await tab.playwright.getByRole('button', { name: previousName, exact: true }).click();
+  await tab.playwright.locator(`button[aria-label="${nextName}"]:not(:disabled)`).waitFor({ state: 'visible' });
+  return { arrowsScroll: true, selectedVisible: visible, photoStationary: true };
+}
+
 export async function checkSheetLayout(tab) {
   const bounds = await tab.playwright.evaluate(() => {
     const sheet = document.querySelector('.product-sheet');

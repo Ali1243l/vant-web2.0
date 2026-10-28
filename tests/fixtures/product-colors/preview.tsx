@@ -12,6 +12,7 @@ const { default: ProductCard } = await import('../../../src/components/ProductCa
 const colors = ['Black', 'White', 'Grey', 'Brown', 'Navy Blue', 'Olive Green'];
 const names = ['أسود', 'أبيض', 'رصاصي', 'بني / جوزي', 'كحلي', 'زيتي'];
 const hexes = ['#17191c', '#f8f9fa', '#6b7280', '#4a3528', '#172554', '#4d5f2d'];
+const lang = new URLSearchParams(window.location.search).get('lang') === 'en' ? 'en' : 'ar';
 const images = colors.map(color => `/demo-colors/shirt_${encodeURIComponent(color)}_1.svg`);
 const product: Product = {
   id: 'local-color-check', title: 'Local color check', title_ar: 'تجربة ألوان محلية — غير معروضة للبيع',
@@ -22,13 +23,20 @@ const product: Product = {
     price: i === 1 ? 28000 : 25000, stock: 10, sizes: i === 1 ? ['M'] : ['M', 'L'], images: [images[i]],
   })),
 };
+if (new URLSearchParams(window.location.search).has('many-colors')) {
+  product.variants = [...product.variants!, ...product.variants!.map(variant => ({
+    ...variant, id: `${variant.id}-extra`, colorNameAr: `${variant.colorNameAr} إضافي`, colorNameEn: `${variant.colorNameEn} Extra`,
+  }))];
+}
 function Preview() {
   const [open, setOpen] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState(product);
   return <SiteControlsProvider>
     <button type="button" onClick={() => setOpen(true)}>فتح تجربة الألوان</button>
-    <div style={{ maxWidth: 280 }}><ProductCard product={product} index={0} lang="ar" onOpen={piece => { setSelectedProduct(piece); setOpen(true); }} /></div>
-    <ProductDrawer product={open ? selectedProduct : null} lang="ar" onClose={() => setOpen(false)} />
+    <div style={{ maxWidth: 280 }}><ProductCard product={product} index={0} lang={lang} onOpen={piece => { setSelectedProduct(piece); setOpen(true); }} /></div>
+    <ProductDrawer product={open ? selectedProduct : null} lang={lang} onClose={() => setOpen(false)} />
   </SiteControlsProvider>;
 }
-createRoot(document.getElementById('root')!).render(<Preview />);
+const root = createRoot(document.getElementById('root')!);
+root.render(<Preview />);
+import.meta.hot?.dispose(() => root.unmount());
