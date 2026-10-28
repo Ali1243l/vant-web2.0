@@ -8,7 +8,7 @@ import type { SizeDemandItem, UnmetSearchQuery } from '../lib/analytics';
 interface Props {
   sizeDemandMatrix: SizeDemandItem[];
   unmetSearches: UnmetSearchQuery[];
-  unmetSearchLossIQD: number;
+  unmetSearchLossIQD: number | null;
   isAr: boolean;
 }
 
@@ -46,8 +46,8 @@ export const DemandSizingTab: React.FC<Props> = ({
             </h3>
             <p className="text-xs text-slate-400 leading-relaxed max-w-2xl">
               {isAr
-                ? 'مقارنة حجم الطلب الفعلي على كل مقاس مقابل المخزون المتوفر للتنبؤ بنفاد السلع وتفادي انخفاض المبيعات، مع كشف عمليات البحث التي لم تسفر عن نتائج لتحديد المنتجات المطلوبة في السوق العراقي.'
-                : 'Evaluates size velocity against available inventory to flag stockout risks and highlights zero-result customer searches indicating unmet market demand in IQD.'}
+                ? 'الكمية المطلوبة خلال الفترة المختارة. المخزون غير المفصّل حسب المقاس يظهر غير معلوم؛ البحث يعرض حالات صفر نتائج المسجلة فقط.'
+                : 'Requested quantities in this reporting period. Size stock stays unknown unless explicitly recorded; search counts use recorded zero-result queries.'}
             </p>
           </div>
 
@@ -56,7 +56,7 @@ export const DemandSizingTab: React.FC<Props> = ({
               {isAr ? 'خسائر البحث غير الملبى' : 'Unmet Demand Loss'}
             </div>
             <div className="text-base font-bold font-mono text-amber-400">
-              {formatCurrency(unmetSearchLossIQD, 'IQD', isAr ? 'ar' : 'en')}
+              {unmetSearchLossIQD === null ? (isAr ? 'غير قابل للاستنتاج' : 'Not measurable') : formatCurrency(unmetSearchLossIQD, 'IQD', isAr ? 'ar' : 'en')}
             </div>
           </div>
         </div>
@@ -70,7 +70,7 @@ export const DemandSizingTab: React.FC<Props> = ({
               {isAr ? 'مصفوفة استهلاك وتوفر المقاسات (Size Demand Matrix)' : 'Size Request vs. Stock Matrix'}
             </h4>
             <p className="text-xs text-slate-400">
-              {isAr ? 'مقارنة معدل اختيار المقاس مع المخزون المتبقي ومعدل انخفاض التحويل' : 'Compare requested velocity with inventory buffer'}
+              {isAr ? 'مقارنة الكمية المسجّلة خلال الفترة مع المخزون المعروف لكل مقاس' : 'Compare recorded period quantities with known stock per size'}
             </p>
           </div>
           <span className="text-xs font-semibold text-slate-400 font-mono">
@@ -84,9 +84,9 @@ export const DemandSizingTab: React.FC<Props> = ({
               <tr className="border-b border-slate-800 text-slate-400 text-[11px] font-semibold uppercase">
                 <th className="py-3 px-3 text-start">{isAr ? 'المنتج' : 'Product'}</th>
                 <th className="py-3 px-3 text-start">{isAr ? 'المقاس / الحجم' : 'Size / Variant'}</th>
-                <th className="py-3 px-3 text-start">{isAr ? 'سرعة الطلب (7 أيام)' : 'Weekly Velocity'}</th>
+                <th className="py-3 px-3 text-start">{isAr ? 'الكمية خلال الفترة' : 'Quantity in period'}</th>
                 <th className="py-3 px-3 text-start">{isAr ? 'المخزون المتبقي' : 'In Stock'}</th>
-                <th className="py-3 px-3 text-start">{isAr ? 'هبوط التحويل' : 'Dropoff Rate'}</th>
+                <th className="py-3 px-3 text-start">{isAr ? 'تغطية المخزون' : 'Stock coverage'}</th>
                 <th className="py-3 px-3 text-end">{isAr ? 'حالة التوازن' : 'Deficit Status'}</th>
               </tr>
             </thead>
@@ -114,12 +114,12 @@ export const DemandSizingTab: React.FC<Props> = ({
                         <strong>{item.requestedVelocity}</strong> {isAr ? 'طلب' : 'reqs'}
                       </td>
                       <td className="py-3 px-3 font-mono">
-                        <span className={item.stockLevel <= 3 ? 'text-rose-400 font-bold' : 'text-slate-300'}>
-                          {item.stockLevel} {isAr ? 'قطعة' : 'units'}
+                        <span className={item.stockLevel !== null && item.stockLevel <= 3 ? 'text-rose-400 font-bold' : 'text-slate-300'}>
+                          {item.stockLevel === null ? (isAr ? 'غير معلوم' : 'Unknown') : `${item.stockLevel} ${isAr ? 'قطعة' : 'units'}`}
                         </span>
                       </td>
                       <td className="py-3 px-3 font-mono text-rose-400 font-semibold">
-                        %{item.conversionDropRate}
+                        {item.stockLevel === null ? '—' : `${(item.stockLevel / item.requestedVelocity).toFixed(1)}×`}
                       </td>
                       <td className="py-3 px-3 text-end whitespace-nowrap">
                         <span
@@ -139,7 +139,7 @@ export const DemandSizingTab: React.FC<Props> = ({
                           ) : isSurplus ? (
                             <span>{isAr ? 'فائض مخزون' : 'Surplus'}</span>
                           ) : (
-                            <span>{isAr ? 'متوازن' : 'Balanced'}</span>
+                            <span>{item.status === 'unknown' ? (isAr ? 'يحتاج مخزون المقاس' : 'Size stock needed') : (isAr ? 'متوازن' : 'Balanced')}</span>
                           )}
                         </span>
                       </td>
@@ -166,7 +166,7 @@ export const DemandSizingTab: React.FC<Props> = ({
             </h4>
             <p className="text-xs text-slate-400">
               {isAr
-                ? 'كلمات بحث العملاء التي لم تسفر عن نتائج، مع القيمة التقديرية للإيرادات المفقودة'
+                ? 'عمليات بحث مسجلة بصفر نتائج. لا يمكن استنتاج خسارة مالية أو نمو من العدد وحده.'
                 : 'Zero-result product queries highlighting immediate inventory expansion opportunities'}
             </p>
           </div>
@@ -187,7 +187,7 @@ export const DemandSizingTab: React.FC<Props> = ({
                   <div className="flex items-center justify-between text-xs mb-1">
                     <span className="text-[10px] text-indigo-400 font-semibold">{unmet.category}</span>
                     <span className="text-emerald-400 font-mono text-[11px] font-semibold">
-                      +{unmet.growthTrend}% {isAr ? 'نمو' : 'trend'}
+                      {unmet.growthTrend === null ? '—' : `${unmet.growthTrend}%`} {isAr ? 'نمو' : 'trend'}
                     </span>
                   </div>
                   <h5 className="font-bold text-white text-xs leading-snug">
@@ -203,7 +203,7 @@ export const DemandSizingTab: React.FC<Props> = ({
                   <div className="text-end">
                     <span className="text-[10px] text-slate-400 block">{isAr ? 'الإيراد المفقود' : 'Est. Lost Rev.'}</span>
                     <span className="font-bold font-mono text-amber-400">
-                      {formatCurrency(unmet.estimatedLostRevenueIQD, 'IQD', isAr ? 'ar' : 'en')}
+                      {unmet.estimatedLostRevenueIQD === null ? '—' : formatCurrency(unmet.estimatedLostRevenueIQD, 'IQD', isAr ? 'ar' : 'en')}
                     </span>
                   </div>
                 </div>

@@ -59,7 +59,7 @@ function MainLayout({ onClose }: AdminAppProps) {
         {/* Desktop Sidebar */}
         <aside
           className={`hidden lg:flex flex-col ${isAr ? 'border-l' : 'border-r'} border-slate-800/80 bg-slate-900/95 backdrop-blur-2xl sticky top-0 h-screen transition-all duration-300 z-20 shrink-0 ${
-            isSidebarCollapsed ? 'w-20' : 'w-72'
+            isSidebarCollapsed ? 'w-20' : 'w-64'
           }`}
         >
           <div className="flex-1 overflow-hidden flex flex-col">

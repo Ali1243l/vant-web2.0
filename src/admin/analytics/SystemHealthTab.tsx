@@ -51,13 +51,13 @@ export const SystemHealthTab: React.FC<Props> = ({
               >
                 {systemErrorLogs.length === 0
                   ? isAr
-                    ? 'النظام عملي 100%'
-                    : '100% Operational'
+                    ? 'لا أخطاء مرصودة بالفترة'
+                    : 'No recorded errors in this period'
                   : isAr
                   ? `تم رصد ${systemErrorLogs.length} أخطاء`
                   : `${systemErrorLogs.length} Errors Detected`}
               </span>
-              <span className="text-xs text-slate-400">| Sentry-Grade Telemetry</span>
+              <span className="text-xs text-slate-400">{isAr ? 'سجل أخطاء المتصفح' : 'Browser error log'}</span>
             </div>
             <h3 className="text-lg font-bold text-white">
               {isAr
@@ -72,7 +72,7 @@ export const SystemHealthTab: React.FC<Props> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        {import.meta.env.DEV && <div className="flex items-center gap-2">
           <Button
             size="sm"
             variant="outline"
@@ -90,7 +90,7 @@ export const SystemHealthTab: React.FC<Props> = ({
             <Sparkles className="w-3.5 h-3.5 ml-1 text-amber-400" />
             {isAr ? 'إرسال خطأ تشخيصي تجريبي' : 'Trigger Diagnostic Test Error'}
           </Button>
-        </div>
+        </div>}
       </div>
 
       {/* Health KPI Cards */}
@@ -103,7 +103,7 @@ export const SystemHealthTab: React.FC<Props> = ({
             {systemErrorLogs.length}
           </span>
           <span className="text-[11px] text-slate-500 block mt-1">
-            {isAr ? 'منذ بدء التشغيل' : 'Since session start'}
+            {isAr ? 'خلال الفترة المختارة' : 'Within the selected period'}
           </span>
         </Card>
 
@@ -121,37 +121,29 @@ export const SystemHealthTab: React.FC<Props> = ({
 
         <Card className="bg-slate-900/50 border-slate-800/80">
           <span className="text-xs font-medium text-slate-400 block mb-1">
-            {isAr ? 'مؤشر سلامة النظام' : 'System Health Score'}
+            {isAr ? 'توافر الخدمة' : 'Service availability'}
           </span>
           <span
             className={`text-2xl font-bold font-mono ${
               systemErrorLogs.length === 0 ? 'text-emerald-400' : 'text-amber-400'
             }`}
           >
-            {systemErrorLogs.length === 0
-              ? '100%'
-              : `${Math.max(60, 100 - systemErrorLogs.length * 5)}%`}
+            —
           </span>
           <span className="text-[11px] text-slate-500 block mt-1">
-            {systemErrorLogs.length === 0
-              ? isAr
-                ? 'ممتاز، لا توجد أخطاء'
-                : 'Excellent, no errors'
-              : isAr
-              ? 'يتطلب المعاينة'
-              : 'Needs inspection'}
+            {isAr ? 'يتطلب مراقبة توافر مستقلة؛ عدد الأخطاء لا يقيس التوافر.' : 'Requires an uptime monitor; error counts do not measure availability.'}
           </span>
         </Card>
 
         <Card className="bg-slate-900/50 border-slate-800/80">
           <span className="text-xs font-medium text-slate-400 block mb-1">
-            {isAr ? 'تزامن قاعدة البيانات' : 'Supabase Telemetry Sync'}
+            {isAr ? 'سجلات سحابية مرصودة' : 'Observed cloud records'}
           </span>
           <span className="text-2xl font-bold font-mono text-emerald-400">
-            {isAr ? 'نشط' : 'Active'}
+            {systemErrorLogs.filter(event => event.isCloudLog).length}
           </span>
           <span className="text-[11px] text-slate-500 block mt-1">
-            {isAr ? 'جدول logs متصل 100%' : 'Table logs synced'}
+            {isAr ? 'عدد السجلات ذات مصدر سحابي ضمن الفترة' : 'Records marked as cloud-sourced in this period'}
           </span>
         </Card>
       </div>
@@ -190,8 +182,8 @@ export const SystemHealthTab: React.FC<Props> = ({
             </h5>
             <p className="text-xs text-slate-400 max-w-md mx-auto">
               {isAr
-                ? 'جميع الخدمات والواجهات البرمجية تعمل بكفاءة عالية واستقرار 100%. سيتم تسجيل أي خطأ يظهر للعملاء تلقائياً هنا.'
-                : 'All app features and user journeys are operating cleanly at 100% stability. Any client-side runtime errors will automatically log here.'}
+                ? 'لم تصل أخطاء متصفح خلال الفترة المختارة. هذا لا يؤكد سلامة السيرفر أو جميع رحلات الاستخدام.'
+                : 'No browser errors were recorded in this period. This does not certify server availability or every user journey.'}
             </p>
           </div>
         ) : (

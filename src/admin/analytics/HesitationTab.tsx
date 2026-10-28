@@ -44,13 +44,13 @@ export const HesitationTab: React.FC<Props> = ({
             </div>
             <h3 className="text-lg font-bold text-white">
               {isAr
-                ? 'اكتشاف تعثر العملاء واسترجاعهم فوراً عبر واتساب'
-                : 'Detect Drop-off Hesitation & Trigger 1-Click WhatsApp Recovery'}
+                ? 'جلسات تحتاج مراجعة ومساعدة'
+                : 'Sessions that may need assistance'}
             </h3>
             <p className="text-xs text-slate-400 leading-relaxed max-w-2xl">
               {isAr
-                ? 'يقوم المحرك برصد العملاء الذين توقفوا عند اختيار المقاس أو ترددوا في صفحة الدفع لأكثر من 90 ثانية، مع حساب مؤشر نية الشراء (Intent Score) وتوليد رسالة مخصصة لفتح محادثة واتساب فوراً.'
-                : 'Monitors users stuck on sizing pickers or checkout forms (>90s dwell), calculates purchase intent scores, and synthesizes 1-click personalized WhatsApp recovery messages.'}
+                ? 'إشارة تفسيرية: خمول 5 دقائق على الأقل، و30 ثانية بين أول وآخر حدث، مع اختيار مقاس أو إضافة للسلة أو استخدام دليل المقاس مرتين. لا تؤكد هجر الشراء، والجلسة المجهولة لا تتيح التواصل.'
+                : 'Rule-based signal: at least 5 minutes idle and 30 seconds between recorded events, plus a size choice, cart addition or repeated fit guidance. It does not prove abandonment; anonymous sessions cannot be contacted.'}
             </p>
           </div>
 
@@ -75,17 +75,17 @@ export const HesitationTab: React.FC<Props> = ({
                   }
                   if (customerSessions.length > 0) {
                     const sum = customerSessions.reduce(
-                      (acc, sess) => acc + (sess.purchaseProbability || sess.rfmScore || 0),
+                      (acc, sess) => acc + sess.engagementScore,
                       0
                     );
                     return Math.round(sum / customerSessions.length);
                   }
                   return 0;
                 })()}
-                %
+                /100
               </div>
               <div className="text-[10px] text-slate-400">
-                {isAr ? 'متوسط نية الشراء' : 'Avg Intent Score'}
+                {isAr ? 'متوسط التفاعل المرصود' : 'Observed engagement average'}
               </div>
             </div>
           </div>
@@ -170,7 +170,7 @@ export const HesitationTab: React.FC<Props> = ({
                         {isAr ? 'مؤشر نية الشراء' : 'Intent Score'}
                       </div>
                       <div className="text-lg font-bold font-mono text-emerald-400">
-                        %{incident.intentScore}
+                        {incident.intentScore}/100
                       </div>
                     </div>
                     <div className="w-20 h-2 bg-slate-800 rounded-full overflow-hidden">
@@ -224,6 +224,8 @@ export const HesitationTab: React.FC<Props> = ({
                       onClick={() =>
                         handleOpenWhatsApp(incident.phone, incident.recoveryMessage)
                       }
+                      disabled={!/^\+?\d{7,15}$/.test(incident.phone)}
+                      title={!incident.phone ? (isAr ? 'الجلسة مجهولة ولا تحتوي رقم تواصل' : 'Anonymous session without a contact number') : undefined}
                       leftIcon={<ExternalLink className="w-3.5 h-3.5 text-white" />}
                       className="bg-emerald-600 hover:bg-emerald-500 font-semibold"
                     >

@@ -10,6 +10,9 @@ export interface ChartDataPoint {
 }
 
 export interface DatasetPeriod {
+  startTime: number;
+  endTime: number;
+  deliveredOrders: number;
   titleAr: string;
   titleEn: string;
   subAr: string;
@@ -21,7 +24,7 @@ export interface DatasetPeriod {
   growth: string;
   peakAr: string;
   peakEn: string;
-  growthVal: number;
+  growthVal: number | null;
   prevRevenue: number;
   prevOrders: number;
   prevAov: number;

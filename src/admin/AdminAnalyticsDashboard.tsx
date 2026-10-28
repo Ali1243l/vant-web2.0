@@ -37,6 +37,7 @@ import {
   computeDatasets,
   computeCategoriesShare,
   computeRecentOrders,
+  computeTopProducts,
 } from './analytics/analyticsCalculations';
 import { OverviewTab } from './analytics/OverviewTab';
 import { HesitationTab } from './analytics/HesitationTab';
@@ -46,7 +47,7 @@ import { SystemHealthTab } from './analytics/SystemHealthTab';
 import { AnalyticsModals } from './analytics/AnalyticsModals';
 
 export const AdminAnalyticsDashboard: React.FC = () => {
-  const { lang, products, offers, subscribers, orders = [], setActiveView } = useAdminBridge();
+  const { lang, products, offers, subscribers, orders = [], setActiveView, isLiveDatabase } = useAdminBridge();
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview');
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
   const [widgetDateRange, setWidgetDateRange] = useState<DateRange | undefined>(undefined);
@@ -101,18 +102,14 @@ export const AdminAnalyticsDashboard: React.FC = () => {
   }, []);
 
   // Fetch real aggregated analytics from live products and orders
-  const analyticsData = useMemo(
-    () => getAggregatedAnalytics(products, orders),
-    [products, orders, refreshSeed]
-  );
-
   // Dynamic datasets computed strictly from real database orders with true date math
   const datasets = useMemo(
     () => computeDatasets(orders, isAr, customStartDate, customEndDate),
-    [orders, isAr, customStartDate, customEndDate]
+    [orders, isAr, customStartDate, customEndDate, refreshSeed]
   );
 
   const currentDataset = datasets[timeRange];
+  const analyticsData = useMemo(() => getAggregatedAnalytics(products, orders, currentDataset), [products, orders, currentDataset, refreshSeed]);
   const chartData = currentDataset.points;
   const maxSales = Math.max(1, ...chartData.map((d) => d.sales));
   const maxOrders = Math.max(1, ...chartData.map((d) => d.orders));
@@ -136,7 +133,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
   const confirmResetData = async () => {
     setIsResetting(true);
     try {
-      await resetAnalyticsData();
+      if (!(await resetAnalyticsData())) throw new Error('Analytics reset failed');
       setRefreshSeed((prev) => prev + 1);
       setResetSuccess(true);
       setTimeout(() => {
@@ -152,35 +149,19 @@ export const AdminAnalyticsDashboard: React.FC = () => {
 
   const systemErrorLogs = useMemo(() => {
     const allEvents = getStoredEvents();
-    return allEvents.filter((ev) => ev.type === 'system_error');
-  }, [refreshSeed]);
-
-  const revenueGrowth = currentDataset.growthVal;
-  const ordersGrowth =
-    currentDataset.prevOrders > 0
-      ? Math.round(
-          ((currentDataset.totalOrders - currentDataset.prevOrders) / currentDataset.prevOrders) * 100
-        )
-      : currentDataset.totalOrders > 0
-      ? 100
-      : 0;
-  const aovGrowth =
-    currentDataset.prevAov > 0
-      ? Math.round(((currentDataset.avgAov - currentDataset.prevAov) / currentDataset.prevAov) * 100)
-      : currentDataset.avgAov > 0
-      ? 100
-      : 0;
+    return allEvents.filter((ev) => ev.type === 'system_error' && !ev.data?.isDev && !String(ev.data?.errorMessage || '').startsWith('Manual Diagnostic Test Error:') && ev.timestamp >= currentDataset.startTime && ev.timestamp < currentDataset.endTime);
+  }, [refreshSeed, currentDataset]);
 
   const stats: KPICardStat[] = [
     {
-      titleAr: 'إجمالي الإيرادات (IQD)',
-      titleEn: 'Total Revenue (IQD)',
+      titleAr: 'إيراد الطلبات المسلّمة (IQD)',
+      titleEn: 'Delivered revenue (IQD)',
       value: currentDataset.totalRevenue,
       isCurrency: true,
       subAr: isAr
-        ? `من إجمالي ${currentDataset.totalOrders} طلب حقيقي مسجل`
-        : `From ${currentDataset.totalOrders} real recorded orders`,
-      subEn: `From ${currentDataset.totalOrders} real orders`,
+        ? `من ${currentDataset.deliveredOrders} طلب مسلّم بالفترة`
+        : `From ${currentDataset.deliveredOrders} delivered orders`,
+      subEn: `From ${currentDataset.deliveredOrders} delivered orders`,
       icon: DollarSign,
     },
     {
@@ -189,27 +170,27 @@ export const AdminAnalyticsDashboard: React.FC = () => {
       value: currentDataset.totalOrders,
       isCurrency: false,
       subAr: isAr
-        ? `${orders.filter((o) => o.status === 'delivered').length} طلب تم تسليمه`
-        : `${orders.filter((o) => o.status === 'delivered').length} delivered orders`,
-      subEn: 'Delivered orders',
+        ? `${currentDataset.deliveredOrders} مسلّم · الملغي مستبعد`
+        : `${currentDataset.deliveredOrders} delivered · excludes cancelled`,
+      subEn: `${currentDataset.deliveredOrders} delivered · excludes cancelled`,
       icon: ShoppingBag,
     },
     {
-      titleAr: 'متوسط قيمة الطلب (IQD)',
-      titleEn: 'Average Order Value (IQD)',
+      titleAr: 'متوسط الطلب المسلّم (IQD)',
+      titleEn: 'Delivered order average (IQD)',
       value: currentDataset.avgAov,
       isCurrency: true,
-      subAr: isAr ? 'محسوب من طلبات قاعدة البيانات الحقيقية' : 'Calculated from real database orders',
-      subEn: 'Based on real database orders',
+      subAr: 'إيراد المسلّم ÷ عدد الطلبات المسلّمة بالفترة',
+      subEn: 'Delivered revenue ÷ delivered order count in the period',
       icon: CreditCard,
     },
     {
-      titleAr: 'معدل التحويل الكلي',
+      titleAr: 'التحويل المرصود',
       titleEn: 'Conversion Rate',
       value: 0,
-      valueText: `${analyticsData.overview.conversionRate}%`,
-      subAr: isAr ? 'نسبة التحويل من الزيارات الحقيقية' : 'Real visitor conversion rate',
-      subEn: 'Real visitor conversion rate',
+      valueText: analyticsData.overview.conversionRate === null ? '—' : `${analyticsData.overview.conversionRate}%`,
+      subAr: 'جلسات مرتبطة بطلب مسلّم؛ — يعني الربط غير كافٍ',
+      subEn: 'Sessions linked to delivered orders; — means insufficient linkage',
       icon: Users,
     },
     {
@@ -241,12 +222,13 @@ export const AdminAnalyticsDashboard: React.FC = () => {
 
   // Category sales distribution derived strictly from real non-cancelled orders in database
   const categoriesShare = useMemo(
-    () => computeCategoriesShare(products, orders, isAr),
-    [products, orders, isAr]
+    () => computeCategoriesShare(products, orders, isAr, currentDataset),
+    [products, orders, isAr, currentDataset]
   );
 
   // Real recent orders directly from database
-  const recentOrders = useMemo(() => computeRecentOrders(orders, isAr), [orders, isAr]);
+  const recentOrders = useMemo(() => computeRecentOrders(orders, isAr, currentDataset), [orders, isAr, currentDataset]);
+  const topProducts = useMemo(() => computeTopProducts(products, orders, currentDataset), [products, orders, currentDataset]);
 
   const handleCopyMessage = (id: string, text: string) => {
     navigator.clipboard?.writeText(text);
@@ -269,38 +251,38 @@ export const AdminAnalyticsDashboard: React.FC = () => {
   const tabsConfig = [
     {
       id: 'overview' as const,
-      labelAr: 'نظرة عامة وبيانية',
-      labelEn: 'Overview & Bento',
+      labelAr: 'نظرة عامة',
+      labelEn: 'Overview',
       icon: BarChart3,
     },
     {
       id: 'hesitation' as const,
-      labelAr: 'خوارزمية 1: كاشف التردد',
-      labelEn: 'Algorithm 1: Hesitation Engine',
+      labelAr: 'إشارات التردد',
+      labelEn: 'Hesitation signals',
       icon: Timer,
       badge: `${analyticsData.hesitationIncidents.length}`,
       badgeColor: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
     },
     {
       id: 'personas' as const,
-      labelAr: 'خوارزمية 2: شخصيات المشترين',
-      labelEn: 'Algorithm 2: Buyer Personas',
+      labelAr: 'الزوار وRFM',
+      labelEn: 'Visitors & RFM',
       icon: Target,
       badge: `${analyticsData.customerSessions.length}`,
       badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
     },
     {
       id: 'demand-sizing' as const,
-      labelAr: 'خوارزمية 3: سرعة الطلب والمقاسات',
-      labelEn: 'Algorithm 3: Demand Velocity',
+      labelAr: 'المقاسات والبحث',
+      labelEn: 'Sizes & search',
       icon: Zap,
       badge: `${analyticsData.unmetSearches.length}`,
       badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
     },
     {
       id: 'system-health' as const,
-      labelAr: 'صحة النظام وسجلات الأخطاء',
-      labelEn: 'System Health & Error Telemetry',
+      labelAr: 'سجل الأخطاء',
+      labelEn: 'Error log',
       icon: ShieldAlert,
       badge: `${systemErrorLogs.length}`,
       badgeColor: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
@@ -308,32 +290,31 @@ export const AdminAnalyticsDashboard: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="analytics-dashboard space-y-6 pb-12">
 
       {/* Top Header Banner with Live Refresh and Title (relative z-50 ensures popover floats over tabs) */}
-      <div className="relative z-50 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="analytics-heading relative z-20 flex flex-col gap-5">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
               <Sparkles className="w-3 h-3 text-indigo-400" />
-              {isAr ? 'محرك التحليلات السلوكية العميقة v2' : 'Deep Behavioral Analytics Engine v2'}
+              {isAr ? (isLiveDatabase ? 'بيانات قاعدة المتجر + أحداث مرصودة' : 'بيانات محلية · بيئة تجريبية') : (isLiveDatabase ? 'Store records + observed events' : 'Local data · test environment')}
             </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-            {isAr ? 'لوحة الذكاء السلوكي وتحليلات المتجر' : 'Store Behavioral Intelligence Hub'}
+            {isAr ? 'تحليلات المتجر' : 'Store analytics'}
           </h2>
           <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
             {isAr
-              ? 'رصد التردد، تصنيف المشترين RFM، وسرعة دوران مقاسات الكتالوج بالدينار العراقي.'
-              : 'Hesitation radar, RFM buyer personas, sizing velocity & unmet demand intelligence in IQD.'}
+              ? 'أرقام موحّدة للفترة المختارة. درجات السلوك مؤشرات تفسيرية وليست توقعات شراء.'
+              : 'One reporting period for every metric. Behavioral scores are explainable signals, not purchase predictions.'}
           </p>
         </div>
 
         {/* Top Header Actions (relative z-50 with auto alignment) */}
         <div className="relative z-50 flex flex-wrap items-center gap-2 sm:gap-2.5">
           {/* Live DateRangeFilterWidget directly in the dashboard toolbar */}
-          {activeTab === 'overview' && (
+          {(
             <DateRangeFilterWidget
               value={widgetDateRange}
               onChange={handleDateRangeWidgetChange}
@@ -344,7 +325,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
           )}
 
           {/* Time range segmented quick presets */}
-          {activeTab === 'overview' && (
+          {(
             <div className="flex items-center gap-0.5 p-1 bg-slate-900/90 border border-slate-800 rounded-xl shadow-inner">
               {[
                 { id: '7d', labelAr: '7D', labelEn: '7D' },
@@ -388,7 +369,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
               </span>
             </button>
 
-            <button
+            {activeTab === 'system-health' && <button
               type="button"
               onClick={handleResetData}
               disabled={isResetting}
@@ -398,13 +379,13 @@ export const AdminAnalyticsDashboard: React.FC = () => {
               <span>
                 {isResetting ? (isAr ? 'جاري التصفير...' : 'Resetting...') : isAr ? 'تصفير العداد' : 'Purge Data'}
               </span>
-            </button>
+            </button>}
           </div>
         </div>
       </div>
 
       {/* Sub-Navigation Tabs Bar with relative z-10 */}
-      <div className="relative z-10 p-1.5 rounded-2xl bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 flex items-center gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent shadow-lg shadow-black/20 w-full min-w-0 flex-nowrap touch-pan-x">
+      <div className="analytics-tabs relative z-10 p-1.5 rounded-2xl bg-slate-900/60 border border-slate-800/80 flex items-center gap-1.5 overflow-x-auto scrollbar-thin scrollbar-thumb-slate-700 w-full min-w-0 touch-pan-x">
         {tabsConfig.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -413,7 +394,8 @@ export const AdminAnalyticsDashboard: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as AnalyticsTab)}
-              className={`relative px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors flex items-center gap-2.5 shrink-0 whitespace-nowrap select-none cursor-pointer ${
+              aria-pressed={isActive}
+              className={`relative px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-2 shrink-0 whitespace-nowrap select-none cursor-pointer ${
                 isActive ? 'text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
               }`}
             >
@@ -460,7 +442,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
             categoriesShare={categoriesShare}
             analyticsData={analyticsData}
             setActiveTab={setActiveTab}
-            products={products}
+            products={topProducts}
             setActiveView={setActiveView}
             recentOrders={recentOrders}
             isAr={isAr}
@@ -479,7 +461,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
         )}
 
         {activeTab === 'personas' && (
-          <PersonasTab customerSessions={analyticsData.customerSessions} isAr={isAr} />
+          <PersonasTab customerSessions={analyticsData.customerSessions} rfmCustomers={analyticsData.rfmCustomers} isAr={isAr} />
         )}
 
         {activeTab === 'demand-sizing' && (

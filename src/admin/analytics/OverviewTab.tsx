@@ -63,7 +63,7 @@ export const OverviewTab: React.FC<Props> = ({
       className="space-y-6"
     >
       {/* KPI Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="analytics-kpis grid gap-3 sm:gap-4">
         {stats.map((s, idx) => {
           const Icon = s.icon;
           return (
@@ -78,10 +78,10 @@ export const OverviewTab: React.FC<Props> = ({
               </div>
 
               <div className="flex items-baseline justify-between gap-2 mb-2">
-                <span className="text-2xl font-bold text-white tracking-tight font-mono">
+                <span dir="ltr" className="text-xl sm:text-2xl font-bold text-white tracking-tight font-mono tabular-nums">
                   {s.valueText ||
                     (s.isCurrency
-                      ? formatCurrency(s.value as number, 'IQD', isAr ? 'ar' : 'en')
+                      ? formatNumber(s.value as number, isAr ? 'ar' : 'en')
                       : formatNumber(s.value as number, isAr ? 'ar' : 'en'))}
                 </span>
               </div>
@@ -99,7 +99,7 @@ export const OverviewTab: React.FC<Props> = ({
         {/* Sales Chart (2 columns) */}
         <Card className="lg:col-span-2 flex flex-col justify-between bg-slate-900/50 backdrop-blur-xl border-slate-800/80">
           <div>
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
+            <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-4 pb-4 border-b border-slate-800 mb-6">
               <div>
                 <h3 className="text-base font-bold text-white">
                   {isAr ? currentDataset.titleAr : currentDataset.titleEn}
@@ -150,7 +150,8 @@ export const OverviewTab: React.FC<Props> = ({
             </div>
 
             {/* Interactive Bar Chart */}
-            <div className="h-64 flex items-end gap-3 sm:gap-6 pt-6 pb-2 px-2">
+            {chartData.every(point => point.sales === 0 && point.orders === 0) && <p role="status" className="py-6 text-center text-sm text-slate-400">{isAr ? 'لا توجد طلبات مسجلة في هذه الفترة.' : 'No orders recorded in this period.'}</p>}
+            <div className="h-64 flex items-end gap-2 sm:gap-4 pt-6 pb-2 px-2">
               {chartData.map((bar, index) => {
                 const salesPercent = (bar.sales / maxSales) * 100;
                 const ordersPercent = (bar.orders / maxOrders) * 100;
@@ -163,17 +164,20 @@ export const OverviewTab: React.FC<Props> = ({
                 const isHovered = hoveredDataIndex === index;
 
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={index}
-                    className="flex-1 flex flex-col items-center gap-2 h-full justify-end group cursor-pointer"
+                    className="relative min-w-0 flex-1 flex flex-col items-center gap-2 h-full justify-end group cursor-pointer focus-visible:outline-2 focus-visible:outline-indigo-400"
                     onMouseEnter={() => setHoveredDataIndex(index)}
                     onMouseLeave={() => setHoveredDataIndex(null)}
+                    onFocus={() => setHoveredDataIndex(index)}
+                    onBlur={() => setHoveredDataIndex(null)}
                     onClick={() => setSelectedBarData(bar)}
                     title={isAr ? 'اضغط لعرض تفاصيل الفترة' : 'Click for period breakdown'}
                   >
                     {/* Tooltip on Hover */}
                     <div
-                      className={`text-[10px] bg-slate-800 text-white px-2 py-1.5 rounded-lg border border-slate-700 shadow-xl pointer-events-none transition-opacity whitespace-nowrap z-20 ${
+                      className={`absolute top-0 max-w-24 text-[10px] bg-slate-800 text-white px-2 py-1.5 rounded-lg border border-slate-700 shadow-xl pointer-events-none transition-opacity z-20 ${
                         isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
                       }`}
                     >
@@ -181,12 +185,12 @@ export const OverviewTab: React.FC<Props> = ({
                         {formatCurrency(bar.sales, 'IQD', isAr ? 'ar' : 'en')}
                       </div>
                       <div className="text-emerald-400 font-medium">
-                        {bar.orders} {isAr ? 'طلب مكتمل' : 'orders'}
+                        {bar.orders} {isAr ? 'طلب مسجل' : 'recorded orders'}
                       </div>
                     </div>
 
                     {/* Bar visual */}
-                    <div className="w-full bg-slate-800/60 rounded-t-lg relative flex items-end overflow-hidden h-44">
+                    <div className="w-full border-b border-slate-700/60 rounded-t-lg relative flex items-end gap-1 overflow-hidden h-44">
                       <div
                         style={{ height: `${activeHeight}%` }}
                         className={`w-full rounded-t-lg transition-all duration-300 ${
@@ -199,13 +203,14 @@ export const OverviewTab: React.FC<Props> = ({
                             : 'bg-indigo-600/80 hover:bg-indigo-500'
                         }`}
                       />
+                      {chartMetric === 'both' && <div style={{ height: `${ordersPercent}%` }} className="w-full rounded-t-lg bg-emerald-500/80" />}
                     </div>
 
                     {/* Day / Period label */}
-                    <span className="text-xs font-semibold text-slate-400 group-hover:text-white transition-colors">
+                    <span className="text-[10px] sm:text-xs font-semibold text-slate-400 group-hover:text-white transition-colors">
                       {isAr ? bar.labelAr : bar.labelEn}
                     </span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -234,7 +239,7 @@ export const OverviewTab: React.FC<Props> = ({
             <div className="space-y-4">
               {categoriesShare.length === 0 ? (
                 <div className="text-center py-6 text-slate-500 text-xs">
-                  {isAr ? 'لا توجد تصنيفات مسجلة في قاعدة البيانات' : 'No categories recorded in database'}
+                  {isAr ? 'لا توجد مبيعات قطع مسلّمة بالفترة.' : 'No delivered item sales in this period.'}
                 </div>
               ) : (
                 categoriesShare.map((cat, i) => (
@@ -275,14 +280,14 @@ export const OverviewTab: React.FC<Props> = ({
               <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50 text-xs">
                 <span className="text-slate-400">{isAr ? 'فرص المبيعات الضائعة بالبحث' : 'Unmet Search Demand'}</span>
                 <span className="font-bold text-amber-400 font-mono">
-                  {formatCurrency(analyticsData.overview.unmetSearchLossIQD, 'IQD', isAr ? 'ar' : 'en')}
+                  {analyticsData.overview.unmetSearchLossIQD === null ? '—' : formatCurrency(analyticsData.overview.unmetSearchLossIQD, 'IQD', isAr ? 'ar' : 'en')}
                 </span>
               </div>
 
               <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50 text-xs">
-                <span className="text-slate-400">{isAr ? 'جلسات المشترين النشطة' : 'Active Buyer Profiles'}</span>
+                <span className="text-slate-400">{isAr ? 'الجلسات المسجّلة بالفترة' : 'Recorded sessions in period'}</span>
                 <span className="font-bold text-indigo-400 font-mono">
-                  {analyticsData.customerSessions.length} {isAr ? 'جلسة' : 'sessions'}
+                  {analyticsData.customerSessions.length} {isAr ? 'جلسة مسجلة' : 'recorded sessions'}
                 </span>
               </div>
             </div>
@@ -309,7 +314,7 @@ export const OverviewTab: React.FC<Props> = ({
                 {isAr ? 'أفضل المنتجات مبيعاً' : 'Top Performing Products'}
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                {isAr ? 'المنتجات ذات أعلى معدل طلب وإقبال' : 'Highest demand and order conversion'}
+                {isAr ? 'مرتبّة حسب كمية القطع المسلّمة بالفترة' : 'Ranked by delivered item quantity in this period'}
               </p>
             </div>
             <Button variant="ghost" size="sm" onClick={() => setActiveView('products')}>
@@ -318,6 +323,7 @@ export const OverviewTab: React.FC<Props> = ({
           </div>
 
           <div className="space-y-3">
+            {products.length === 0 && <p className="py-6 text-sm text-slate-400">{isAr ? 'لا توجد مبيعات مسلّمة بالفترة لترتيب المنتجات.' : 'No delivered sales in this period to rank products.'}</p>}
             {products.slice(0, 4).map((prod) => (
               <div
                 key={prod.id}
@@ -379,7 +385,7 @@ export const OverviewTab: React.FC<Props> = ({
                 {isAr ? 'آخر طلبات الشراء الواردة' : 'Recent Customer Orders'}
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                {isAr ? 'تحديث فوري لمعاملات الدفع والشحن' : 'Real-time order checkout activity'}
+                {isAr ? 'أحدث الطلبات المسجّلة خلال الفترة المختارة' : 'Latest recorded orders in the selected period'}
               </p>
             </div>
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -388,7 +394,7 @@ export const OverviewTab: React.FC<Props> = ({
           <div className="space-y-3">
             {recentOrders.length === 0 ? (
               <div className="py-8 text-center text-slate-500 text-xs">
-                {isAr ? 'لا توجد طلبات مسجلة في قاعدة البيانات حتى الآن' : 'No customer orders recorded in database yet'}
+                {isAr ? 'لا توجد طلبات مسجّلة خلال هذه الفترة' : 'No recorded orders in this period'}
               </div>
             ) : (
               recentOrders.map((ord) => (

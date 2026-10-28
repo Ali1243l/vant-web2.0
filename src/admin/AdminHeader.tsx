@@ -65,10 +65,21 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   const [isSyncing, setIsSyncing] = useState(false);
 
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   const isAr = lang === 'ar';
+  useEffect(() => {
+    const handleKey = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault(); searchInputRef.current?.focus(); setIsSearchFocused(true);
+      }
+      if (event.key === 'Escape') { setIsSearchFocused(false); setIsNotifOpen(false); setIsUserMenuOpen(false); }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, []);
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const viewTitles: Record<AdminView, { ar: string; en: string }> = {
@@ -157,7 +168,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   };
 
   return (
-    <header className="h-16 border-b border-slate-800 bg-slate-900/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 select-none">
+    <header className="admin-header border-b border-slate-800 bg-slate-950/95 backdrop-blur-md sticky top-0 z-30">
       {/* Logout animation toast */}
       {logoutFeedback && (
         <div className="fixed top-4 start-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-slate-900 border border-amber-500/50 text-amber-300 rounded-xl shadow-2xl text-xs font-semibold flex items-center gap-2 animate-in fade-in zoom-in duration-200">
@@ -175,11 +186,13 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
       </div>
 
       {/* Right section: Search, Widgets Studio, Action Button, Notifications, Lang, Lock, User Profile */}
-      <div className="flex items-center gap-2 sm:gap-2.5">
+      <div className="admin-header-tools flex items-center gap-2">
         {/* 1. Quick Search with Live Suggestions */}
-        <div ref={searchContainerRef} className="relative hidden md:block w-48 lg:w-60">
+        <div ref={searchContainerRef} className="admin-header-search relative w-48">
           <Search className="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
+            ref={searchInputRef}
+            aria-label={isAr ? 'البحث في الإدارة' : 'Search administration'}
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -190,13 +203,14 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           {searchQuery ? (
             <button
               onClick={() => setSearchQuery('')}
+              aria-label={isAr ? 'مسح بحث الإدارة' : 'Clear admin search'}
               className="absolute end-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           ) : (
             <kbd className="absolute end-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 bg-slate-700/50 px-1.5 py-0.5 rounded font-mono pointer-events-none">
-              ⌘K
+              Ctrl K
             </kbd>
           )}
 
@@ -280,6 +294,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           )}
         </div>
 
+        <div className="admin-header-actions flex items-center gap-2">
         {/* 2. Primary Quick Action Button */}
         {activeView === 'products' && onOpenProductSheet && (
           <Button
@@ -328,7 +343,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
         )}
 
         {/* 3. Notification Bell with interactive dropdown */}
-        <div ref={notifRef} className="relative">
+        {notifications.length > 0 && <div ref={notifRef} className="relative">
           <button
             onClick={() => {
               setIsNotifOpen(!isNotifOpen);
@@ -355,6 +370,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
                 </span>
               </div>
               <div className="space-y-2 max-h-72 overflow-y-auto">
+                {notifications.length === 0 && <p className="py-4 text-center text-xs text-slate-400">{isAr ? 'لا توجد إشعارات مسجلة.' : 'No recorded notifications.'}</p>}
                 {notifications.map((n) => (
                   <div
                     key={n.id}
@@ -372,8 +388,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
               </div>
             </div>
           )}
-        </div>
-
+        </div>}
         {/* 4. Language Switcher (عربي / EN) */}
         <button
           onClick={toggleLang}
@@ -404,6 +419,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             <X className="w-5 h-5" />
           </button>
         )}
+        </div>
       </div>
     </header>
   );

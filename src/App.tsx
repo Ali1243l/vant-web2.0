@@ -135,11 +135,12 @@ function MainApp() {
 
   // Track initial page view telemetry
   useEffect(() => {
-    trackEvent('page_view', { path: window.location.pathname });
+    if (!new URLSearchParams(window.location.search).has('admin')) trackEvent('page_view', { path: window.location.pathname });
   }, []);
 
   // Active User Engagement Duration Telemetry Tracker (logs every 30s of active user attention)
   useEffect(() => {
+    if (isAdminOpen) return;
     let activeSeconds = 0;
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible') {
@@ -152,17 +153,7 @@ function MainApp() {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, []);
-
-  // Track search queries telemetry
-  useEffect(() => {
-    if (searchQuery.trim().length >= 3) {
-      const timer = setTimeout(() => {
-        trackEvent('search_query', { query: searchQuery.trim() });
-      }, 700);
-      return () => clearTimeout(timer);
-    }
-  }, [searchQuery]);
+  }, [isAdminOpen]);
 
   // Auto-Apply Coupon & Offer Direct Routing from 1-Click Email Link (?coupon=... & ?filter=offers)
   const [appliedCouponNotification, setAppliedCouponNotification] = useState<string | null>(null);
@@ -339,6 +330,14 @@ function MainApp() {
     // Default: 'newest' (products are ordered in natural chronological order, latest first)
     return filtered;
   }, [products, isOffersOnly, category, wishlist, isWishlistOnly, availabilityFilter, searchQuery, catalogSort]);
+  useEffect(() => {
+    if (isAdminOpen || loading || searchQuery.trim().length < 3) return;
+    const timer = setTimeout(() => trackEvent('search_query', {
+      query: searchQuery.trim(), resultsCount: hasMore ? undefined : visible.length,
+      filters: { category, availabilityFilter, isOffersOnly, isWishlistOnly },
+    }), 700);
+    return () => clearTimeout(timer);
+  }, [searchQuery, visible.length, hasMore, loading, isAdminOpen, category, availabilityFilter, isOffersOnly, isWishlistOnly]);
 
   // One navigation owner handles filters after React commits their layout changes.
   const prevCategoryFilterRef = useRef({ category, isOffersOnly, availabilityFilter });
