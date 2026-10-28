@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { normalizeOrders } from './orderModel';
 
 export interface UploadedMediaItem {
   url: string;
@@ -464,28 +465,8 @@ export async function fetchOrdersFromSupabase(): Promise<any[] | null> {
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (!dbErr && Array.isArray(dbData) && dbData.length > 0) {
-      return dbData.map((d: any) => ({
-        id: String(d.id || 'ORD-' + Math.floor(1000 + Math.random() * 9000)),
-        customerName: d.customer_name || d.customerName || 'عميل كونسيرج',
-        customerPhone: d.customer_phone || d.customerPhone || '',
-        customerEmail: d.customer_email || d.customerEmail || '',
-        shippingAddress: d.shipping_address || d.shippingAddress || '',
-        items: Array.isArray(d.items)
-          ? d.items
-          : typeof d.items === 'string'
-          ? (() => { try { return JSON.parse(d.items); } catch { return []; } })()
-          : [],
-        totalPrice: Number(d.total_price || d.totalPrice || 0),
-        status: d.status || 'pending_payment',
-        orderDate: d.created_at || d.orderDate || new Date().toISOString(),
-        type: d.type || 'ready_to_wear',
-        timeline: Array.isArray(d.timeline)
-          ? d.timeline
-          : typeof d.timeline === 'string'
-          ? (() => { try { return JSON.parse(d.timeline); } catch { return []; } })()
-          : [],
-      }));
+    if (!dbErr && Array.isArray(dbData)) {
+      return normalizeOrders(dbData);
     }
 
     // Fallback to storage file if database table returns empty or error

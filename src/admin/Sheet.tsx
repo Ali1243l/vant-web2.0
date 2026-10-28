@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 
 export interface SheetProps {
@@ -22,23 +22,34 @@ export const Sheet: React.FC<SheetProps> = ({
   side = 'end',
   widthClass = 'max-w-2xl',
 }) => {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   useEffect(() => {
+    if (!isOpen) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    const focusable = () => Array.from(panelRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex="0"]') || []).filter(element => element.getClientRects().length > 0);
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
+      if (e.key === 'Escape') {
+        closeRef.current();
+      }
+      if (e.key === 'Tab') {
+        const elements = focusable(), first = elements[0], last = elements[elements.length - 1];
+        if (!first) { e.preventDefault(); return; }
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
       }
     };
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      window.addEventListener('keydown', handleKeyDown);
-    } else {
-      document.body.style.overflow = '';
-    }
+    document.body.style.overflow = 'hidden';
+    focusable()[0]?.focus();
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', handleKeyDown);
+      if (previousFocus?.isConnected) previousFocus.focus();
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -58,6 +69,10 @@ export const Sheet: React.FC<SheetProps> = ({
         } flex max-w-full pointer-events-auto`}
       >
         <div
+          ref={panelRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
           className={`w-screen ${widthClass} bg-slate-900 border-x border-slate-800/90 shadow-2xl flex flex-col h-full z-10 animate-in duration-300 ease-out slide-in-from-right rtl:slide-in-from-left`}
         >
           {/* Header */}
@@ -68,7 +83,7 @@ export const Sheet: React.FC<SheetProps> = ({
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+              className="min-h-11 min-w-11 p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
               aria-label="Close panel"
             >
               <X className="w-5 h-5" />
@@ -76,7 +91,7 @@ export const Sheet: React.FC<SheetProps> = ({
           </div>
 
           {/* Body */}
-          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-6 overscroll-contain scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-6 overscroll-contain scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
             {children}
           </div>
 

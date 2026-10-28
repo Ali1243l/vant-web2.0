@@ -1,705 +1,86 @@
-import React, { useState, useMemo } from 'react';
-import {
-  LayoutGrid,
-  List,
-  Search,
-  Filter,
-  Crown,
-  Scissors,
-  Clock,
-  Truck,
-  CheckCircle2,
-  AlertCircle,
-  Phone,
-  Eye,
-  ArrowRight,
-  ArrowLeft,
-  ChevronRight,
-  ChevronLeft,
-  Plus,
-  RefreshCw,
-  ShoppingBag,
-  DollarSign,
-  User,
-  Sparkles,
-  Calendar,
-  MessageCircle,
-} from 'lucide-react';
-import { useAdminBridge, Order, OrderStatus, OrderType } from './useAdminBridge';
-import { StatusBadge } from './ui';
-import { OrderDetailsSheet } from './OrderDetailsSheet';
+import React, { useMemo, useState } from 'react';
+import { LayoutGrid, List, Search, Eye, ShoppingBag, FlaskConical } from 'lucide-react';
 import type { DateRange } from 'react-day-picker';
+import { useAdminBridge, type Order, type OrderStatus } from './useAdminBridge';
+import { OrderDetailsSheet } from './OrderDetailsSheet';
+import { Button } from './ui';
 import { DateRangeFilterWidget } from '../components/admin/widgets/DateRangeFilterWidget';
 import { PaginationWidget } from '../components/admin/widgets/PaginationWidget';
-
-type ViewMode = 'kanban' | 'table';
-type FilterTab = 'all' | 'bespoke' | 'ready_to_wear' | 'pending';
+import { normalizeOrders, filterOrders, orderMetrics, orderStatuses, orderStatusLabels } from '../lib/orderModel';
+import { createDemoOrders } from './ordersDemo';
+import { formatCurrency } from './format';
 
 export const OrdersManager: React.FC = () => {
-  const { orders = [], lang, updateOrderStatus } = useAdminBridge();
+  const { orders: storedOrders, lang } = useAdminBridge();
   const isAr = lang === 'ar';
+  const [demoOrders, setDemoOrders] = useState<Order[] | null>(null);
+  const [view, setView] = useState<'kanban' | 'table'>('kanban');
+  const [query, setQuery] = useState('');
+  const [type, setType] = useState('all');
+  const [status, setStatus] = useState('all');
+  const [sort, setSort] = useState('newest');
+  const [range, setRange] = useState<DateRange>();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(8);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const orders = useMemo(() => demoOrders ?? normalizeOrders(storedOrders), [demoOrders, storedOrders]);
+  const filtered = useMemo(() => filterOrders(orders, { query, type, status, sort, from: range?.from, to: range?.to }), [orders, query, type, status, sort, range]);
+  const metrics = orderMetrics(filtered);
+  const selected = orders.find(order => order.id === selectedId) || null;
+  const safePage = Math.min(page, Math.max(1, Math.ceil(filtered.length / pageSize)));
+  const visible = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const money = (amount: number) => formatCurrency(amount, 'IQD', lang);
+  const label = (value: OrderStatus) => orderStatusLabels[value][isAr ? 'ar' : 'en'];
+  const date = (value: string) => value ? new Date(value).toLocaleDateString(isAr ? 'ar-IQ' : 'en-GB') : '—';
+  const resetFilters = () => { setQuery(''); setType('all'); setStatus('all'); setRange(undefined); setSort('newest'); setPage(1); };
+  const hasFilters = !!query || type !== 'all' || status !== 'all' || !!range?.from || sort !== 'newest';
+  const statusClass = (value: OrderStatus) => value === 'cancelled' ? 'text-rose-300 border-rose-500/30' : value === 'delivered' ? 'text-emerald-300 border-emerald-500/30' : 'text-indigo-300 border-slate-700';
 
-  const [viewMode, setViewMode] = useState<ViewMode>('kanban');
-  const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [isDetailsOpen, setIsDetailsOpen] = useState<boolean>(false);
-
-  // VANT UI Widgets: DateRangePicker and Pagination
-  const [orderDateRange, setOrderDateRange] = useState<DateRange | undefined>(undefined);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(8);
-
-  const formatPrice = (num: number) => {
-    return `${new Intl.NumberFormat('en-US').format(num)} IQD`;
-  };
-
-  // Metrics calculations
-  const metrics = useMemo(() => {
-    const total = orders.length;
-    const pending = orders.filter((o) => o.status === 'pending_payment').length;
-    const inAtelier = orders.filter((o) => o.status === 'processing').length;
-    const shipped = orders.filter((o) => o.status === 'shipped').length;
-    const delivered = orders.filter((o) => o.status === 'delivered').length;
-    const bespokeCount = orders.filter((o) => o.type === 'bespoke').length;
-    const totalRevenue = orders
-      .filter((o) => o.status !== 'cancelled')
-      .reduce((acc, cur) => acc + cur.totalPrice, 0);
-
-    return { total, pending, inAtelier, shipped, delivered, bespokeCount, totalRevenue };
-  }, [orders]);
-
-  // Filtered orders list with DateRangeFilterWidget
-  const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
-      // Tab filter
-      if (activeFilter === 'bespoke' && order.type !== 'bespoke') return false;
-      if (activeFilter === 'ready_to_wear' && order.type !== 'ready_to_wear') return false;
-      if (activeFilter === 'pending' && order.status !== 'pending_payment') return false;
-
-      // Date Range Filter Widget
-      if (orderDateRange?.from) {
-        const orderTime = new Date(order.orderDate).getTime();
-        const fromTime = new Date(orderDateRange.from).setHours(0, 0, 0, 0);
-        if (orderTime < fromTime) return false;
-        const targetTo = orderDateRange.to || orderDateRange.from;
-        const toTime = new Date(targetTo).setHours(23, 59, 59, 999);
-        if (orderTime > toTime) return false;
-      }
-
-      // Search query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const matchesId = order.id.toLowerCase().includes(q);
-        const matchesName = order.customerName.toLowerCase().includes(q);
-        const matchesPhone = order.customerPhone.includes(q);
-        const matchesItem = order.items.some(
-          (i) => i.name.toLowerCase().includes(q) || i.nameEn.toLowerCase().includes(q)
-        );
-        return matchesId || matchesName || matchesPhone || matchesItem;
-      }
-      return true;
-    });
-  }, [orders, activeFilter, searchQuery, orderDateRange]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / pageSize));
-  const safeCurrentPage = Math.min(currentPage, totalPages);
-  const paginatedOrders = filteredOrders.slice(
-    (safeCurrentPage - 1) * pageSize,
-    safeCurrentPage * pageSize
-  );
-
-  const handleOpenOrder = (order: Order) => {
-    setSelectedOrder(order);
-    setIsDetailsOpen(true);
-  };
-
-  const handleQuickAdvance = (e: React.MouseEvent, order: Order) => {
-    e.stopPropagation();
-    const sequence: Record<OrderStatus, OrderStatus | null> = {
-      pending_payment: 'processing',
-      processing: 'shipped',
-      shipped: 'delivered',
-      delivered: null,
-      cancelled: null,
-    };
-
-    const next = sequence[order.status];
-    if (next) {
-      updateOrderStatus(order.id, next);
-    }
-  };
-
-  const kanbanColumns: Array<{
-    id: OrderStatus;
-    titleAr: string;
-    titleEn: string;
-    icon: React.ElementType;
-    badgeStatus: 'draft' | 'warning' | 'active' | 'success';
-    headerBorder: string;
-  }> = [
-    {
-      id: 'pending_payment',
-      titleAr: 'بانتظار الدفع والتأكيد',
-      titleEn: 'Pending Payment',
-      icon: Clock,
-      badgeStatus: 'draft',
-      headerBorder: 'border-amber-500/40',
-    },
-    {
-      id: 'processing',
-      titleAr: 'قيد التفصيل في الأتيليه',
-      titleEn: 'In Atelier / Tailoring',
-      icon: Scissors,
-      badgeStatus: 'warning',
-      headerBorder: 'border-indigo-500/40',
-    },
-    {
-      id: 'shipped',
-      titleAr: 'تم الشحن للتوصيل',
-      titleEn: 'Shipped & In Transit',
-      icon: Truck,
-      badgeStatus: 'active',
-      headerBorder: 'border-cyan-500/40',
-    },
-    {
-      id: 'delivered',
-      titleAr: 'تم التسليم بنجاح',
-      titleEn: 'Delivered',
-      icon: CheckCircle2,
-      badgeStatus: 'success',
-      headerBorder: 'border-emerald-500/40',
-    },
-  ];
-
-  return (
-    <div className="space-y-6 text-start">
-      {/* Top Header & Page Title */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-              <span>{isAr ? 'إدارة الطلبات والكونسيرج الملكي' : 'Order Management & VIP Concierge'}</span>
-              <Crown className="w-5 h-5 text-amber-400" />
-            </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-              OMS v2.6
-            </span>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            {isAr
-              ? 'متابعة مراحل الإنتاج والتفصيل اليدوي في الأتيليه وشحن طلبات العملاء الفورية وكبار الشخصيات.'
-              : 'Real-time tracking of atelier bespoke tailoring, express fulfillment, and VIP concierge client requests.'}
-          </p>
-        </div>
-
-        {/* View Switcher Toggle */}
-        <div className="flex items-center gap-2 self-start md:self-auto">
-          <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1 shadow-sm">
-            <button
-              onClick={() => setViewMode('kanban')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                viewMode === 'kanban'
-                  ? 'bg-indigo-600 text-white shadow-sm font-semibold'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>{isAr ? 'لوحة كانبان (Kanban)' : 'Kanban Board'}</span>
-            </button>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                viewMode === 'table'
-                  ? 'bg-indigo-600 text-white shadow-sm font-semibold'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <List className="w-3.5 h-3.5" />
-              <span>{isAr ? 'جدول البيانات (Table)' : 'Data Table'}</span>
-            </button>
+  return <div className="orders-manager min-w-0 space-y-5 text-start">
+    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-4">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+        <div><h2 className="text-xl sm:text-2xl font-bold text-white">{isAr ? 'إدارة الطلبات' : 'Order management'}</h2>
+          <p className="text-sm text-slate-400 mt-2">{isAr ? 'متابعة الطلب من التأكيد إلى التسليم، مع سجل تغييرات واضح.' : 'Track orders from confirmation to delivery with a clear change history.'}</p></div>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant={demoOrders ? 'primary' : 'outline'} onClick={() => { setDemoOrders(demoOrders ? null : createDemoOrders()); setSelectedId(null); resetFilters(); }}><FlaskConical className="w-4 h-4 me-2" />{isAr ? (demoOrders ? 'إنهاء التجربة' : 'تجربة معزولة') : (demoOrders ? 'Exit demo' : 'Isolated demo')}</Button>
+          <div className="flex rounded-xl border border-slate-700 p-1" role="group" aria-label={isAr ? 'طريقة عرض الطلبات' : 'Order display'}>
+            <Button size="sm" variant={view === 'kanban' ? 'primary' : 'ghost'} aria-pressed={view === 'kanban'} onClick={() => setView('kanban')}><LayoutGrid className="w-4 h-4 me-2" />{isAr ? 'المراحل' : 'Stages'}</Button>
+            <Button size="sm" variant={view === 'table' ? 'primary' : 'ghost'} aria-pressed={view === 'table'} onClick={() => setView('table')}><List className="w-4 h-4 me-2" />{isAr ? 'الجدول' : 'Table'}</Button>
           </div>
         </div>
       </div>
-
-      {/* Metrics Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {/* Metric 1: Total Orders */}
-        <div className="rounded-xl bg-slate-900/90 border border-slate-800/80 p-3.5 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs">{isAr ? 'إجمالي الطلبات' : 'Total Orders'}</span>
-            <ShoppingBag className="w-4 h-4 text-slate-400" />
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="text-xl font-bold font-mono text-white">{metrics.total}</span>
-            <span className="text-[11px] text-indigo-400">{metrics.bespokeCount} {isAr ? 'تفصيل ملكي' : 'Bespoke'}</span>
-          </div>
-        </div>
-
-        {/* Metric 2: Pending Action (Glowing Amber) */}
-        <div className="rounded-xl bg-slate-900/90 border border-amber-500/40 p-3.5 flex flex-col justify-between shadow-[0_0_15px_rgba(245,158,11,0.12)]">
-          <div className="flex items-center justify-between text-amber-300 mb-2">
-            <span className="text-xs font-semibold">{isAr ? 'بانتظار التأكيد' : 'Pending Action'}</span>
-            <Clock className="w-4 h-4 text-amber-400 animate-pulse" />
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="text-xl font-bold font-mono text-amber-300">{metrics.pending}</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-              {isAr ? 'يتطلب إجراء' : 'Action Required'}
-            </span>
-          </div>
-        </div>
-
-        {/* Metric 3: In Atelier */}
-        <div className="rounded-xl bg-slate-900/90 border border-indigo-500/30 p-3.5 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-indigo-300 mb-2">
-            <span className="text-xs">{isAr ? 'قيد الخياطة بالأتيليه' : 'In Atelier'}</span>
-            <Scissors className="w-4 h-4 text-indigo-400" />
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="text-xl font-bold font-mono text-indigo-300">{metrics.inAtelier}</span>
-            <span className="text-[11px] text-slate-400">{isAr ? 'جاري التنفيذ' : 'In Progress'}</span>
-          </div>
-        </div>
-
-        {/* Metric 4: Shipped */}
-        <div className="rounded-xl bg-slate-900/90 border border-slate-800/80 p-3.5 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs">{isAr ? 'تم الشحن للتسليم' : 'Shipped & Transit'}</span>
-            <Truck className="w-4 h-4 text-cyan-400" />
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="text-xl font-bold font-mono text-cyan-300">{metrics.shipped}</span>
-            <span className="text-[11px] text-emerald-400 font-mono">+{metrics.delivered} {isAr ? 'مستلم' : 'Done'}</span>
-          </div>
-        </div>
-
-        {/* Metric 5: Total Revenue */}
-        <div className="col-span-2 sm:col-span-3 lg:col-span-1 rounded-xl bg-slate-900/90 border border-emerald-500/30 p-3.5 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-emerald-400 mb-2">
-            <span className="text-xs">{isAr ? 'عائدات الطلبات' : 'Total Revenue'}</span>
-            <DollarSign className="w-4 h-4 text-emerald-400" />
-          </div>
-          <span className="text-lg font-bold font-mono text-emerald-300 truncate">
-            {formatPrice(metrics.totalRevenue)}
-          </span>
-        </div>
-      </div>
-
-      {/* Search & Filter Tabs Bar */}
-      <div className="relative z-30 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-900/80 border border-slate-800/80 p-3 rounded-2xl">
-        {/* Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-          <button
-            onClick={() => setActiveFilter('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
-              activeFilter === 'all'
-                ? 'bg-indigo-600 text-white font-semibold shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/70'
-            }`}
-          >
-            {isAr ? 'جميع الطلبات' : 'All Orders'} ({orders.length})
-          </button>
-          <button
-            onClick={() => setActiveFilter('bespoke')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
-              activeFilter === 'bespoke'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold shadow-[0_0_10px_rgba(245,158,11,0.2)]'
-                : 'text-slate-400 hover:text-amber-300 hover:bg-slate-800/70'
-            }`}
-          >
-            <Crown className="w-3.5 h-3.5 text-amber-400" />
-            <span>{isAr ? 'طلبات التفصيل الخاص VIP' : 'Bespoke Atelier'}</span>
-            <span className="text-[10px] bg-amber-500/30 px-1.5 py-0.2 rounded-full font-mono">
-              {metrics.bespokeCount}
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveFilter('ready_to_wear')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
-              activeFilter === 'ready_to_wear'
-                ? 'bg-indigo-600 text-white font-semibold shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/70'
-            }`}
-          >
-            {isAr ? 'الملابس الجاهزة' : 'Ready-to-Wear'}
-          </button>
-          <button
-            onClick={() => setActiveFilter('pending')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
-              activeFilter === 'pending'
-                ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/70'
-            }`}
-          >
-            <Clock className="w-3.5 h-3.5" />
-            <span>{isAr ? 'بانتظار التأكيد' : 'Pending'}</span>
-            {metrics.pending > 0 && (
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-            )}
-          </button>
-        </div>
-
-        {/* DateRangeFilterWidget & Search Input */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-          <DateRangeFilterWidget
-            value={orderDateRange}
-            onChange={(range) => {
-              setOrderDateRange(range);
-              setCurrentPage(1);
-            }}
-            lang={isAr ? 'ar' : 'en'}
-            label={isAr ? 'تاريخ الطلب' : 'Order Date'}
-          />
-
-          <div className="relative min-w-[220px]">
-            <Search className={`absolute ${isAr ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400`} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              placeholder={isAr ? 'بحث برقم الطلب، العميل...' : 'Search order #, client...'}
-              className={`w-full text-xs ${
-                isAr ? 'pr-9 pl-3' : 'pl-9 pr-3'
-              } py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500`}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Main View Area */}
-      {viewMode === 'kanban' ? (
-        /* KANBAN BOARD VIEW */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
-          {kanbanColumns.map((col) => {
-            const ColIcon = col.icon;
-            const columnOrders = filteredOrders.filter((o) => o.status === col.id);
-
-            return (
-              <div
-                key={col.id}
-                className="bg-slate-900/60 border border-slate-800/80 rounded-2xl flex flex-col max-h-[820px] overflow-hidden shadow-sm"
-              >
-                {/* Column Header */}
-                <div
-                  className={`p-3.5 bg-slate-900/95 border-b border-slate-800/80 border-t-2 ${col.headerBorder} flex items-center justify-between`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-slate-800 text-slate-300">
-                      <ColIcon className="w-4 h-4" />
-                    </div>
-                    <span className="text-xs font-bold text-white tracking-wide">
-                      {isAr ? col.titleAr : col.titleEn}
-                    </span>
-                  </div>
-                  <span className="text-xs font-bold font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">
-                    {columnOrders.length}
-                  </span>
-                </div>
-
-                {/* Column Cards Drop Area */}
-                <div className="p-3 space-y-3 overflow-y-auto flex-1">
-                  {columnOrders.length === 0 ? (
-                    <div className="text-center py-10 px-4 border border-dashed border-slate-800 rounded-xl text-slate-500 text-xs">
-                      {isAr ? 'لا توجد طلبات في هذه المرحلة' : 'No orders in this stage'}
-                    </div>
-                  ) : (
-                    columnOrders.map((order) => {
-                      return (
-                        <div
-                          key={order.id}
-                          onClick={() => handleOpenOrder(order)}
-                          className={`group relative rounded-xl p-4 bg-slate-900 border transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md hover:border-slate-700 text-start ${
-                            order.isVip
-                              ? 'border-amber-500/40 bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/20 hover:border-amber-500/70'
-                              : 'border-slate-800/90 hover:border-slate-700'
-                          }`}
-                        >
-                          {/* Card Header: Order ID & VIP Badge */}
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-mono text-xs font-bold text-indigo-300">#{order.id}</span>
-                              {order.isVip && (
-                                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                                  <Crown className="w-2.5 h-2.5" />
-                                  <span>VIP</span>
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[10px] text-slate-500 font-mono">
-                              {order.orderDate.split(' ')[0]}
-                            </span>
-                          </div>
-
-                          {/* Customer Name & Phone */}
-                          <div className="mb-2.5">
-                            <h4 className="text-xs font-bold text-white group-hover:text-indigo-300 transition-colors truncate">
-                              {order.customerName}
-                            </h4>
-                            <p className="text-[11px] text-slate-400 font-mono mt-0.5 flex items-center gap-1">
-                              <Phone className="w-2.5 h-2.5 text-slate-500" />
-                              <span>{order.customerPhone}</span>
-                            </p>
-                          </div>
-
-                          {/* Bespoke Measurement / Atelier Flag */}
-                          {order.type === 'bespoke' && (
-                            <div className="mb-2.5 px-2 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-between text-[10px] text-amber-300">
-                              <span className="flex items-center gap-1 font-medium">
-                                <Scissors className="w-3 h-3 text-amber-400" />
-                                <span>{isAr ? 'تفصيل ملكي خاص' : 'Atelier Bespoke'}</span>
-                              </span>
-                              <span className="font-mono text-amber-400/90">
-                                {order.bespokeDetails?.fittingDate ? (isAr ? 'بروفة قياس' : 'Fitting') : (isAr ? 'باترون' : 'Pattern')}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Items Preview thumbnails */}
-                          <div className="flex items-center gap-2 mb-3">
-                            <div className="flex -space-x-2 rtl:space-x-reverse overflow-hidden">
-                              {order.items.slice(0, 3).map((item, i) =>
-                                item.imageUrl?.trim() ? (
-                                  <img
-                                    key={i}
-                                    src={item.imageUrl}
-                                    alt={item.name}
-                                    className="w-7 h-7 rounded-full border-2 border-slate-900 object-cover bg-slate-800"
-                                    title={`${item.name} (${item.selectedSize})`}
-                                  />
-                                ) : (
-                                  <div
-                                    key={i}
-                                    className="w-7 h-7 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center text-[9px] text-slate-400"
-                                  >
-                                    •
-                                  </div>
-                                )
-                              )}
-                            </div>
-                            <span className="text-[11px] text-slate-400 truncate flex-1">
-                              {order.items.length === 1
-                                ? isAr
-                                  ? order.items[0].name
-                                  : order.items[0].nameEn
-                                : `${order.items.length} ${isAr ? 'منتجات' : 'items'}`}
-                            </span>
-                          </div>
-
-                          {/* Card Footer: Price & Quick Advance */}
-                          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
-                            <span className="text-xs font-bold font-mono text-emerald-400">
-                              {formatPrice(order.totalPrice)}
-                            </span>
-
-                            {col.id !== 'delivered' && (
-                              <button
-                                onClick={(e) => handleQuickAdvance(e, order)}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white text-[10px] font-semibold transition-all cursor-pointer border border-slate-700 hover:border-indigo-500"
-                                title={isAr ? 'نقل للمرحلة التالية' : 'Advance Stage'}
-                              >
-                                <span>{isAr ? 'المرحلة التالية' : 'Advance'}</span>
-                                {isAr ? <ChevronLeft className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        /* DENSE SLEEK DATA TABLE VIEW */
-        <div className="bg-slate-900/90 border border-slate-800/80 rounded-2xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-start">
-              <thead className="bg-slate-950/70 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
-                <tr>
-                  <th className="py-3.5 px-4 text-start">{isAr ? 'رقم الطلب والتاريخ' : 'Order ID & Date'}</th>
-                  <th className="py-3.5 px-4 text-start">{isAr ? 'العميل وبيانات التواصل' : 'Customer & Contact'}</th>
-                  <th className="py-3.5 px-4 text-start">{isAr ? 'نوع الطلب' : 'Type'}</th>
-                  <th className="py-3.5 px-4 text-start">{isAr ? 'القطع والمنتجات' : 'Purchased Items'}</th>
-                  <th className="py-3.5 px-4 text-start">{isAr ? 'القيمة الإجمالية' : 'Total Price'}</th>
-                  <th className="py-3.5 px-4 text-start">{isAr ? 'حالة الطلب' : 'Status'}</th>
-                  <th className="py-3.5 px-4 text-end">{isAr ? 'الإجراءات' : 'Actions'}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/80 text-slate-300">
-                {filteredOrders.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-500 text-xs">
-                      {isAr ? 'لا توجد طلبات تطابق معايير البحث' : 'No matching orders found'}
-                    </td>
-                  </tr>
-                ) : (
-                  paginatedOrders.map((order) => {
-                    const statusBadgeMap: Record<
-                      OrderStatus,
-                      { labelAr: string; labelEn: string; status: 'draft' | 'warning' | 'active' | 'success' | 'danger' }
-                    > = {
-                      pending_payment: { labelAr: 'بانتظار الدفع', labelEn: 'Pending Payment', status: 'draft' },
-                      processing: { labelAr: 'في الأتيليه', labelEn: 'In Atelier', status: 'warning' },
-                      shipped: { labelAr: 'تم الشحن', labelEn: 'Shipped', status: 'active' },
-                      delivered: { labelAr: 'تم التسليم', labelEn: 'Delivered', status: 'success' },
-                      cancelled: { labelAr: 'ملغي', labelEn: 'Cancelled', status: 'danger' },
-                    };
-
-                    const badge = statusBadgeMap[order.status];
-
-                    return (
-                      <tr
-                        key={order.id}
-                        onClick={() => handleOpenOrder(order)}
-                        className={`hover:bg-slate-800/40 transition-colors cursor-pointer ${
-                          order.isVip ? 'bg-amber-500/[0.02]' : ''
-                        }`}
-                      >
-                        {/* Order ID & Date */}
-                        <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono font-bold text-indigo-300">#{order.id}</span>
-                            {order.isVip && (
-                              <span title="VIP Client">
-                                <Crown className="w-3.5 h-3.5 text-amber-400" />
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-[10px] text-slate-500 font-mono block mt-0.5">
-                            {order.orderDate}
-                          </span>
-                        </td>
-
-                        {/* Customer */}
-                        <td className="py-3.5 px-4">
-                          <span className="font-bold text-white block">{order.customerName}</span>
-                          <span className="font-mono text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
-                            <Phone className="w-2.5 h-2.5 text-slate-500" />
-                            <span>{order.customerPhone}</span>
-                          </span>
-                        </td>
-
-                        {/* Type */}
-                        <td className="py-3.5 px-4">
-                          {order.type === 'bespoke' ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                              <Crown className="w-3 h-3" />
-                              <span>{isAr ? 'تفصيل ملكي' : 'VIP Bespoke'}</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-800 text-slate-300 border border-slate-700">
-                              <span>{isAr ? 'جاهز للارتداء' : 'Ready-to-Wear'}</span>
-                            </span>
-                          )}
-                        </td>
-
-                        {/* Items */}
-                        <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-2">
-                            <div className="flex -space-x-2 rtl:space-x-reverse overflow-hidden">
-                              {order.items.slice(0, 2).map((item, i) =>
-                                item.imageUrl?.trim() ? (
-                                  <img
-                                    key={i}
-                                    src={item.imageUrl}
-                                    alt={item.name}
-                                    className="w-6 h-6 rounded-full border border-slate-800 object-cover bg-slate-800"
-                                  />
-                                ) : (
-                                  <div
-                                    key={i}
-                                    className="w-6 h-6 rounded-full border border-slate-800 bg-slate-800 flex items-center justify-center text-[8px] text-slate-400"
-                                  >
-                                    •
-                                  </div>
-                                )
-                              )}
-                            </div>
-                            <span className="text-xs text-slate-300 truncate max-w-[180px]">
-                              {order.items.map((i) => (isAr ? i.name : i.nameEn)).join(', ')}
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* Price */}
-                        <td className="py-3.5 px-4 font-mono font-bold text-emerald-400">
-                          {formatPrice(order.totalPrice)}
-                        </td>
-
-                        {/* Status */}
-                        <td className="py-3.5 px-4">
-                          <StatusBadge
-                            status={badge.status}
-                            label={isAr ? badge.labelAr : badge.labelEn}
-                          />
-                        </td>
-
-                        {/* Actions */}
-                        <td className="py-3.5 px-4 text-end">
-                          <div className="inline-flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              onClick={() => handleOpenOrder(order)}
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
-                              title={isAr ? 'عرض التفاصيل' : 'View Details'}
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                            </button>
-                            {order.status !== 'delivered' && order.status !== 'cancelled' && (
-                              <button
-                                onClick={(e) => handleQuickAdvance(e, order)}
-                                className="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white text-[11px] font-semibold border border-indigo-500/30 transition-all cursor-pointer"
-                              >
-                                {isAr ? 'المرحلة التالية' : 'Advance'}
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination Widget for Orders Table */}
-          {filteredOrders.length > 0 && (
-            <div className="p-3 border-t border-slate-800/80 bg-slate-900/60">
-              <PaginationWidget
-                currentPage={safeCurrentPage}
-                totalItems={filteredOrders.length}
-                pageSize={pageSize}
-                onPageChange={setCurrentPage}
-                onPageSizeChange={(newSize) => {
-                  setPageSize(newSize);
-                  setCurrentPage(1);
-                }}
-                pageSizeOptions={[6, 8, 12, 25]}
-                lang={isAr ? 'ar' : 'en'}
-                itemLabel={isAr ? 'طلب' : 'orders'}
-              />
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* VIP Concierge Order Details Sheet */}
-      <OrderDetailsSheet
-        order={selectedOrder}
-        isOpen={isDetailsOpen}
-        onClose={() => {
-          setIsDetailsOpen(false);
-          setSelectedOrder(null);
-        }}
-      />
+      <p role="status" className={`text-xs leading-6 rounded-xl border p-3 ${demoOrders ? 'text-amber-200 bg-amber-500/5 border-amber-500/30' : 'text-slate-300 border-slate-700'}`}>{isAr ? (demoOrders ? 'تجربة معزولة: بيانات وهمية بالذاكرة فقط. تغييرات الحالة والملاحظات لا تُحفظ ولا تُرسل لأي جهة.' : 'الطلبات المحمّلة للعرض فقط أثناء التجربة. افتح «تجربة معزولة» لاختبار الحالات والملاحظات بدون تعديل طلب حقيقي.') : (demoOrders ? 'Isolated demo: fictional data in memory only. Status and notes never persist or send.' : 'Loaded orders are read-only during testing. Use the isolated demo to test changes safely.')}</p>
+      {!demoOrders && storedOrders.length > orders.length && <p role="alert" className="text-xs text-amber-300">{isAr ? 'استُبعدت سجلات مكررة أو غير صالحة؛ راجع المصدر قبل التشغيل الفعلي.' : 'Duplicate or invalid records were excluded; review the source before live use.'}</p>}
     </div>
-  );
-};
 
+    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+      {[
+        [isAr ? 'الطلبات المطابقة' : 'Matching orders', metrics.total],
+        [isAr ? 'بانتظار التأكيد' : 'Pending confirmation', metrics.pending],
+        [isAr ? 'قيد التجهيز' : 'Processing', metrics.processing],
+        [isAr ? 'تم التسليم' : 'Delivered', metrics.delivered],
+        [isAr ? 'ملغي' : 'Cancelled', metrics.cancelled],
+        [isAr ? 'إيراد الطلبات المسلّمة' : 'Delivered revenue', money(metrics.revenue)],
+      ].map(([title, value]) => <div key={title} className="min-w-0 rounded-xl bg-slate-900 border border-slate-800 p-4"><p className="text-xs text-slate-400">{title}</p><p className="mt-3 text-lg font-bold text-white break-words">{value}</p></div>)}
+    </div>
+
+    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 items-end">
+        <label className="block text-xs text-slate-400">{isAr ? 'البحث بالطلب أو العميل أو القطعة' : 'Search order, customer or item'}<div className="relative mt-2"><Search className="absolute start-3 top-3 w-4 h-4" /><input aria-label={isAr ? 'بحث الطلبات' : 'Search orders'} value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} className="w-full min-h-11 rounded-xl bg-slate-950 border border-slate-700 ps-9 pe-3 text-white" /></div></label>
+        <label className="text-xs text-slate-400">{isAr ? 'حالة الطلب' : 'Order status'}<select value={status} onChange={event => { setStatus(event.target.value); setPage(1); }} className="mt-2 w-full min-h-11 rounded-xl bg-slate-950 border border-slate-700 px-3 text-white"><option value="all">{isAr ? 'كل الحالات' : 'All statuses'}</option>{orderStatuses.map(value => <option key={value} value={value}>{label(value)}</option>)}</select></label>
+        <label className="text-xs text-slate-400">{isAr ? 'نوع الطلب' : 'Order type'}<select value={type} onChange={event => { setType(event.target.value); setPage(1); }} className="mt-2 w-full min-h-11 rounded-xl bg-slate-950 border border-slate-700 px-3 text-white"><option value="all">{isAr ? 'كل الأنواع' : 'All types'}</option><option value="ready_to_wear">{isAr ? 'جاهز' : 'Ready to wear'}</option><option value="bespoke">{isAr ? 'تفصيل خاص' : 'Bespoke'}</option></select></label>
+        <label className="text-xs text-slate-400">{isAr ? 'ترتيب الطلبات' : 'Sort orders'}<select value={sort} onChange={event => { setSort(event.target.value); setPage(1); }} className="mt-2 w-full min-h-11 rounded-xl bg-slate-950 border border-slate-700 px-3 text-white"><option value="newest">{isAr ? 'الأحدث أولاً' : 'Newest first'}</option><option value="oldest">{isAr ? 'الأقدم أولاً' : 'Oldest first'}</option><option value="value">{isAr ? 'الأعلى قيمة' : 'Highest value'}</option></select></label>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3"><DateRangeFilterWidget value={range} onChange={value => { setRange(value); setPage(1); }} lang={lang} label={isAr ? 'تاريخ التسجيل' : 'Created date'} />{hasFilters && <Button size="sm" variant="outline" onClick={resetFilters}>{isAr ? 'مسح الفلاتر' : 'Clear filters'}</Button>}</div>
+      <p role="status" className="text-xs text-slate-400">{filtered.length} / {orders.length} {isAr ? 'طلب · الأرقام أعلاه تتبع الفلاتر. الإيراد للمسلّم فقط ولا يثبت تحصيل الدفع.' : 'orders · Metrics follow filters. Delivered revenue does not confirm payment collection.'}</p>
+    </div>
+
+    {orders.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-700 p-10 text-center text-slate-400"><ShoppingBag className="mx-auto mb-3 w-8 h-8" /><p>{isAr ? 'لا توجد طلبات محمّلة. جرّب العرض المعزول لفحص الواجهة.' : 'No orders loaded. Try the isolated demo to review the interface.'}</p></div> : filtered.length === 0 ? <p role="status" className="text-center py-10 text-slate-400">{isAr ? 'لا توجد طلبات تطابق الفلاتر.' : 'No orders match these filters.'}</p> : view === 'kanban' ?
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-4 items-start">
+        {orderStatuses.filter(value => status === 'all' || status === value).map(value => { const column = filtered.filter(order => order.status === value); return <section key={value} aria-label={label(value)} className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900/50 overflow-hidden"><div className="p-4 border-b border-slate-800 flex justify-between gap-2"><h3 className={`text-sm font-semibold ${statusClass(value)}`}>{label(value)}</h3><span className="text-xs text-slate-400">{column.length}</span></div><div className="p-3 space-y-3 max-h-[65dvh] overflow-y-auto overscroll-contain">{column.length ? column.map(order => <button key={order.id} onClick={() => setSelectedId(order.id)} className="w-full text-start rounded-xl border border-slate-700 bg-slate-900 p-4 hover:border-indigo-400 focus-visible:outline-2 focus-visible:outline-indigo-400 space-y-2"><span className="block text-xs font-mono text-indigo-300 break-all">#{order.id}</span><span className="block font-semibold text-white text-sm">{order.customerName || '—'}</span><span className="block text-xs text-slate-400">{date(order.orderDate)} · {order.type === 'bespoke' ? (isAr ? 'تفصيل خاص' : 'Bespoke') : (isAr ? 'جاهز' : 'Ready to wear')}</span><span className="block text-xs text-slate-300 truncate">{order.items.map(item => isAr ? item.name : item.nameEn).join('، ') || '—'}</span><span className="block text-sm font-semibold text-emerald-300">{money(order.totalPrice)}</span><span className="block text-xs text-indigo-300">{isAr ? 'عرض التفاصيل' : 'View details'}</span></button>) : <p className="py-6 text-center text-xs text-slate-500">{isAr ? 'لا توجد طلبات بهذه المرحلة' : 'No orders in this stage'}</p>}</div></section>; })}
+      </div> : <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-800"><div className="overflow-x-auto"><table className="w-full min-w-[700px] text-start text-sm"><thead className="bg-slate-900 text-slate-400"><tr>{[isAr ? 'الطلب' : 'Order', isAr ? 'العميل' : 'Customer', isAr ? 'التاريخ' : 'Date', isAr ? 'الحالة' : 'Status', isAr ? 'القيمة المسجّلة' : 'Recorded value', isAr ? 'التفاصيل' : 'Details'].map(title => <th key={title} scope="col" className="p-4 text-start">{title}</th>)}</tr></thead><tbody className="divide-y divide-slate-800">{visible.map(order => <tr key={order.id} className="bg-slate-950/30"><td className="p-4 font-mono text-indigo-300">#{order.id}</td><td className="p-4 text-white">{order.customerName || '—'}</td><td className="p-4 text-slate-400">{date(order.orderDate)}</td><td className={`p-4 ${statusClass(order.status)}`}>{label(order.status)}</td><td className="p-4 text-emerald-300">{money(order.totalPrice)}</td><td className="p-4"><Button size="icon" variant="outline" aria-label={`${isAr ? 'تفاصيل الطلب' : 'Order details'} ${order.id}`} onClick={() => setSelectedId(order.id)}><Eye className="w-4 h-4" /></Button></td></tr>)}</tbody></table></div><div className="p-3"><PaginationWidget currentPage={safePage} totalItems={filtered.length} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={value => { setPageSize(value); setPage(1); }} pageSizeOptions={[8, 12, 25]} lang={lang} itemLabel={isAr ? 'طلب' : 'orders'} /></div></div>}
+
+    <OrderDetailsSheet order={selected} isOpen={!!selected} onClose={() => setSelectedId(null)} readOnly={!demoOrders} onUpdate={updated => setDemoOrders(current => current?.map(order => order.id === updated.id ? updated : order) ?? null)} />
+  </div>;
+};
 export default OrdersManager;

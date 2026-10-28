@@ -5,6 +5,7 @@ import type { Product as StoreProduct, ProductAvailability } from '../types';
 import { getStoredSubscribers, addSubscriber as addStoredSubscriber, removeSubscriber as removeStoredSubscriber, syncSubscribersFromCloud, saveSubscribers } from '../lib/newsletter';
 import { saveOrdersToSupabase, fetchOrdersFromSupabase, saveOffersToSupabase, fetchOffersFromSupabase } from '../lib/storage';
 import { updateSystemErrorStatus } from '../lib/analytics';
+import { normalizeOrders } from '../lib/orderModel';
 
 export type AdminView = 'dashboard' | 'orders' | 'products' | 'sizes' | 'offers' | 'banners' | 'subscribers' | 'welcome_modal' | 'controls' | 'social' | 'backup' | 'settings' | 'security' | 'widgets';
 
@@ -674,6 +675,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Load orders from Supabase on mount
   useEffect(() => {
     async function loadOrders() {
+      if (!supabase) {
+        try { setOrders(normalizeOrders(JSON.parse(localStorage.getItem('vant_orders_v1') || '[]'))); } catch { setOrders([]); }
+        return;
+      }
       let data: any = null;
       let error: any = null;
 
@@ -692,37 +697,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
 
       if (!error && data && Array.isArray(data)) {
-        const mappedOrders: Order[] = data.map((d: any) => {
-          const parsedItems = Array.isArray(d.items)
-            ? d.items
-            : typeof d.items === 'string'
-            ? (() => { try { return JSON.parse(d.items); } catch { return []; } })()
-            : [];
-
-          const parsedTimeline = Array.isArray(d.timeline)
-            ? d.timeline
-            : typeof d.timeline === 'string'
-            ? (() => { try { return JSON.parse(d.timeline); } catch { return []; } })()
-            : [];
-
-          return {
-            id: String(d.id || d.order_id || d.code || 'ORD-' + Math.floor(1000 + Math.random() * 9000)),
-            customerName: d.customer_name || d.customerName || d.name || 'عميل كونسيرج',
-            customerPhone: d.customer_phone || d.customerPhone || d.phone || '',
-            customerEmail: d.customer_email || d.customerEmail || d.email || '',
-            shippingAddress: d.shipping_address || d.shippingAddress || d.address || '',
-            items: parsedItems,
-            totalPrice: Number(d.total_price || d.totalPrice || d.total || d.amount || 0),
-            status: d.status || 'pending_payment',
-            orderDate: d.created_at || d.order_date || d.orderDate || new Date().toISOString(),
-            type: d.type || 'ready_to_wear',
-            isVip: Boolean(d.is_vip || d.isVip),
-            bespokeDetails: d.bespoke_details || d.bespokeDetails,
-            timeline: parsedTimeline,
-            paymentMethod: d.payment_method || d.paymentMethod || 'cash_on_delivery',
-            trackingNumber: d.tracking_number || d.trackingNumber,
-          };
-        });
+        const mappedOrders = normalizeOrders(data);
         setOrders(mappedOrders);
         try { localStorage.setItem('vant_orders_v1', JSON.stringify(mappedOrders)); } catch {}
         return;
@@ -732,7 +707,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (!data) {
         const remoteOrders = await fetchOrdersFromSupabase();
         if (remoteOrders && Array.isArray(remoteOrders)) {
-          setOrders(remoteOrders);
+          setOrders(normalizeOrders(remoteOrders));
           try { localStorage.setItem('vant_orders_v1', JSON.stringify(remoteOrders)); } catch {}
           return;
         }
