@@ -1,4 +1,5 @@
 import { supabase } from '../supabase';
+import { mergeCloudEvents } from './mergeCloudEvents';
 import {
   AnalyticsEvent,
   STORAGE_KEY,
@@ -69,7 +70,8 @@ export function getStoredEvents(): AnalyticsEvent[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
-    return JSON.parse(raw);
+    const events = JSON.parse(raw);
+    return Array.isArray(events) ? events : [];
   } catch (e) {
     console.warn('Failed to parse analytics local storage', e);
     return [];
@@ -90,6 +92,7 @@ export function trackEvent(
 
     const eventData = {
       ...data,
+      eventId,
       visitorId,
       visitCount,
       url: typeof window !== 'undefined' ? window.location.href : '',
@@ -297,45 +300,19 @@ function scheduleSupabaseSync(events: AnalyticsEvent[]) {
 
 // Fetch telemetry events directly from Supabase `logs` database table
 export async function syncFromSupabaseCloud(): Promise<AnalyticsEvent[]> {
-  if (!supabase) return [];
-  try {
+  if (!supabase) throw new Error('Analytics cloud is not configured');
     const { data: dbLogs, error: dbErr } = await supabase
       .from('logs')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(1000);
 
-    console.log('Supabase Fetch Result:', dbLogs);
-    console.log('Supabase Fetch Error:', dbErr);
-
-    if (!dbErr && Array.isArray(dbLogs)) {
-      if (dbLogs.length === 0) {
-        try {
-          localStorage.removeItem(STORAGE_KEY);
-        } catch {}
-        return [];
-      }
-      const cloudEvents: AnalyticsEvent[] = dbLogs.map((row: any) => {
-        const id = String(row.id || `log_${row.created_at}`);
-        const timestamp = new Date(row.created_at).getTime() || Date.now();
-        return {
-          id,
-          type: (row.event_type || row.type || 'page_view') as AnalyticsEvent['type'],
-          timestamp,
-          device: (row.device || 'mobile') as 'mobile' | 'desktop' | 'tablet',
-          sessionId: String(row.session_id || 'sess_cloud'),
-          data: typeof row.data === 'object' && row.data !== null ? row.data : {},
-        };
-      });
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudEvents));
-      } catch {}
-      return cloudEvents;
-    }
-  } catch (err) {
-    console.log('Supabase Fetch Error:', err);
-  }
-  return [];
+    if (dbErr) throw dbErr;
+    if (!Array.isArray(dbLogs)) throw new Error('Invalid analytics cloud response');
+    const events = mergeCloudEvents(getStoredEvents(), dbLogs);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+    window.dispatchEvent(new CustomEvent('vant_analytics_updated'));
+    return events;
 }
 
 // Clear stored local analytics

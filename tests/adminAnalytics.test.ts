@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { computeDatasets, computeTopProducts, computeCategoriesShare, periodBounds, DAY_MS } from '../src/admin/analytics/analyticsCalculations.ts';
-import { computeDashboardAnalytics, computeRFM } from '../src/admin/analytics/dashboardModel.ts';
+import { computeDashboardAnalytics, computeRFM, recordedErrorLogs, filterErrorLogs } from '../src/admin/analytics/dashboardModel.ts';
+import { mergeCloudEvents } from '../src/lib/analytics/mergeCloudEvents.ts';
 
 test('dashboard uses matching calendar windows, ignores bad dates and only recognizes delivered revenue', (t) => {
   t.mock.method(Date, 'now', () => new Date('2026-10-28T12:00:00').getTime());
@@ -96,4 +97,24 @@ test('all date buckets partition their periods exactly and growth without a base
   }
   assert.equal(computeDatasets([order('new')] as any, true, '', '')['7d'].growthVal, null);
   assert.equal(computeDatasets(orders as any, true, '2026-10-28', '2026-10-12').custom.totalOrders, 0);
+});
+
+test('error log excludes future, simulated and duplicate observations and searches safely', () => {
+  const error = event('failure', 'system_error', { errorMessage: 'Failed Request', errorStack: 'at loadCatalog', url: '/shop', visitorId: 123 });
+  const logs = recordedErrorLogs([error, error, event('future', 'system_error', {}, -1), event('test', 'system_error', { isSimulation: true }), event('diagnostic', 'system_error', { errorMessage: 'Manual Diagnostic Test Error: test' }), event('old', 'system_error', {}, 60 * 24 * 90)], window, now);
+  assert.equal(logs.length, 1);
+  assert.equal(filterErrorLogs(logs, ' FAILED ').length, 1);
+  assert.equal(filterErrorLogs(logs, 'loadcatalog').length, 1);
+  assert.equal(filterErrorLogs(logs, '123').length, 1);
+  assert.equal(filterErrorLogs(logs, 'missing').length, 0);
+});
+
+test('cloud refresh preserves unsynced local data, validates dates and deduplicates original event IDs', () => {
+  const local = event('original', 'product_view', { productId: 'p1' });
+  assert.deepEqual(mergeCloudEvents([local], [], now), [local]);
+  const row = { id: 'cloud-id', event_type: 'product_view', session_id: local.sessionId, created_at: new Date(local.timestamp).toISOString(), data: { ...local.data, eventId: local.id } };
+  const merged = mergeCloudEvents([local], [row, { ...row, id: 'invalid', created_at: 'broken' }, { ...row, id: 'future', created_at: new Date(now + DAY_MS).toISOString() }, { ...row, id: 'no-session', session_id: null }], now);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].id, local.id);
+  assert.equal(merged[0].isCloudLog, true);
 });

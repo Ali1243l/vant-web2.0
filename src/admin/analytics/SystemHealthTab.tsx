@@ -1,14 +1,13 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ShieldAlert, Sparkles, Check, Search } from 'lucide-react';
+import { ShieldAlert, Check, Search } from 'lucide-react';
 import { Card, Button, Input } from '../ui';
-import { trackSystemError } from '../lib/analytics';
+import { filterErrorLogs } from './dashboardModel';
 
 interface Props {
   systemErrorLogs: any[];
   searchFilter: string;
   setSearchFilter: (query: string) => void;
-  handleRefresh: () => void;
   isAr: boolean;
 }
 
@@ -16,9 +15,9 @@ export const SystemHealthTab: React.FC<Props> = ({
   systemErrorLogs,
   searchFilter,
   setSearchFilter,
-  handleRefresh,
   isAr,
 }) => {
+  const filteredLogs = filterErrorLogs(systemErrorLogs, searchFilter);
   return (
     <motion.div
       key="system-health"
@@ -66,31 +65,12 @@ export const SystemHealthTab: React.FC<Props> = ({
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
               {isAr
-                ? 'رصد تلقائي لأخطاء المتجر والاستجابات بدون الحاجة لفحص سجلات Vercel.'
-                : 'Automatic telemetry tracking of client errors & unhandled rejections without checking server logs.'}
+                ? 'أخطاء المتصفح المرصودة فقط؛ فحص السيرفر يحتاج سجلات ومراقبة منفصلة.'
+                : 'Recorded browser errors only; server diagnosis requires separate logs and monitoring.'}
             </p>
           </div>
         </div>
 
-        {import.meta.env.DEV && <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              trackSystemError(
-                'Manual Diagnostic Test Error: Testing Telemetry System',
-                'Error: Diagnostic stack trace generated at ' +
-                  new Date().toISOString() +
-                  '\n    at TestButton.onClick (AdminAnalyticsDashboard.tsx)'
-              );
-              handleRefresh();
-            }}
-            className="bg-slate-800/80 hover:bg-slate-800 text-xs text-slate-300 border-slate-700"
-          >
-            <Sparkles className="w-3.5 h-3.5 ml-1 text-amber-400" />
-            {isAr ? 'إرسال خطأ تشخيصي تجريبي' : 'Trigger Diagnostic Test Error'}
-          </Button>
-        </div>}
       </div>
 
       {/* Health KPI Cards */}
@@ -162,13 +142,18 @@ export const SystemHealthTab: React.FC<Props> = ({
             </p>
           </div>
 
-          <div className="w-full sm:w-64">
+          <div className="w-full sm:w-64 space-y-2">
             <Input
+              aria-label={isAr ? 'البحث في سجل الأخطاء' : 'Search error log'}
               placeholder={isAr ? 'بحث في الأخطاء...' : 'Search errors...'}
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
               icon={Search}
             />
+            <div className="flex items-center justify-between gap-2 text-xs text-slate-400">
+              <span role="status">{filteredLogs.length} / {systemErrorLogs.length} {isAr ? 'نتيجة' : 'results'}</span>
+              {searchFilter && <Button size="sm" variant="ghost" onClick={() => setSearchFilter('')}>{isAr ? 'مسح البحث' : 'Clear search'}</Button>}
+            </div>
           </div>
         </div>
 
@@ -186,17 +171,11 @@ export const SystemHealthTab: React.FC<Props> = ({
                 : 'No browser errors were recorded in this period. This does not certify server availability or every user journey.'}
             </p>
           </div>
+        ) : filteredLogs.length === 0 ? (
+          <p role="status" className="py-10 text-center text-sm text-slate-400">{isAr ? 'ماكو أخطاء تطابق البحث. جرّب كلمة ثانية أو امسح البحث.' : 'No errors match this search. Try another term or clear the search.'}</p>
         ) : (
           <div className="space-y-3">
-            {systemErrorLogs
-              .filter((e) => {
-                if (!searchFilter.trim()) return true;
-                const q = searchFilter.toLowerCase();
-                const msg = (e.data?.errorMessage || '').toLowerCase();
-                const url = (e.data?.url || '').toLowerCase();
-                const pid = (e.data?.visitorId || '').toLowerCase();
-                return msg.includes(q) || url.includes(q) || pid.includes(q);
-              })
+            {filteredLogs
               .map((err) => (
                 <div
                   key={err.id}
@@ -211,7 +190,7 @@ export const SystemHealthTab: React.FC<Props> = ({
                         {new Date(err.timestamp).toLocaleString(isAr ? 'ar-IQ' : 'en-US')}
                       </span>
                     </div>
-                    <div className="text-[11px] font-mono text-slate-400 flex items-center gap-3">
+                    <div className="text-[11px] font-mono text-slate-400 flex flex-wrap items-center gap-3 break-all">
                       <span>ID: {err.data?.visitorId || 'pvid_anon'}</span>
                       <span>Visit #{err.data?.visitCount || 1}</span>
                       <span>{err.device}</span>
@@ -223,7 +202,7 @@ export const SystemHealthTab: React.FC<Props> = ({
                   </div>
 
                   {err.data?.url && (
-                    <div className="text-[11px] text-slate-400 font-mono">
+                    <div className="text-[11px] text-slate-400 font-mono break-all">
                       <span className="text-slate-500">{isAr ? 'المسار: ' : 'URL: '}</span>
                       {err.data.url}
                     </div>

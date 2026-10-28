@@ -24,6 +24,14 @@ The current admin dashboard and storefront event collection were updated. The se
 
 ## Validation
 
-Eight analytics regression tests cover revenue, dates/bucket totals, deduplication, observed conversion, RFM, size stock, inactivity and zero-result search. The full suite contains 33 passing tests. Type checking and production build pass. Existing bundle/import warnings remain; production database permissions and delivery integrations were not exercised.
+Ten analytics regression tests cover revenue, dates/bucket totals, deduplication, observed conversion, RFM, size stock, inactivity, zero-result search, error filtering and safe cloud merging. The full suite contains 35 passing tests. Type checking and production build pass. Existing bundle/import warnings remain; production database permissions and delivery integrations were not exercised.
 
 Browser checks covered widths 320, 375, 768, 1101 and 1440 with no document/header horizontal overflow. Admin search returned matching products; Ctrl+K focused search. Period selection, visitor/RFM, demand, error-log tabs and mobile menu were exercised. No browser console errors were captured in the fresh preview. Real-device Safari/Android testing and populated production dashboards remain unchecked.
+
+## Toolbar and error-log follow-up
+
+- Removed the misleading "reset counter" action from this dashboard: it previously deleted all telemetry, not only the displayed error count. Removed the synthetic-error button, which generated events excluded from the report. Legacy reset exports are unchanged and were not executed.
+- Local refresh recalculates local records without contacting production. Cloud refresh reports failure instead of silently succeeding, preserves unsynced local events and rejects invalid/future cloud dates. Only the latest 1,000 cloud rows are fetched and at most 2,000 merged events retained; this is not a complete historical report. New behavioral events carry their original event ID for deduplication; older cloud rows without it can overlap older local observations.
+- Added methodology disclosure, selected-state semantics for period/chart controls, error-search result counts and a clear-search action. The dashboard now listens to the actual telemetry update event and reevaluates time-based signals every minute.
+- Chart detail labels now distinguish recorded orders from delivered revenue. Removed unused alternative date/reset dialogs.
+- Repaired the shared date picker, whose mobile popup extended outside the viewport. Its portal now stays within the viewport and supports Escape; date selection, apply and Escape were verified at widths 320/375/768/1101/1440. This shared picker also serves other admin views; those views were type-checked but not individually exercised.

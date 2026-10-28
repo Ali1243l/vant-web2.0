@@ -114,6 +114,7 @@ export const OverviewTab: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={() => setChartMetric('sales')}
+                  aria-pressed={chartMetric === 'sales'}
                   className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${
                     chartMetric === 'sales'
                       ? 'bg-indigo-600 text-white shadow-sm font-semibold'
@@ -126,6 +127,7 @@ export const OverviewTab: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={() => setChartMetric('orders')}
+                  aria-pressed={chartMetric === 'orders'}
                   className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${
                     chartMetric === 'orders'
                       ? 'bg-emerald-600 text-white shadow-sm font-semibold'
@@ -138,6 +140,7 @@ export const OverviewTab: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={() => setChartMetric('both')}
+                  aria-pressed={chartMetric === 'both'}
                   className={`px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${
                     chartMetric === 'both'
                       ? 'bg-slate-800 text-white border border-slate-700 shadow-sm font-semibold'
@@ -150,6 +153,7 @@ export const OverviewTab: React.FC<Props> = ({
             </div>
 
             {/* Interactive Bar Chart */}
+            {chartMetric === 'both' && <p className="text-[11px] text-slate-400">{isAr ? 'ارتفاع الأعمدة نسبي لكل مقياس على حدة؛ افتح العمود لقراءة الأرقام.' : 'Bar heights are relative within each metric; open a bar for exact values.'}</p>}
             {chartData.every(point => point.sales === 0 && point.orders === 0) && <p role="status" className="py-6 text-center text-sm text-slate-400">{isAr ? 'لا توجد طلبات مسجلة في هذه الفترة.' : 'No orders recorded in this period.'}</p>}
             <div className="h-64 flex items-end gap-2 sm:gap-4 pt-6 pb-2 px-2">
               {chartData.map((bar, index) => {

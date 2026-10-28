@@ -12,7 +12,6 @@ import {
   RefreshCw,
   ShieldAlert,
   Eye,
-  RotateCcw,
   Layers,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -23,7 +22,6 @@ import { DateRangeFilterWidget } from '../components/admin/widgets/DateRangeFilt
 import {
   getAggregatedAnalytics,
   syncFromSupabaseCloud,
-  resetAnalyticsData,
   getStoredEvents,
 } from './lib/analytics';
 import type {
@@ -45,6 +43,7 @@ import { PersonasTab } from './analytics/PersonasTab';
 import { DemandSizingTab } from './analytics/DemandSizingTab';
 import { SystemHealthTab } from './analytics/SystemHealthTab';
 import { AnalyticsModals } from './analytics/AnalyticsModals';
+import { recordedErrorLogs } from './analytics/dashboardModel';
 
 export const AdminAnalyticsDashboard: React.FC = () => {
   const { lang, products, offers, subscribers, orders = [], setActiveView, isLiveDatabase } = useAdminBridge();
@@ -70,13 +69,10 @@ export const AdminAnalyticsDashboard: React.FC = () => {
       setTimeRange('30d');
     }
   };
-  const [showCustomDateModal, setShowCustomDateModal] = useState<boolean>(false);
   const [hoveredDataIndex, setHoveredDataIndex] = useState<number | null>(null);
   const [refreshSeed, setRefreshSeed] = useState<number>(0);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-  const [isResetting, setIsResetting] = useState<boolean>(false);
-  const [showResetModal, setShowResetModal] = useState<boolean>(false);
-  const [resetSuccess, setResetSuccess] = useState<boolean>(false);
+  const [actionMessage, setActionMessage] = useState<{ error: boolean; ar: string; en: string } | null>(null);
   const [chartMetric, setChartMetric] = useState<ChartMetric>('both');
   const [selectedBarData, setSelectedBarData] = useState<ChartDataPoint | null>(null);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
@@ -93,11 +89,15 @@ export const AdminAnalyticsDashboard: React.FC = () => {
     window.addEventListener('vant:analytics:heartbeat', handleAnalyticsUpdate);
     window.addEventListener('vant:order_created', handleAnalyticsUpdate);
     window.addEventListener('vant:hesitation_detected', handleAnalyticsUpdate);
+    window.addEventListener('vant_analytics_updated', handleAnalyticsUpdate);
+    const timer = window.setInterval(handleAnalyticsUpdate, 60000);
 
     return () => {
       window.removeEventListener('vant:analytics:heartbeat', handleAnalyticsUpdate);
       window.removeEventListener('vant:order_created', handleAnalyticsUpdate);
       window.removeEventListener('vant:hesitation_detected', handleAnalyticsUpdate);
+      window.removeEventListener('vant_analytics_updated', handleAnalyticsUpdate);
+      window.clearInterval(timer);
     };
   }, []);
 
@@ -116,40 +116,22 @@ export const AdminAnalyticsDashboard: React.FC = () => {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
+    setActionMessage(null);
     try {
-      await syncFromSupabaseCloud();
+      if (isLiveDatabase) await syncFromSupabaseCloud();
+      setActionMessage({ error: false, ar: isLiveDatabase ? 'تم تحديث الأحداث المرصودة؛ الطلبات من البيانات المحمّلة في الإدارة.' : 'تمت إعادة حساب البيانات المحلية؛ لم يتم الاتصال بقاعدة إنتاج.', en: isLiveDatabase ? 'Observed events refreshed; orders use records loaded in administration.' : 'Local data recalculated; no production database contacted.' });
     } catch (err) {
       console.warn('Sync failed during refresh', err);
+      setActionMessage({ error: true, ar: 'تعذرت المزامنة. بقيت البيانات السابقة؛ جرّب التحديث مرة ثانية.', en: 'Sync failed. Previous data is preserved; try refreshing again.' });
     } finally {
       setRefreshSeed((prev) => prev + 1);
       setIsRefreshing(false);
     }
   };
 
-  const handleResetData = () => {
-    setShowResetModal(true);
-  };
-
-  const confirmResetData = async () => {
-    setIsResetting(true);
-    try {
-      if (!(await resetAnalyticsData())) throw new Error('Analytics reset failed');
-      setRefreshSeed((prev) => prev + 1);
-      setResetSuccess(true);
-      setTimeout(() => {
-        setResetSuccess(false);
-        setShowResetModal(false);
-      }, 1200);
-    } catch (err) {
-      console.warn('Reset failed', err);
-    } finally {
-      setIsResetting(false);
-    }
-  };
-
   const systemErrorLogs = useMemo(() => {
     const allEvents = getStoredEvents();
-    return allEvents.filter((ev) => ev.type === 'system_error' && !ev.data?.isDev && !String(ev.data?.errorMessage || '').startsWith('Manual Diagnostic Test Error:') && ev.timestamp >= currentDataset.startTime && ev.timestamp < currentDataset.endTime);
+    return recordedErrorLogs(allEvents, currentDataset);
   }, [refreshSeed, currentDataset]);
 
   const stats: KPICardStat[] = [
@@ -230,10 +212,14 @@ export const AdminAnalyticsDashboard: React.FC = () => {
   const recentOrders = useMemo(() => computeRecentOrders(orders, isAr, currentDataset), [orders, isAr, currentDataset]);
   const topProducts = useMemo(() => computeTopProducts(products, orders, currentDataset), [products, orders, currentDataset]);
 
-  const handleCopyMessage = (id: string, text: string) => {
-    navigator.clipboard?.writeText(text);
-    setCopiedMessageId(id);
-    setTimeout(() => setCopiedMessageId(null), 2000);
+  const handleCopyMessage = async (id: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedMessageId(id);
+      setTimeout(() => setCopiedMessageId(null), 2000);
+    } catch {
+      setActionMessage({ error: true, ar: 'تعذر نسخ النص. تحقق من صلاحية الحافظة.', en: 'Could not copy the text. Check clipboard permission.' });
+    }
   };
 
   const handleOpenWhatsApp = (phone: string, text: string) => {
@@ -334,7 +320,9 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                 { id: 'year', labelAr: 'سنة', labelEn: 'Year' },
               ].map((t) => (
                 <button
+                  type="button"
                   key={t.id}
+                  aria-pressed={timeRange === t.id}
                   onClick={() => {
                     setTimeRange(t.id as TimeRange);
                     setWidgetDateRange(undefined);
@@ -365,23 +353,17 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                 className={`w-3.5 h-3.5 text-indigo-400 ${isRefreshing ? 'animate-spin' : ''}`}
               />
               <span>
-                {isRefreshing ? (isAr ? 'جاري التحديث...' : 'Updating...') : isAr ? 'تحديث' : 'Refresh'}
+                {isRefreshing ? (isAr ? 'جاري التحديث...' : 'Updating...') : isAr ? (isLiveDatabase ? 'تحديث الأحداث' : 'تحديث محلي') : (isLiveDatabase ? 'Refresh events' : 'Refresh local data')}
               </span>
             </button>
 
-            {activeTab === 'system-health' && <button
-              type="button"
-              onClick={handleResetData}
-              disabled={isResetting}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-xs font-medium text-rose-300 transition-all cursor-pointer disabled:opacity-50"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
-              <span>
-                {isResetting ? (isAr ? 'جاري التصفير...' : 'Resetting...') : isAr ? 'تصفير العداد' : 'Purge Data'}
-              </span>
-            </button>}
           </div>
         </div>
+        {actionMessage && <p role={actionMessage.error ? 'alert' : 'status'} className="text-xs text-slate-300">{isAr ? actionMessage.ar : actionMessage.en}</p>}
+        <details className="text-xs text-slate-400">
+          <summary className="cursor-pointer py-2 text-indigo-300 focus-visible:outline-2 focus-visible:outline-indigo-400">{isAr ? 'شلون تنحسب الأرقام؟' : 'How are metrics calculated?'}</summary>
+          <p className="mt-2 leading-6">{isAr ? 'الإيراد والمتوسط من الطلبات المسلّمة حسب تاريخ تسجيل الطلب. RFM ترتيب نسبي لحداثة وتكرار وقيمة الشراء. التفاعل والتردد قواعد من الأحداث المسجّلة، مو احتمال شراء. التحويل يحتاج ربط الجلسة بالطلب، والمخزون يحتاج بيانات لكل مقاس. — تعني بيانات غير كافية. السجلات مرصودة ومحدودة وليست ضماناً لتغطية كل الزيارات.' : 'Revenue and average use delivered orders by recorded order date. RFM ranks purchase recency, frequency and value. Engagement and hesitation are observed rules, not purchase probabilities. Conversion needs order/session linkage; inventory needs size-level stock. — means insufficient data. Stored events are limited and do not guarantee complete visit coverage.'}</p>
+        </details>
       </div>
 
       {/* Sub-Navigation Tabs Bar with relative z-10 */}
@@ -478,7 +460,6 @@ export const AdminAnalyticsDashboard: React.FC = () => {
             systemErrorLogs={systemErrorLogs}
             searchFilter={searchFilter}
             setSearchFilter={setSearchFilter}
-            handleRefresh={handleRefresh}
             isAr={isAr}
           />
         )}
@@ -490,18 +471,6 @@ export const AdminAnalyticsDashboard: React.FC = () => {
         selectedBarData={selectedBarData}
         setSelectedBarData={setSelectedBarData}
         currentDataset={currentDataset}
-        showCustomDateModal={showCustomDateModal}
-        setShowCustomDateModal={setShowCustomDateModal}
-        customStartDate={customStartDate}
-        setCustomStartDate={setCustomStartDate}
-        customEndDate={customEndDate}
-        setCustomEndDate={setCustomEndDate}
-        setTimeRange={setTimeRange}
-        showResetModal={showResetModal}
-        setShowResetModal={setShowResetModal}
-        resetSuccess={resetSuccess}
-        confirmResetData={confirmResetData}
-        isResetting={isResetting}
         isAr={isAr}
       />
     </div>

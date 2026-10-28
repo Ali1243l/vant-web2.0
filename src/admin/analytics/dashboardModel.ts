@@ -2,6 +2,20 @@ import type { AnalyticsEvent } from '../../lib/analytics/types';
 import type { AggregatedAnalytics, CustomerSession, HesitationIncident, SizeDemandItem } from '../lib/analytics';
 import { DAY_MS, orderTime, orderAmount, ordersInWindow, type AnalyticsWindow } from './analyticsCalculations.ts';
 
+export function filterErrorLogs(events: AnalyticsEvent[], query: string): AnalyticsEvent[] {
+  const term = query.trim().toLowerCase();
+  return events.filter(event => !term || [event.data?.errorMessage, event.data?.url, event.data?.visitorId, event.data?.errorStack].some(value => String(value ?? '').toLowerCase().includes(term)));
+}
+
+export function recordedErrorLogs(events: AnalyticsEvent[], window: AnalyticsWindow, now = Date.now()): AnalyticsEvent[] {
+  const recorded = events.filter(event => event?.id && event.type === 'system_error'
+    && Number.isFinite(event.timestamp) && event.timestamp <= now
+    && event.timestamp >= window.startTime && event.timestamp < window.endTime
+    && !event.data?.isDev && !event.data?.isDemo && !event.data?.isSimulation
+    && !String(event.data?.errorMessage || '').startsWith('Manual Diagnostic Test Error:'));
+  return [...new Map(recorded.map(event => [event.id, event])).values()].sort((a, b) => b.timestamp - a.timestamp);
+}
+
 export interface RFMCustomer {
   id: string; name: string; recencyDays: number; frequency: number; monetary: number; score: number;
 }

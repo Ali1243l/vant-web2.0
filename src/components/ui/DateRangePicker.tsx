@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar as CalendarIcon, X, RotateCcw, Check } from 'lucide-react';
 import { DayPicker, type DateRange } from 'react-day-picker';
@@ -38,9 +39,10 @@ export function DateRangePicker({
 }: DateRangePickerProps) {
   const isAr = lang === 'ar';
   const containerRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<React.CSSProperties>({});
   const [isOpen, setIsOpen] = useState(false);
   const [selectedRange, setSelectedRange] = useState<DateRange | undefined>(value);
-  const [resolvedAlign, setResolvedAlign] = useState<'left' | 'right'>('left');
   const [dropUp, setDropUp] = useState(false);
 
   // Sync internal state when external prop value changes
@@ -52,54 +54,34 @@ export function DateRangePicker({
   useEffect(() => {
     if (!isOpen) return;
 
-    if (containerRef.current) {
+    const placePopover = () => {
+      if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
       const popoverWidth = 570;
       const popoverHeight = 360;
-      const spaceRight = window.innerWidth - rect.left;
-      const spaceLeft = rect.right;
       const spaceBelow = window.innerHeight - rect.bottom;
       const spaceAbove = rect.top;
 
-      // Vertical flip detection
-      if (spaceBelow < popoverHeight && spaceAbove > popoverHeight) {
-        setDropUp(true);
-      } else {
-        setDropUp(false);
-      }
-
-      // Horizontal alignment calculation
-      if (align === 'left') {
-        setResolvedAlign('left');
-      } else if (align === 'right') {
-        setResolvedAlign('right');
-      } else {
-        // Auto alignment based on language and available margins
-        if (isAr) {
-          // In RTL layout:
-          if (spaceRight >= popoverWidth && rect.left < popoverWidth) {
-            setResolvedAlign('left'); // grows towards center/right
-          } else if (spaceLeft >= popoverWidth) {
-            setResolvedAlign('right'); // grows towards left
-          } else {
-            setResolvedAlign('left');
-          }
-        } else {
-          // In LTR layout:
-          if (spaceRight >= popoverWidth) {
-            setResolvedAlign('left');
-          } else {
-            setResolvedAlign('right');
-          }
-        }
-      }
-    }
+      const mobile = window.innerWidth < 768;
+      const above = spaceBelow < popoverHeight && spaceAbove > popoverHeight;
+      const alignRight = align === 'right' || (align === 'start' && isAr) || (align === 'end' && !isAr) || (align === 'auto' && isAr);
+      const left = alignRight ? rect.right - popoverWidth : rect.left;
+      const top = mobile ? Math.max(12, Math.min(rect.bottom + 8, window.innerHeight - 460)) : rect.bottom + 8;
+      setPosition(mobile
+        ? { left: 12, right: 12, top, maxHeight: window.innerHeight - top - 12 }
+        : { width: popoverWidth, left: Math.max(12, Math.min(left, window.innerWidth - popoverWidth - 12)), top: above ? undefined : top, bottom: above ? window.innerHeight - rect.top + 8 : undefined, maxHeight: Math.max(120, (above ? spaceAbove : spaceBelow) - 20) });
+      setDropUp(above);
+    };
+    placePopover();
+    window.addEventListener('resize', placePopover);
+    window.addEventListener('scroll', placePopover, true);
+    return () => { window.removeEventListener('resize', placePopover); window.removeEventListener('scroll', placePopover, true); };
   }, [isOpen, align, isAr]);
 
   // Close popover on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node) && !popoverRef.current?.contains(event.target as Node)) {
         setIsOpen(false);
       }
     }
@@ -107,8 +89,13 @@ export function DateRangePicker({
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { setIsOpen(false); containerRef.current?.querySelector<HTMLElement>('[role="button"]')?.focus(); }
+    };
+    if (isOpen) document.addEventListener('keydown', closeOnEscape);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', closeOnEscape);
     };
   }, [isOpen]);
 
@@ -221,22 +208,23 @@ export function DateRangePicker({
       </div>
 
       {/* 2. Absolute Isolated Popover (strictly themed to slate-900 & indigo) */}
-      <AnimatePresence>
+      {createPortal(<AnimatePresence>
         {isOpen && (
           <motion.div
+            ref={popoverRef}
+            style={position}
+            dir={isAr ? 'rtl' : 'ltr'}
             initial={{ opacity: 0, scale: 0.97, y: dropUp ? -8 : 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: dropUp ? -8 : 8 }}
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
             role="dialog"
-            aria-modal="true"
+            aria-label={isAr ? 'اختيار الفترة الزمنية' : 'Choose date range'}
             className={cn(
-              'absolute z-[99999]',
-              dropUp ? 'bottom-full mb-2' : 'top-full mt-2',
-              resolvedAlign === 'left' ? 'left-0' : 'right-0',
+              'fixed z-[99999] overflow-y-auto',
               'flex flex-col md:flex-row rounded-3xl border border-slate-800/90',
               'bg-slate-900/98 backdrop-blur-2xl shadow-[0_24px_60px_rgba(0,0,0,0.65),0_4px_16px_rgba(0,0,0,0.4)]',
-              'p-3.5 sm:p-4.5 text-slate-100 max-w-[calc(100vw-1.5rem)] overflow-hidden'
+              'p-3.5 sm:p-4.5 text-slate-100 max-w-[calc(100vw-1.5rem)]'
             )}
           >
             {/* Quick Presets Sidebar */}
@@ -391,7 +379,7 @@ export function DateRangePicker({
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>, document.body)}
     </div>
   );
 }
