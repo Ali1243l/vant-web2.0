@@ -90,7 +90,7 @@ export const ProductOrderButton: React.FC<ProductOrderButtonProps> = ({
           <button
             type="button"
             disabled={!product || !selectedSize || unavailable}
-            className="group relative flex h-11.5 sm:h-12 md:h-13 w-full items-center justify-center gap-2 rounded-xl md:rounded-2xl bg-[#004ad7] hover:bg-[#003db3] dark:bg-[#3b82f6] dark:hover:bg-[#2563eb] text-white text-xs sm:text-sm md:text-base font-bold tracking-wide transition-all shadow-md shadow-[#004ad7]/25 dark:shadow-[#3b82f6]/30 active:scale-[0.98] cursor-pointer"
+            className="group relative flex h-11.5 sm:h-12 md:h-13 w-full items-center justify-center gap-2 rounded-xl md:rounded-2xl bg-[#004ad7] hover:bg-[#003db3] dark:bg-[#3b82f6] dark:hover:bg-[#2563eb] text-white text-xs sm:text-sm md:text-base font-bold tracking-wide transition-all shadow-md shadow-[#004ad7]/25 dark:shadow-[#3b82f6]/30 active:scale-[0.98] cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed disabled:shadow-none"
           >
             <ShoppingCart className="h-4.5 w-4.5 fill-white/20 stroke-white stroke-[2] shrink-0" />
             <span className="truncate">{cartButtonText}</span>

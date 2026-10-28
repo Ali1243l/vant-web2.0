@@ -33,8 +33,8 @@ export const ProductHeaderInfo: React.FC<ProductHeaderInfoProps> = ({
   availability,
   statusBannerText,
 }) => {
-  const originalPrice = activeVariant?.originalPrice || product.original_price;
-  const hasDiscount = Boolean(product.is_offer && originalPrice && originalPrice > activePrice);
+  const originalPrice = activeVariant ? activeVariant.originalPrice : product.original_price;
+  const hasDiscount = Boolean(originalPrice && originalPrice > activePrice);
 
   return (
     <div className="flex flex-col gap-2.5 sm:gap-3">
@@ -74,7 +74,7 @@ export const ProductHeaderInfo: React.FC<ProductHeaderInfoProps> = ({
             )}
           </div>
 
-          {product.is_offer && (
+          {(hasDiscount || (!product.variants?.length && product.is_offer)) && (
             <div className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold bg-[#004ad7]/10 dark:bg-[#3b82f6]/15 border border-[#004ad7]/25 dark:border-[#3b82f6]/35 text-[#004ad7] dark:text-[#60a5fa] shadow-2xs">
               <Tag className="h-3.5 w-3.5 md:h-4 md:w-4 shrink-0" />
               <span>{lang === 'ar' ? (product.offer_badge_ar || 'عرض خاص') : (product.offer_badge_en || 'Special Offer')}</span>

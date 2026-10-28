@@ -82,7 +82,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     }
   }, [product?.id, defaultVariantIdx, variantInfo]);
 
-  const hasColorOptions = Boolean(variantInfo && (variantInfo.hasMultipleColors || product?.colors?.length));
+  const hasColorOptions = Boolean(variantInfo && (variantInfo.hasMultipleColors || product?.colors?.length || product?.variants?.length));
   const selectColor = (index: number) => {
     if (index === selectedColorIdx) return;
     setSelectedColorIdx(index);
@@ -112,6 +112,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
       const filtered = targetVariant.images.map((s) => s?.trim()).filter(Boolean) as string[];
       if (filtered.length > 0) return filtered;
     }
+    if (product.variants?.length) return [];
 
     if (product.image_url?.trim()) return [product.image_url.trim()];
     if (Array.isArray(product.images) && product.images.length > 0) {
@@ -404,7 +405,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                 </p> : <ProductOrderButton
                       whatsappControl={whatsappControl}
                       whatsappUrl={whatsappUrl}
-                      product={product}
+                      product={{ ...product, image_url: images[0] || '' }}
                       displayTitle={displayTitle}
                       activePrice={activePrice}
                       color={colorSpecLabel}

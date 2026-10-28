@@ -1,6 +1,43 @@
 // Run against /tests/fixtures/product-colors/index.html using a CUA tab at the viewport being checked.
 import assert from 'node:assert/strict';
 
+export async function checkSheetLayout(tab) {
+  const bounds = await tab.playwright.evaluate(() => {
+    const sheet = document.querySelector('.product-sheet');
+    const scroll = document.querySelector('[data-product-scroll]');
+    const colors = document.querySelector('.product-color-options').getBoundingClientRect();
+    const image = document.querySelector('.product-gallery-track').getBoundingClientRect();
+    const owner = scroll.getBoundingClientRect();
+    const footer = document.querySelector('.product-sheet-footer').getBoundingClientRect();
+    return {
+      width: innerWidth, height: innerHeight,
+      noOverflow: sheet.scrollWidth <= sheet.clientWidth + 1 && scroll.scrollWidth <= scroll.clientWidth + 1,
+      colorsVisible: colors.top >= owner.top - 1 && colors.bottom <= owner.bottom + 1,
+      photoVisible: image.top >= owner.top - 1 && image.bottom <= owner.bottom + 1,
+      footerVisible: footer.top >= 0 && footer.bottom <= innerHeight + 1,
+      touchHeight: document.querySelector('.product-color-option').getBoundingClientRect().height,
+    };
+  });
+  assert.equal(bounds.noOverflow, true);
+  assert.equal(bounds.colorsVisible, true);
+  assert.equal(bounds.photoVisible, true);
+  assert.equal(bounds.footerVisible, true);
+  assert.ok(bounds.touchHeight >= 44);
+  return bounds;
+}
+
+export async function checkConfiguredProduct(tab) {
+  await tab.playwright.getByRole('button', { name: 'أبيض', exact: true }).click();
+  assert.match(await tab.playwright.locator('.product-detail-info').innerText(), /28,000/);
+  assert.equal(await tab.playwright.getByRole('button', { name: 'L available', exact: true }).count(), 0);
+  await tab.playwright.getByRole('button', { name: 'إغلاق', exact: true }).click();
+  await tab.playwright.locator('.product-sheet').waitFor({ state: 'detached' });
+  await tab.playwright.locator('h3').filter({ hasText: 'تجربة ألوان محلية — غير معروضة للبيع' }).click();
+  await tab.playwright.getByRole('button', { name: 'أبيض', exact: true }).click();
+  assert.match(await tab.playwright.locator('.product-detail-info').innerText(), /28,000/);
+  assert.equal(await tab.playwright.getByRole('button', { name: 'L available', exact: true }).count(), 0);
+}
+
 // Run after opening the demo card in the main development storefront.
 export async function checkDemoColorProduct(tab) {
   const photos = new Set();
@@ -49,4 +86,3 @@ export async function checkProductColors(tab) {
   assert.equal(await tab.playwright.getByRole('button', { name: 'أضف للسلة', exact: true }).isEnabled(), false, 'changing color must require a new size selection');
   return bounds;
 }
-

@@ -360,7 +360,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       category: sp.category_ar || sp.category,
       price: basePrice,
       salePrice: salePrice,
-      stock: rawAvailability === 'sold_out' ? 0 : 25,
+      stock: sp.variants?.length ? sp.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0) : rawAvailability === 'sold_out' ? 0 : 25,
       status,
       imageUrl: sp.image_url,
       images: sp.images && sp.images.length > 0 ? sp.images : [sp.image_url],
@@ -375,7 +375,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       salesCount: 0,
       rating: 5.0,
       createdAt: sp.created_at ? sp.created_at.split('T')[0] : '2026-03-01',
-      hasVariants: false,
+      hasVariants: Boolean(sp.variants?.length),
+      variants: sp.variants,
     };
   }, []);
 
@@ -483,6 +484,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       category_ar: enriched.category,
       sizes: enriched.sizes && enriched.sizes.length > 0 ? enriched.sizes : ['S', 'M', 'L', 'XL'],
       colors: variantColors.length > 0 ? variantColors : undefined,
+      variants: enriched.hasVariants ? enriched.variants : [],
       image_url: enriched.imageUrl || allImages[0],
       images: allImages,
       description: enriched.descriptionEn,
@@ -495,7 +497,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [siteControls]);
 
   const updateProduct = useCallback((id: string, updated: Partial<Product>) => {
+    updated = deriveProductMetricsFromVariants(updated);
     const patch: Partial<StoreProduct> = {};
+    if (updated.hasVariants !== undefined) {
+      patch.variants = updated.hasVariants ? updated.variants || [] : [];
+      patch.colors = patch.variants.map(v => v.colorNameAr || v.colorNameEn).filter(Boolean);
+    }
     if (updated.name) patch.title_ar = updated.name;
     if (updated.nameEn) patch.title = updated.nameEn;
     if (updated.price !== undefined) {

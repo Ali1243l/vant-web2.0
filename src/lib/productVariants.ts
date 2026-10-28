@@ -4,7 +4,7 @@
  * and high-precision comparative analysis against baseline reference colors (Black).
  */
 
-import { COMMERCIAL_RETAIL_PALETTE, type RGB } from '../admin/utils/colorExtraction';
+import { COMMERCIAL_RETAIL_PALETTE, hexToRgb, type RGB } from '../admin/utils/colorExtraction.ts';
 import type { Product, ProductAvailability } from '../types';
 
 export interface ColorVariant {
@@ -298,7 +298,8 @@ function analyzeColorTone(colorNameEn: string, hex: string) {
  */
 export function extractColorFromImageUrl(url: string): string | null {
   if (!url || typeof url !== 'string') return null;
-  const decoded = decodeURIComponent(url);
+  let decoded = url;
+  try { decoded = decodeURIComponent(url); } catch { /* Keep malformed URLs usable as opaque image paths. */ }
 
   // Specific user uploads:
   // b4niw is the Brown shirt variant
@@ -352,6 +353,9 @@ export function resolveProductColorVariants(
     : product.image_url
     ? [product.image_url]
     : []) as string[];
+  const configuredVariants = Array.isArray(product.variants)
+    ? product.variants.filter(v => v && typeof v === 'object' && (typeof v.colorNameEn === 'string' || typeof v.colorNameAr === 'string'))
+    : [];
 
   // 1. Group images by detected color name from their URLs
   const colorImageBuckets = new Map<string, string[]>();
@@ -392,7 +396,7 @@ export function resolveProductColorVariants(
     });
   }
 
-  const hasRealColors = candidateColorMap.size > 0;
+  const hasRealColors = configuredVariants.length > 0 || candidateColorMap.size > 0;
 
   // 3. Only if no colors and no explicit variants exist, use single transparent baseline without forcing fake color swatches
   if (candidateColorMap.size === 0) {
@@ -412,7 +416,28 @@ export function resolveProductColorVariants(
     availability: ProductAvailability;
   }> = [];
 
-  candidateColorMap.forEach(({ rawName, palette }) => {
+  if (configuredVariants.length) {
+    for (const variant of configuredVariants) {
+      const colorNameEn = typeof variant.colorNameEn === 'string' ? variant.colorNameEn.trim() : '';
+      const colorNameAr = typeof variant.colorNameAr === 'string' ? variant.colorNameAr.trim() : '';
+      const palette = resolvePaletteInfo(colorNameEn || colorNameAr);
+      const hasPrice = typeof variant.price === 'number' && Number.isFinite(variant.price) && variant.price >= 0;
+      const basePrice = hasPrice ? variant.price : product.original_price ?? product.price;
+      const salePrice = variant.salePrice ?? (!hasPrice && product.original_price ? product.price : undefined);
+      const hasSale = typeof salePrice === 'number' && Number.isFinite(salePrice) && salePrice > 0 && salePrice < basePrice;
+      const hex = typeof variant.colorHex === 'string' && /^#[a-f\d]{6}$/i.test(variant.colorHex) ? variant.colorHex : palette.hex;
+      rawVariants.push({
+        colorNameAr: colorNameAr || palette.colorNameAr,
+        colorNameEn: colorNameEn || palette.colorNameEn,
+        hex, rgb: hexToRgb(hex),
+        images: Array.isArray(variant.images) ? variant.images.filter((image: unknown) => typeof image === 'string' && image.trim()) : [],
+        price: hasSale ? salePrice : basePrice,
+        originalPrice: hasSale ? basePrice : undefined,
+        sizes: Array.isArray(variant.sizes) ? variant.sizes.filter((size: unknown) => typeof size === 'string' && size.trim()) : [...product.sizes],
+        availability: typeof variant.stock === 'number' && variant.stock <= 0 ? 'sold_out' : product.availability || 'in_stock',
+      });
+    }
+  } else candidateColorMap.forEach(({ rawName, palette }) => {
     let matchedImages = colorImageBuckets.get(rawName) || [];
 
     // Fallback: check case-insensitive or partial
@@ -522,8 +547,8 @@ export function resolveProductColorVariants(
       colorNameEn: rv.colorNameEn,
       hex: rv.hex,
       sku,
-      images: rv.images.length > 0 ? rv.images : images,
-      thumbnail: rv.images[0] || images[0] || '',
+      images: rv.images,
+      thumbnail: rv.images[0] || '',
       price: rv.price,
       originalPrice: rv.originalPrice,
       sizes: rv.sizes,

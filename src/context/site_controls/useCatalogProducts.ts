@@ -82,6 +82,8 @@ export function useCatalogProducts() {
         sizes: Array.isArray(p.sizes) && p.sizes.length > 0 ? p.sizes : ['S', 'M', 'L', 'XL'],
         image_url: defaultImg,
         images: imagesList,
+        colors: enh.colors ?? p.colors,
+        variants: enh.variants ?? p.variants,
         created_at: p.created_at,
         tags: enh.tags || [],
       };
@@ -248,6 +250,8 @@ export function useCatalogProducts() {
       tags: prodData.tags,
       image_url: prodData.image_url,
       images: prodData.images,
+      colors: prodData.colors,
+      variants: prodData.variants,
     });
 
     setProducts((prev) => [newProduct, ...prev]);
@@ -293,6 +297,8 @@ export function useCatalogProducts() {
               tags: prodData.tags,
               image_url: prodData.image_url,
               images: prodData.images,
+              colors: prodData.colors,
+              variants: prodData.variants,
             });
 
             const imagesList =
@@ -346,6 +352,8 @@ export function useCatalogProducts() {
       tags: updates.tags,
       image_url: updates.image_url,
       images: updates.images,
+      ...(updates.colors !== undefined ? { colors: updates.colors } : {}),
+      ...(updates.variants !== undefined ? { variants: updates.variants } : {}),
     });
 
     setProducts((prev) =>

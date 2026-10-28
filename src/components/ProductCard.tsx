@@ -110,11 +110,11 @@ export default React.memo(function ProductCard({
   const colorImages =
     activeVariant?.images && activeVariant.images.length > 0
       ? activeVariant.images
-      : product.image_url
+      : !product.variants?.length && product.image_url
       ? [product.image_url]
       : [];
 
-  const primaryImage = (colorImages[0] || product.image_url)?.trim() || null;
+  const primaryImage = colorImages[0]?.trim() || null;
   const secondaryImage = colorImages.length > 1 && colorImages[1]?.trim() ? colorImages[1].trim() : null;
 
   const { width, height } = product;
@@ -125,14 +125,9 @@ export default React.memo(function ProductCard({
   const isAr = lang === 'ar';
 
   const handleCardClick = () => {
-    // Pass the primary active variant and its image to the drawer
+    // Preserve catalog data so the drawer can resolve every color without losing its settings.
     const enrichedProduct: Product = {
       ...product,
-      images: Array.isArray(product.images) && product.images.length > 0 ? product.images : colorImages,
-      image_url: primaryImage || product.image_url || '',
-      price: activeVariant.price,
-      sku: activeVariant.sku,
-      variants: variantInfo.variants,
     };
     (enrichedProduct as any).activeColorKey = activeVariant.colorKey;
     (enrichedProduct as any).activeColorNameEn = activeVariant.colorNameEn;
@@ -161,10 +156,10 @@ export default React.memo(function ProductCard({
 
   const availability = activeVariant?.availability ?? product.availability ?? 'in_stock';
 
-  // Calculate discount percentage if offer
+  const originalPrice = activeVariant.originalPrice;
   const discountPct =
-    product.is_offer && product.original_price && product.original_price > product.price
-      ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
+    originalPrice && originalPrice > activeVariant.price
+      ? Math.round(((originalPrice - activeVariant.price) / originalPrice) * 100)
       : null;
 
   // Status badges only for special non-standard availability (coming soon, limited, sold out)
@@ -346,9 +341,9 @@ export default React.memo(function ProductCard({
               <span className="whitespace-nowrap font-mono font-black text-sm sm:text-base md:text-[17px] lg:text-lg text-[#004ad7] dark:text-[#3b82f6] tabular-nums tracking-tight">
                 {formatPrice(activeVariant.price)}
               </span>
-              {product.is_offer && product.original_price && product.original_price > activeVariant.price && (
+              {originalPrice && originalPrice > activeVariant.price && (
                 <span className="whitespace-nowrap text-[11px] sm:text-xs md:text-[13px] text-black/35 dark:text-white/35 line-through tabular-nums font-mono">
-                  {formatPrice(product.original_price)}
+                  {formatPrice(originalPrice)}
                 </span>
               )}
             </div>
