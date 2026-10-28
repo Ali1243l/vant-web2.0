@@ -1,5 +1,7 @@
 import { useSiteControls } from '../context/SiteControlsContext';
 import type { Product } from '../types';
+import { DEMO_COLOR_PRODUCT } from '../data/demoColorProduct';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 export function useProducts(): {
   products: Product[];
@@ -26,12 +28,14 @@ export function useProducts(): {
     loadMoreProducts,
   } = useSiteControls();
 
+  const showDemo = import.meta.env.DEV && !isSupabaseConfigured && !isLiveDatabase;
+
   return {
-    products,
+    products: showDemo ? [DEMO_COLOR_PRODUCT, ...products] : products,
     loading,
     loadingMore,
     hasMore,
-    totalProductsCount,
+    totalProductsCount: totalProductsCount + (showDemo ? 1 : 0),
     error,
     isLiveDatabase,
     lastSyncTime,

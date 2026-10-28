@@ -73,40 +73,40 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     return bIdx >= 0 ? bIdx : 0;
   }, [product, variantInfo]);
 
-  const [selectedColorIdx, setSelectedColorIdx] = useState<number | null>(defaultVariantIdx);
-  const [hoverColorIdx, setHoverColorIdx] = useState<number | null>(null);
+  const [selectedColorIdx, setSelectedColorIdx] = useState(defaultVariantIdx);
 
   useEffect(() => {
     if (product && variantInfo) {
       setSelectedColorIdx(defaultVariantIdx);
-      setHoverColorIdx(null);
       setActiveImageIndex(0);
     }
   }, [product?.id, defaultVariantIdx, variantInfo]);
 
-  const effectiveColorIdx = hoverColorIdx !== null ? hoverColorIdx : selectedColorIdx;
+  const hasColorOptions = Boolean(variantInfo && (variantInfo.hasMultipleColors || product?.colors?.length));
+  const selectColor = (index: number) => {
+    if (index === selectedColorIdx) return;
+    setSelectedColorIdx(index);
+    setSelectedSize(null);
+    setSizeFeedback(null);
+    setActiveImageIndex(0);
+  };
 
   const activeVariant = useMemo(() => {
     if (!variantInfo || variantInfo.variants.length === 0) return null;
-    if (effectiveColorIdx !== null && variantInfo.variants[effectiveColorIdx]) {
-      return variantInfo.variants[effectiveColorIdx];
+    if (variantInfo.variants[selectedColorIdx]) {
+      return variantInfo.variants[selectedColorIdx];
     }
     return (
       variantInfo.variants[defaultVariantIdx] ||
       variantInfo.baselineVariant ||
       variantInfo.variants[0]
     );
-  }, [variantInfo, effectiveColorIdx, defaultVariantIdx]);
+  }, [variantInfo, selectedColorIdx, defaultVariantIdx]);
 
   const images = useMemo(() => {
     if (!product || !variantInfo) return [];
 
-    const targetVariant =
-      effectiveColorIdx !== null && variantInfo.variants[effectiveColorIdx]
-        ? variantInfo.variants[effectiveColorIdx]
-        : variantInfo.variants[defaultVariantIdx] ||
-          variantInfo.baselineVariant ||
-          variantInfo.variants[0];
+    const targetVariant = activeVariant;
 
     if (targetVariant && Array.isArray(targetVariant.images) && targetVariant.images.length > 0) {
       const filtered = targetVariant.images.map((s) => s?.trim()).filter(Boolean) as string[];
@@ -119,7 +119,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
       if (filtered.length > 0) return filtered;
     }
     return [];
-  }, [product, effectiveColorIdx, variantInfo, defaultVariantIdx]);
+  }, [product, activeVariant, variantInfo]);
 
   useEffect(() => {
     if (product) {
@@ -264,6 +264,10 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
   }
 
   const activePrice = activeVariant ? activeVariant.price : (product?.price ?? 0);
+  if (product?.is_demo) {
+    statusBadgeLabel = lang === 'ar' ? 'للتجربة فقط' : 'Demo only';
+    statusBannerText = lang === 'ar' ? 'قطعة تجريبية — السعر للتوضيح والطلب غير متاح.' : 'Demo piece — illustrative price; ordering is unavailable.';
+  }
   const productCode = activeVariant?.sku || (product?.id ? `#${product.id}` : '');
   const formattedProductPrice = formatPrice(activePrice);
   const colorSpecLabel = activeVariant ? `${activeVariant.colorNameAr} (${activeVariant.colorNameEn})` : '';
@@ -395,24 +399,32 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                 <p className="mt-1 text-xs text-black/50 dark:text-white/50">{selectedSize ? `${lang === 'ar' ? 'المقاس' : 'Size'} · ${selectedSize}` : (lang === 'ar' ? 'اختر المقاس المناسب' : 'Choose your size')}</p>
               </div>
               <div className="min-w-0 w-full md:max-w-md">
-                <ProductOrderButton
+                {product.is_demo ? <p className="py-3 text-center text-sm font-semibold" role="status">
+                  {lang === 'ar' ? 'للتجربة فقط — الطلب غير متاح' : 'Demo only — ordering unavailable'}
+                </p> : <ProductOrderButton
                       whatsappControl={whatsappControl}
                       whatsappUrl={whatsappUrl}
                       product={product}
                       displayTitle={displayTitle}
                       activePrice={activePrice}
                       color={colorSpecLabel}
-                      unavailable={availability === 'sold_out' || availability === 'coming_soon'}
+                      unavailable={availability === 'sold_out' || availability === 'coming_soon' || (selectedSize !== null && !availableSizes.has(selectedSize.toUpperCase()))}
                       selectedSize={selectedSize}
                       buttonLabel={buttonLabel}
                       lang={lang}
-                    />
+                    />}
               </div>
             </div>
           }
         >
           <div className="product-detail-layout">
-            <div className="product-detail-gallery">
+            <div className={`product-detail-gallery${hasColorOptions ? ' product-detail-gallery--colors' : ''}`}>
+              {hasColorOptions && variantInfo && <ProductColorSelector
+                variants={variantInfo.variants}
+                lang={lang}
+                selectedColorIdx={selectedColorIdx}
+                onSelectColor={selectColor}
+              />}
               <ProductDrawerGallery
                     images={images}
                     product={product}
@@ -441,20 +453,8 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                       statusBannerText={statusBannerText}
                     />
               </section>
-              {(renderedSizes.length > 0 || variantInfo?.hasMultipleColors || Boolean(product.colors?.length)) && <section className="product-detail-section space-y-5">
-                <ProductColorSelector
-                      variantInfo={variantInfo}
-                      product={product}
-                      lang={lang}
-                      selectedColorIdx={selectedColorIdx}
-                      setSelectedColorIdx={setSelectedColorIdx}
-                      hoverColorIdx={hoverColorIdx}
-                      setHoverColorIdx={setHoverColorIdx}
-                      defaultVariantIdx={defaultVariantIdx}
-                      onColorChange={() => {
-                        setActiveImageIndex(0);
-                      }}
-                    />
+              {renderedSizes.length > 0 && <section className="product-detail-section space-y-5">
+
                 <ProductSizeSection
                       renderedSizes={renderedSizes}
                       availableSizes={availableSizes}
@@ -467,7 +467,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                       showSizeGuide={showSizeGuide}
                       setShowSizeGuide={setShowSizeGuide}
                       masterSizes={masterSizes}
-                      bespokeControl={bespokeControl}
+                      bespokeControl={product.is_demo ? { ...bespokeControl, visible: false } : bespokeControl}
                       bespokeWhatsappUrl={bespokeWhatsappUrl}
                       product={product}
                       displayTitle={displayTitle}
@@ -481,8 +481,8 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                 <ProductDetailsBadges
                       shareControl={shareControl}
                       copyControl={copyControl}
-                      deliveryBadgeControl={deliveryBadgeControl}
-                      craftBadgeControl={craftBadgeControl}
+                      deliveryBadgeControl={product.is_demo ? { ...deliveryBadgeControl, visible: false } : deliveryBadgeControl}
+                      craftBadgeControl={product.is_demo ? { ...craftBadgeControl, visible: false } : craftBadgeControl}
                       lang={lang}
                       displayDescription={displayDescription}
                       handleCopyTitle={handleCopyTitle}

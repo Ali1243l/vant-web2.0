@@ -65,7 +65,7 @@ export default function ProductDrawerGallery({ images, product, displayTitle, ac
                 loading={index === activeImageIndex ? 'eager' : 'lazy'} decoding="async" referrerPolicy="no-referrer"
                 onError={event => {
                   const fallback = product?.image_url?.trim();
-                  if (fallback && event.currentTarget.getAttribute('src') !== fallback) event.currentTarget.src = fallback;
+                  if (fallback && images.includes(fallback) && event.currentTarget.getAttribute('src') !== fallback) event.currentTarget.src = fallback;
                 }} />
             </div>
           )) : <div className="product-gallery-slide flex-col gap-3 text-black/35 dark:text-white/35"><ImageOff size={32} /><span className="text-xs">{isAr ? 'لا توجد صورة لهذه القطعة' : 'No image available'}</span></div>}

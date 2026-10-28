@@ -4,6 +4,7 @@ export type Size = typeof ALL_SIZES[number];
 export type ProductAvailability = 'in_stock' | 'sold_out' | 'coming_soon' | 'limited';
 
 export interface Product {
+  is_demo?: boolean;
   id: string | number;
   title: string;
   title_ar?: string;
