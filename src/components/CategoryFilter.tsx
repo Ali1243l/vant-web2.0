@@ -44,16 +44,6 @@ export default function CategoryFilter({
   const isAr = lang === 'ar';
   const tabsContainerRef = useRef<HTMLDivElement>(null);
 
-  // Smooth scroll window back up to the top of the collection when switching category/filters
-  const scrollToCatalogTop = () => {
-    if (typeof window !== 'undefined' && window.scrollY > 20) {
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth',
-      });
-    }
-  };
-
   // Container-isolated scroll: smoothly centers active category inside tabs bar
   useEffect(() => {
     if (!activeRef.current || !tabsContainerRef.current) return;
@@ -61,6 +51,7 @@ export default function CategoryFilter({
     const activeEl = activeRef.current;
 
     const centerActive = (behavior: ScrollBehavior) => {
+      if (container.scrollWidth <= container.clientWidth + 1) return;
       const containerRect = container.getBoundingClientRect();
       const activeRect = activeEl.getBoundingClientRect();
       const offset = (activeRect.left + activeRect.width / 2) - (containerRect.left + containerRect.width / 2);
@@ -171,7 +162,6 @@ export default function CategoryFilter({
                   const nextState = !isOffersOnly;
                   onToggleOffersOnly(nextState);
                   trackEvent('category_filter', { category: 'offers', isOffersOnly: nextState });
-                  scrollToCatalogTop();
                 }}
                 className={`relative shrink-0 snap-center whitespace-nowrap rounded-full px-3.5 py-1.5 md:h-9.5 md:px-4 lg:h-10 lg:px-4.5 flex items-center justify-center text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
                   isOffersOnly
@@ -210,7 +200,6 @@ export default function CategoryFilter({
                       onChange(c);
                       trackEvent('category_filter', { category: c });
                     }
-                    scrollToCatalogTop();
                   }}
                   className={`relative shrink-0 snap-center whitespace-nowrap rounded-full px-3.5 py-1.5 md:h-9.5 md:px-4 lg:h-10 lg:px-4.5 flex items-center justify-center text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer ${
                     isActive
@@ -316,7 +305,6 @@ export default function CategoryFilter({
                               onAvailabilityChange(opt.id);
                               trackEvent('availability_filter', { availability: opt.id });
                               setIsOpen(false);
-                              scrollToCatalogTop();
                             }}
                             className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2 md:px-3 md:py-2.5 text-xs sm:text-[13px] md:text-sm transition-all duration-150 cursor-pointer ${
                               isSelected

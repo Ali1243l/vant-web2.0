@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useState, useRef, type ReactNode } from 'react';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent, useReducedMotion } from 'framer-motion';
 import { Search, Sun, Moon, Globe, Heart, ShoppingCart } from 'lucide-react';
 import type { Language, Theme } from '../types';
@@ -49,6 +49,19 @@ export default function Header({
 
   const [scrolled, setScrolled] = useState(false);
   const [showCategories, setShowCategories] = useState(true);
+  // Numeric endpoints avoid Framer's auto-height measurement, which restores
+  // window scroll and interrupts a page navigation when the categories reveal.
+  const categoryContentRef = useRef<HTMLDivElement>(null);
+  const [categoryHeight, setCategoryHeight] = useState(0);
+  useLayoutEffect(() => {
+    const content = categoryContentRef.current;
+    if (!content) return;
+    const measure = () => setCategoryHeight(content.offsetHeight);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [children]);
   const scrollState = useRef(INITIAL_HEADER_SCROLL);
   const reduceMotion = useReducedMotion();
   const [kineticLang, setKineticLang] = useState<'en' | 'ar'>(lang);
@@ -306,12 +319,12 @@ export default function Header({
             aria-hidden={!showCategories}
             inert={!showCategories}
             initial={false}
-            animate={{ height: showCategories ? 'auto' : 0, opacity: showCategories ? 1 : 0 }}
+            animate={{ height: showCategories ? categoryHeight : 0, opacity: showCategories ? 1 : 0 }}
             transition={{ duration: reduceMotion ? 0 : 0.22, ease: [0.16, 1, 0.3, 1] }}
             style={{ overflow: showCategories ? 'visible' : 'hidden' }}
             className="store-category-rail w-full"
           >
-            <div className="flex min-w-0 items-center gap-1 px-1 sm:block sm:px-0">
+            <div ref={categoryContentRef} className="flex min-w-0 items-center gap-1 px-1 sm:block sm:px-0">
               <div className="min-w-0 flex-1">{children}</div>
               {wishlistControl.visible && onToggleWishlistOnly && (
                 <button type="button" onClick={onToggleWishlistOnly} aria-label={lang === 'ar' ? wishlistControl.label_ar : wishlistControl.label_en} aria-pressed={isWishlistOnly}

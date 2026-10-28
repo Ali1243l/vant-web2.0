@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUp } from 'lucide-react';
 import type { Language } from '../types';
 import { useSiteControls } from '../context/SiteControlsContext';
+import { scrollStorefrontTo } from '../lib/pageScroll';
 
 interface Props {
   lang: Language;
@@ -19,16 +20,12 @@ export default function BackToTop({ lang }: Props) {
       setVisible(window.scrollY > 360);
     };
 
+    handleScroll();
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
-  };
+  const scrollToTop = () => scrollStorefrontTo('top');
 
   if (!backToTopControl.visible) return null;
 

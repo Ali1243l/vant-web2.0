@@ -240,3 +240,6 @@ html.dark ::-webkit-scrollbar-thumb {
   .product-purchase-row > div:last-child > div > a { width: auto; flex: 0 1 46%; padding-inline: 12px; font-size: 12px; }
   .product-purchase-row > div:last-child > div > a span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
+
+/* Programmatic navigation owns positioning while banners change their layout. */
+html[data-storefront-scrolling] { overflow-anchor: none; scroll-behavior: auto; }

@@ -13,6 +13,7 @@ import type { CSSProperties } from 'react';
 interface Props {
   lang: Language;
   onExplore: () => void;
+  onViewOffers?: () => void;
   onDismiss: () => void;
   onSelectCategory?: (category: string) => void;
   backgroundImageUrl?: string;
@@ -47,6 +48,7 @@ const DEFAULT_BANNER_BG = HERO_BANNER_IMAGE;
 export default function WelcomeHeroBanner({
   lang,
   onExplore,
+  onViewOffers,
   onDismiss,
   onSelectCategory,
   backgroundImageUrl = '',
@@ -154,7 +156,9 @@ export default function WelcomeHeroBanner({
   const headlineText = toWesternNumerals(isAr ? heroTitleControl.label_ar : heroTitleControl.label_en);
   const subtitleText = toWesternNumerals(isAr ? heroSubtitleControl.label_ar : heroSubtitleControl.label_en);
   const tagText = toWesternNumerals(isAr ? heroTagControl.label_ar : heroTagControl.label_en);
-  const btnText = isAr ? heroBtnControl.label_ar : heroBtnControl.label_en;
+  const configuredBtnText = isAr ? heroBtnControl.label_ar : heroBtnControl.label_en;
+  const btnText = onViewOffers && configuredBtnText === (isAr ? 'تصفح كافة القطع' : 'Browse All Pieces')
+    ? (isAr ? 'تصفح العروض' : 'Browse Offers') : configuredBtnText;
   const trendsHeadline = toWesternNumerals(isAr ? trendsTitleControl.label_ar : trendsTitleControl.label_en);
 
   return (
@@ -236,7 +240,7 @@ export default function WelcomeHeroBanner({
                       <div className="shrink-0 flex items-center">
                         <button
                           type="button"
-                          onClick={onExplore}
+                          onClick={onViewOffers || onExplore}
                           className="group inline-flex items-center gap-2 rounded-full bg-[#15171c] hover:bg-black dark:bg-white dark:hover:bg-white/95 min-h-11 px-5 py-2.5 sm:px-6 sm:py-3 text-xs sm:text-sm font-bold text-white dark:text-[#15171c] transition-all active:scale-95 shadow-md hover:shadow-lg dark:shadow-[0_4px_20px_rgba(255,255,255,0.12)] border border-black/10 dark:border-white/20 cursor-pointer"
                         >
                           <span className={isAr ? 'tracking-normal' : 'tracking-wide'}>{btnText}</span>

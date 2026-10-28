@@ -20,6 +20,8 @@ import { productMatchesQuery } from './lib/search';
 import { Heart, Loader2, Check, X, Sparkles, Gift, Percent, Tag, ArrowUpDown, LayoutGrid, Grid2X2 } from 'lucide-react';
 import type { Product, Language, Theme } from './types';
 
+import { scrollStorefrontTo } from './lib/pageScroll';
+
 const ALL = 'All';
 const AdminDrawer = lazy(() => import('./components/AdminDrawer'));
 
@@ -338,14 +340,9 @@ function MainApp() {
     return filtered;
   }, [products, isOffersOnly, category, wishlist, isWishlistOnly, availabilityFilter, searchQuery, catalogSort]);
 
-  // Smoothly scroll window back to the top of the collection whenever category, offers, or availability changes
-  const isFirstMountRef = useRef(true);
+  // One navigation owner handles filters after React commits their layout changes.
   const prevCategoryFilterRef = useRef({ category, isOffersOnly, availabilityFilter });
   useEffect(() => {
-    if (isFirstMountRef.current) {
-      isFirstMountRef.current = false;
-      return;
-    }
     const prev = prevCategoryFilterRef.current;
     if (
       prev.category !== category ||
@@ -354,15 +351,7 @@ function MainApp() {
     ) {
       prevCategoryFilterRef.current = { category, isOffersOnly, availabilityFilter };
 
-      // Request animation frame to smoothly scroll window to top
-      requestAnimationFrame(() => {
-        if (typeof window !== 'undefined' && window.scrollY > 20) {
-          window.scrollTo({
-            top: 0,
-            behavior: 'smooth',
-          });
-        }
-      });
+      scrollStorefrontTo('catalog');
     }
   }, [category, isOffersOnly, availabilityFilter]);
 
@@ -530,7 +519,12 @@ function MainApp() {
           lang={lang}
           isOpen={!isBannerDismissed && (category === ALL || !category || category === 'all') && !isWishlistOnly && !isOffersOnly && !searchQuery.trim()}
           onExplore={() => {
-            document.getElementById('catalog-grid')?.scrollIntoView({ behavior: 'smooth' });
+            scrollStorefrontTo('catalog');
+          }}
+          onViewOffers={() => {
+            setCategory(ALL);
+            setAvailabilityFilter('all');
+            setIsOffersOnly(true);
           }}
           onDismiss={() => setIsBannerDismissed(true)}
           onSelectCategory={(cat) => setCategory(cat)}
