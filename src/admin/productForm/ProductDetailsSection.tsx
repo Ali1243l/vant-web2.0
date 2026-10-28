@@ -61,26 +61,7 @@ export const ProductDetailsSection: React.FC<Props> = ({
               </select>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                {isAr ? 'حالة النشر بالمتجر' : 'Publishing Status'}
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    status: e.target.value as any,
-                  }))
-                }
-                className="w-full bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-100 text-sm rounded-lg px-3 py-2 h-9.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
-              >
-                <option value="active">{isAr ? 'نشط ومعروض' : 'Active / Published'}</option>
-                <option value="draft">{isAr ? 'مسودة غير منشورة' : 'Draft'}</option>
-                <option value="lowStock">{isAr ? 'مخزون منخفض' : 'Low Stock'}</option>
-                <option value="outOfStock">{isAr ? 'نفد من المخزون' : 'Out of Stock'}</option>
-              </select>
-            </div>
+
           </div>
         </div>
       )}

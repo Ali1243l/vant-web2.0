@@ -260,6 +260,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
 };
 
 export interface ProductEnhancement {
+  description_ar?: string;
   title_ar?: string;
   category_ar?: string;
   is_offer?: boolean;
@@ -273,6 +274,7 @@ export interface ProductEnhancement {
   colors?: string[];
   variants?: any[];
   sku?: string;
+  stock?: number;
 }
 
 

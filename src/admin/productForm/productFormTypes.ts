@@ -50,4 +50,5 @@ export interface ProductFormSheetProps {
   isOpen: boolean;
   onClose: () => void;
   editingProduct?: Product | null;
+  initialProduct?: Product | null;
 }

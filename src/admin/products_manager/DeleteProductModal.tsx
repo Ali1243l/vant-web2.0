@@ -6,6 +6,7 @@ interface DeleteProductModalProps {
   onClose: () => void;
   onConfirm: () => void;
   isAr: boolean;
+  productName?: string;
 }
 
 export const DeleteProductModal: React.FC<DeleteProductModalProps> = ({
@@ -13,6 +14,7 @@ export const DeleteProductModal: React.FC<DeleteProductModalProps> = ({
   onClose,
   onConfirm,
   isAr,
+  productName,
 }) => {
   return (
     <Modal
@@ -22,6 +24,7 @@ export const DeleteProductModal: React.FC<DeleteProductModalProps> = ({
       maxWidth="sm"
     >
       <p className="text-sm text-slate-300 mb-6">
+        <strong className="block text-white mb-3">{productName}</strong>
         {isAr
           ? 'هل أنت متأكد من رغبتك في إزالة هذا المنتج من الكتالوج؟ لا يمكن التراجع عن هذا الإجراء.'
           : 'Are you sure you want to permanently remove this product? This action cannot be reversed.'}

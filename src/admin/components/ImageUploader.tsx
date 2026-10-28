@@ -192,7 +192,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
               جاري فحص القمصان، قراءة درجات القماش، وتقسيم الألوان تلقائياً...
             </span>
             <span className="text-[10px] text-slate-400 font-mono">
-              Client-Side Canvas Processing • Zero Clicks Needed
+              راجع النتائج قبل الحفظ
             </span>
           </div>
         ) : (
@@ -346,29 +346,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         </div>
       )}
 
-      {/* Preset sample suggestions */}
-      <div className="flex items-center gap-2 pt-1 overflow-x-auto pb-1">
-        <span className="text-[10px] text-slate-400 shrink-0">
-          عينات سريعة:
-        </span>
-        {sampleSuggestions.map((thumb, idx) => (
-          <button
-            key={idx}
-            type="button"
-            onClick={() => {
-              if (images.length < maxFiles) {
-                onChange([...images, thumb]);
-              }
-            }}
-            className="w-7 h-7 rounded-lg border border-slate-700 overflow-hidden shrink-0 hover:scale-105 transition-transform"
-            title="إضافة عينة سريعة"
-          >
-            {thumb?.trim() ? (
-              <img src={thumb} alt="sample" className="w-full h-full object-cover" />
-            ) : null}
-          </button>
-        ))}
-      </div>
+
     </div>
   );
 };

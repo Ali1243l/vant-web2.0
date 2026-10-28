@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAdminBridge, Product } from './useAdminBridge';
+import { filterCatalog, hasProductOffer, productSellingPrice, productLink, catalogOfferPlan } from './products_manager/catalogModel';
 import { ProductFormSheet } from './ProductFormSheet';
 import { ProductOfferModal } from './ProductOfferModal';
 import { ProductsManagerHeader } from './products_manager/ProductsManagerHeader';
@@ -8,23 +9,26 @@ import { ProductsGridView } from './products_manager/ProductsGridView';
 import { DeleteProductModal } from './products_manager/DeleteProductModal';
 import ToastNotification from '../components/ToastNotification';
 import { PaginationWidget } from '../components/admin/widgets/PaginationWidget';
+import { useSiteControls } from '../context/SiteControlsContext';
 
 export const ProductsManager: React.FC = () => {
   const { products, deleteProduct, addProduct, updateProduct, offers, addOffer, lang } = useAdminBridge();
   const isAr = lang === 'ar';
+  const catalog = useSiteControls();
 
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'default' | 'price-asc' | 'price-desc' | 'sales' | 'stock'>('default');
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>(() => window.innerWidth < 768 ? 'grid' : 'table');
 
   // VANT UI Widgets States: RangeSlider & Pagination
-  const [priceRange, setPriceRange] = useState<number[]>([0, 500000]);
+  const [priceRange, setPriceRange] = useState<number[]>([0, Number.MAX_SAFE_INTEGER]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(8);
 
   // Sheet & Modal state
+  const [initialProduct, setInitialProduct] = useState<Product | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -35,13 +39,13 @@ export const ProductsManager: React.FC = () => {
 
   // Quick Action Feedback State
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'info' } | null>(null);
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
 
   // Categories list
   const categories = Array.from(new Set(products.map((p) => p.category)));
 
   // Show temporary toast notification
-  const showToast = (text: string, type: 'success' | 'info' = 'success') => {
+  const showToast = (text: string, type: 'success' | 'info' | 'error' = 'success') => {
     setToastMessage({ text, type });
     setTimeout(() => {
       setToastMessage((prev) => (prev?.text === text ? null : prev));
@@ -49,27 +53,8 @@ export const ProductsManager: React.FC = () => {
   };
 
   // Filter products with Search, Category, Status, and Price Range Slider Widget
-  const filteredProducts = products
-    .filter((p) => {
-      const matchSearch =
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        (p.nameEn && p.nameEn.toLowerCase().includes(search.toLowerCase())) ||
-        p.sku.toLowerCase().includes(search.toLowerCase());
-
-      const matchCategory = selectedCategory === 'all' || p.category === selectedCategory;
-      const matchStatus = selectedStatus === 'all' || p.status === selectedStatus;
-      const matchPrice = p.price >= priceRange[0] && p.price <= priceRange[1];
-
-      return matchSearch && matchCategory && matchStatus && matchPrice;
-    })
-    .sort((a, b) => {
-      if (sortBy === 'price-asc') return a.price - b.price;
-      if (sortBy === 'price-desc') return b.price - a.price;
-      if (sortBy === 'sales') return b.salesCount - a.salesCount;
-      if (sortBy === 'stock') return a.stock - b.stock;
-      return 0;
-    });
-
+  const priceCeiling = Math.max(1, ...products.map(productSellingPrice));
+  const filteredProducts = filterCatalog(products, { search, category: selectedCategory, status: selectedStatus, min: priceRange[0], max: priceRange[1], sort: sortBy });
   // Paginated slice for current page
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -96,61 +81,21 @@ export const ProductsManager: React.FC = () => {
     },
     applyToAllInCategory?: boolean
   ) => {
-    const prod = products.find((item) => item.id === productId);
-    const prodName = isAr ? prod?.name : prod?.nameEn || prod?.name;
-
-    if (applyToAllInCategory && prod?.category) {
-      const categoryProducts = products.filter((p) => p.category === prod.category);
-      categoryProducts.forEach((p) => {
-        let finalSalePrice = updates.salePrice;
-        if (updates.discountPercent && updates.discountPercent > 0) {
-          finalSalePrice = Math.round((p.price * (1 - updates.discountPercent / 100)) / 250) * 250;
-        } else if (updates.offerCampaign) {
-          const camp = offers.find((o) => o.title === updates.offerCampaign || o.titleEn === updates.offerCampaign);
-          if (camp) {
-            if (camp.discountType === 'percentage') {
-              finalSalePrice = Math.round((p.price * (1 - camp.discountValue / 100)) / 250) * 250;
-            } else {
-              finalSalePrice = Math.max(0, p.price - camp.discountValue);
-            }
-          }
-        }
-        updateProduct(p.id, {
-          isOnOffer: true,
-          salePrice: finalSalePrice || updates.salePrice,
-          offerCampaign: updates.offerCampaign,
-          offerBadgeText: updates.offerBadgeText,
-        });
-      });
-
-      showToast(
-        isAr
-          ? `تم تطبيق العرض بنجاح على جميع منتجات فئة "${prod.category}" (${categoryProducts.length} منتجات)!`
-          : `Offer successfully applied to all ${categoryProducts.length} products in "${prod.category}"!`,
-        'success'
-      );
-    } else {
-      updateProduct(productId, updates);
-      if (updates.offerCampaign) {
-        showToast(
-          isAr
-            ? `تم ربط "${prodName}" بقائمة "${updates.offerCampaign}" وتطبيق الخصم بنجاح!`
-            : `Product "${prodName}" assigned to campaign "${updates.offerCampaign}"!`,
-          'success'
-        );
-      } else {
-        showToast(
-          isAr
-            ? `تم تفعيل عرض خاص ومخصص لـ "${prodName}" بنجاح!`
-            : `Custom promo offer applied to "${prodName}"!`,
-          'success'
-        );
-      }
-    }
+    if (applyToAllInCategory && catalog.hasMore) { showToast(isAr ? 'حمّل بقية الكتالوج قبل تطبيق عرض على فئة كاملة.' : 'Load the rest of the catalog before applying a category-wide offer.', 'error'); return false; }
+    try {
+      const product = products.find(item => item.id === productId);
+      if (!product) throw new Error('Product not found');
+      const targets = applyToAllInCategory ? products.filter(item => item.category === product.category) : [product];
+      const campaign = updates.offerCampaign ? offers.find(offer => offer.title === updates.offerCampaign || offer.titleEn === updates.offerCampaign) : undefined;
+      const plan = catalogOfferPlan(targets, applyToAllInCategory ? updates : { salePrice: updates.salePrice }, campaign);
+      for (const item of plan) updateProduct(item.id, { ...updates, salePrice: item.salePrice });
+      showToast(isAr ? `حُدثت بيانات العرض في الكتالوج (${plan.length} منتج).` : `Catalog offer updated (${plan.length} products).`, 'info');
+      return true;
+    } catch { showToast(isAr ? 'لم يُطبق العرض: راجع السعر والخصم لكل منتج.' : 'Offer not applied: check each product price and discount.', 'error'); return false; }
   };
-
   // Remove Offer
   const handleRemoveOffer = (productId: string, removeFromAllInCategory?: boolean) => {
+    if (removeFromAllInCategory && catalog.hasMore) { showToast(isAr ? 'حمّل بقية الكتالوج قبل تعديل فئة كاملة.' : 'Load the rest of the catalog before changing a whole category.', 'error'); return; }
     const prod = products.find((item) => item.id === productId);
     const prodName = isAr ? prod?.name : prod?.nameEn || prod?.name;
 
@@ -188,61 +133,25 @@ export const ProductsManager: React.FC = () => {
 
   // Quick Edit
   const handleQuickEdit = (p: Product) => {
+    setInitialProduct(null);
     setEditingProduct(p);
     setIsSheetOpen(true);
   };
 
   // Copy Link
   const handleCopyLink = async (p: Product) => {
-    const storeOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://store.iraq';
-    const productLink = `${storeOrigin}/products/${encodeURIComponent(p.sku || p.id)}`;
-
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(productLink);
-      }
-    } catch {
-      // Fallback
-    }
-
-    setCopiedId(p.id);
-    setTimeout(() => {
-      setCopiedId((prev) => (prev === p.id ? null : prev));
-    }, 2500);
-
-    showToast(
-      isAr
-        ? `تم نسخ رابط المنتج بنجاح: ${productLink}`
-        : `Product link copied to clipboard: ${productLink}`,
-      'success'
-    );
+      await navigator.clipboard.writeText(productLink(window.location.origin, p.id));
+      setCopiedId(p.id);
+      setTimeout(() => setCopiedId(null), 2500);
+      showToast(isAr ? 'تم نسخ رابط المنتج.' : 'Product link copied.');
+    } catch { showToast(isAr ? 'تعذر نسخ الرابط؛ تحقق من صلاحية الحافظة.' : 'Could not copy the link; check clipboard permission.', 'error'); }
   };
-
   const handleDuplicate = (p: Product) => {
-    addProduct({
-      name: `${p.name} (${isAr ? 'نسخة' : 'Copy'})`,
-      nameEn: `${p.nameEn || p.name} (Copy)`,
-      sku: `${p.sku}-CP`,
-      category: p.category,
-      price: p.price,
-      salePrice: p.salePrice,
-      stock: p.stock,
-      status: 'draft',
-      imageUrl: p.imageUrl,
-      images: p.images,
-      sizes: p.sizes,
-      descriptionAr: p.descriptionAr,
-      descriptionEn: p.descriptionEn,
-      materialDetails: p.materialDetails,
-      availabilityStatus: p.availabilityStatus,
-      isOnOffer: p.isOnOffer,
-    });
-    showToast(
-      isAr ? `تم نسخ المنتج "${p.name}" بنجاح!` : `Product "${p.nameEn || p.name}" duplicated!`,
-      'info'
-    );
+    setEditingProduct(null);
+    setInitialProduct({ ...structuredClone(p), name: `${p.name} — نسخة`, sku: `${p.sku}-COPY-${Date.now().toString(36)}` });
+    setIsSheetOpen(true);
   };
-
   const handleDelete = () => {
     if (deleteConfirmId) {
       deleteProduct(deleteConfirmId);
@@ -251,12 +160,12 @@ export const ProductsManager: React.FC = () => {
     }
   };
 
-  const totalUnits = filteredProducts.reduce((sum, p) => sum + p.stock, 0);
-  const activeOffersCount = products.filter((p) => p.isOnOffer || !!p.salePrice).length;
-  const outOfStockCount = products.filter((p) => p.stock === 0).length;
+  const totalUnits = filteredProducts.reduce((sum, p) => sum + (p.stockKnown === false ? 0 : p.stock), 0);
+  const activeOffersCount = filteredProducts.filter(hasProductOffer).length;
+  const outOfStockCount = filteredProducts.filter((p) => p.stockKnown !== false && p.stock === 0).length;
 
   return (
-    <div className="space-y-6 pb-12 relative w-full">
+    <div className="products-manager space-y-5 pb-12 relative w-full min-w-0">
       {/* Toast Notification Banner */}
       <ToastNotification
         message={toastMessage}
@@ -271,20 +180,24 @@ export const ProductsManager: React.FC = () => {
         viewMode={viewMode}
         setViewMode={setViewMode}
         onNewProduct={() => {
+          setInitialProduct(null);
           setEditingProduct(null);
           setIsSheetOpen(true);
         }}
         search={search}
-        setSearch={setSearch}
+        setSearch={value => { setSearch(value); setCurrentPage(1); }}
         selectedCategory={selectedCategory}
-        setSelectedCategory={setSelectedCategory}
+        setSelectedCategory={value => { setSelectedCategory(value); setCurrentPage(1); }}
         categories={categories}
         selectedStatus={selectedStatus}
-        setSelectedStatus={setSelectedStatus}
+        setSelectedStatus={value => { setSelectedStatus(value); setCurrentPage(1); }}
         sortBy={sortBy}
-        setSortBy={setSortBy}
+        setSortBy={value => { setSortBy(value); setCurrentPage(1); }}
         filteredCount={filteredProducts.length}
         totalUnits={totalUnits}
+        unknownStockCount={filteredProducts.filter(product => product.stockKnown === false).length}
+        priceCeiling={priceCeiling}
+        onResetFilters={() => { setSearch(''); setSelectedCategory('all'); setSelectedStatus('all'); setSortBy('default'); setPriceRange([0, Number.MAX_SAFE_INTEGER]); setCurrentPage(1); }}
         activeOffersCount={activeOffersCount}
         outOfStockCount={outOfStockCount}
         priceRange={priceRange}
@@ -293,11 +206,12 @@ export const ProductsManager: React.FC = () => {
           setCurrentPage(1);
         }}
         onResetPriceRange={() => {
-          setPriceRange([0, 500000]);
+          setPriceRange([0, Number.MAX_SAFE_INTEGER]);
           setCurrentPage(1);
         }}
       />
 
+      {catalog.hasMore && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 p-4"><p className="text-xs text-slate-400">{isAr ? `الفلاتر تشمل المنتجات المحمّلة فقط (${products.length} من ${catalog.totalProductsCount}).` : `Filters apply to loaded products only (${products.length} of ${catalog.totalProductsCount}).`}</p><button type="button" disabled={catalog.loadingMore} onClick={() => void catalog.loadMoreProducts()} className="min-h-11 rounded-lg border border-indigo-500/40 px-4 text-sm text-indigo-200 disabled:opacity-50">{isAr ? (catalog.loadingMore ? 'جاري التحميل...' : 'تحميل المزيد من الكتالوج') : (catalog.loadingMore ? 'Loading...' : 'Load more catalog items')}</button></div>}
       {/* Main View Mode: Table or Grid with Paginated Items */}
       {viewMode === 'table' ? (
         <ProductsTableView
@@ -309,8 +223,8 @@ export const ProductsManager: React.FC = () => {
           onQuickEdit={handleQuickEdit}
           onOpenOfferModal={handleOpenOfferModal}
           onCopyLink={handleCopyLink}
-          onDuplicate={handleDuplicate}
           onDeleteConfirm={(id) => setDeleteConfirmId(id)}
+          onDuplicate={handleDuplicate}
         />
       ) : (
         <ProductsGridView
@@ -321,6 +235,7 @@ export const ProductsManager: React.FC = () => {
           onOpenOfferModal={handleOpenOfferModal}
           onCopyLink={handleCopyLink}
           onDeleteConfirm={(id) => setDeleteConfirmId(id)}
+          onDuplicate={handleDuplicate}
         />
       )}
 
@@ -348,6 +263,7 @@ export const ProductsManager: React.FC = () => {
         isOpen={isSheetOpen}
         onClose={() => setIsSheetOpen(false)}
         editingProduct={editingProduct}
+        initialProduct={initialProduct}
       />
 
       {/* Product Offer Assignment / Customization Modal */}
@@ -370,6 +286,7 @@ export const ProductsManager: React.FC = () => {
 
       {/* Delete Confirmation Modal */}
       <DeleteProductModal
+        productName={products.find(product => product.id === deleteConfirmId)?.name}
         isOpen={!!deleteConfirmId}
         onClose={() => setDeleteConfirmId(null)}
         onConfirm={handleDelete}

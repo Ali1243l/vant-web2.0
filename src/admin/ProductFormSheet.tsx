@@ -37,6 +37,7 @@ import {
   getClosestLuxuryColorName,
 } from './utils/colorExtraction';
 import { translateArabicToEnglish } from './utils/magicTranslate';
+import { validateProductNumbers, stockAvailability } from './products_manager/catalogModel';
 import { uploadImageToSupabase, uploadDataUrlToSupabase } from '../lib/storage';
 
 import {
@@ -55,6 +56,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
   isOpen,
   onClose,
   editingProduct,
+  initialProduct,
 }) => {
   const { addProduct, updateProduct, lang } = useAdminBridge();
   const isAr = lang === 'ar';
@@ -66,7 +68,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
     category: "ملابس وأزياء",
     price: "",
     salePrice: "",
-    stock: "15",
+    stock: "",
     status: "active",
     images: [],
     sizes: ["M", "L", "XL"],
@@ -85,6 +87,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
   const [variantCustomSizeInputs, setVariantCustomSizeInputs] = useState<Record<string, string>>({});
   const [variantShowCustom, setVariantShowCustom] = useState<Record<string, boolean>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
 
   // Magic Smart Upload (Client-Side Color Sorting) States
   const [isAnalyzingColors, setIsAnalyzingColors] = useState(false);
@@ -96,32 +99,34 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
   const [translateNotice, setTranslateNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    if (editingProduct) {
+    setFormError('');
+    const source = editingProduct || initialProduct;
+    if (source) {
       const initialImages =
-        editingProduct.images && editingProduct.images.length > 0
-          ? editingProduct.images
-          : editingProduct.imageUrl
-          ? [editingProduct.imageUrl]
+        source.images && source.images.length > 0
+          ? source.images
+          : source.imageUrl
+          ? [source.imageUrl]
           : [];
 
-      const variantsList = editingProduct.variants || [];
-      const hasVars = !!(editingProduct.hasVariants && variantsList.length > 0);
+      const variantsList = source.variants || [];
+      const hasVars = !!(source.hasVariants && variantsList.length > 0);
 
       setFormData({
-        name: editingProduct.name,
-        nameEn: editingProduct.nameEn || '',
-        sku: editingProduct.sku,
-        category: editingProduct.category,
-        price: editingProduct.price.toString(),
-        salePrice: editingProduct.salePrice ? editingProduct.salePrice.toString() : '',
-        stock: editingProduct.stock.toString(),
-        status: editingProduct.status,
+        name: source.name,
+        nameEn: source.nameEn || '',
+        sku: source.sku,
+        category: source.category,
+        price: source.price.toString(),
+        salePrice: source.salePrice ? source.salePrice.toString() : '',
+        stock: source.stockKnown === false ? '' : source.stock.toString(),
+        status: source.status,
         images: initialImages,
-        sizes: editingProduct.sizes || ['M', 'L', 'XL'],
-        descriptionAr: editingProduct.descriptionAr || '',
-        descriptionEn: editingProduct.descriptionEn || '',
-        materialDetails: editingProduct.materialDetails || '',
-        availabilityStatus: editingProduct.availabilityStatus || 'in_stock',
+        sizes: source.sizes || ['M', 'L', 'XL'],
+        descriptionAr: source.descriptionAr || '',
+        descriptionEn: source.descriptionEn || '',
+        materialDetails: source.materialDetails || '',
+        availabilityStatus: source.availabilityStatus || 'in_stock',
         hasVariants: hasVars,
         variants: variantsList,
       });
@@ -142,9 +147,9 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
         category: 'ملابس وأزياء',
         price: '',
         salePrice: '',
-        stock: '15',
+        stock: '',
         status: 'active',
-        images: ['https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600&q=80'],
+        images: [],
         sizes: ['M', 'L', 'XL'],
         descriptionAr: '',
         descriptionEn: '',
@@ -159,7 +164,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
     setCustomSizeInput('');
     setVariantCustomSizeInputs({});
     setVariantShowCustom({});
-  }, [editingProduct, isOpen]);
+  }, [editingProduct, initialProduct, isOpen]);
 
   // Standard sizes toggle for base product
   const toggleSize = (size: string) => {
@@ -203,7 +208,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
       colorHex: preset ? preset.hex : '#0f172a',
       price: baseP > 0 ? baseP : undefined,
       salePrice: baseSp,
-      stock: 12,
+      stock: 0,
       sizes: ['M', 'L', 'XL'],
       images: formData.images.length > 0 ? [...formData.images] : [],
     };
@@ -361,7 +366,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
               colorHex: cluster.hex,
               price: baseP > 0 ? baseP : undefined,
               salePrice: baseSp,
-              stock: 12,
+              stock: 0,
               sizes: [...baseSizes],
               images: cluster.images,
             };
@@ -380,7 +385,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
             colorHex: cluster.hex,
             price: baseP > 0 ? baseP : undefined,
             salePrice: baseSp,
-            stock: 12,
+            stock: 0,
             sizes: [...baseSizes],
             images: cluster.images,
           };
@@ -578,7 +583,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
             colorHex: extraCluster.hex,
             price: baseP > 0 ? baseP : undefined,
             salePrice: baseSp,
-            stock: 12,
+            stock: 0,
             sizes: [...baseSizes],
             images: extraCluster.images,
           };
@@ -644,7 +649,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
           colorHex: c.hex,
           price: baseP > 0 ? baseP : undefined,
           salePrice: baseSp,
-          stock: 12,
+          stock: 0,
           sizes: [...baseSizes],
           images: c.images,
         }));
@@ -700,8 +705,14 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
   // Submit Handler
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!formData.name.trim()) return;
+    if (isSubmitting) return;
+    setFormError('');
+    if (!formData.name.trim()) { setFormError(isAr ? 'اكتب اسم المنتج.' : 'Enter a product name.'); return; }
 
+    try { validateProductNumbers(formData.price, formData.salePrice, formData.stock); } catch { setFormError(isAr ? 'راجع السعر والخصم والمخزون: السعر موجب، الخصم أقل من السعر، والمخزون عدد صحيح غير سالب.' : 'Check price, sale price and stock: positive price, a lower sale price, and non-negative whole stock.'); return; }
+    if (!formData.images.some(image => image.trim()) && !formData.variants.some(variant => variant.images?.some(image => image.trim()))) { setFormError(isAr ? 'أضف صورة للمنتج قبل الحفظ.' : 'Add a product image before saving.'); return; }
+    try { if (formData.hasVariants) for (const variant of formData.variants) validateProductNumbers(String(variant.price ?? formData.price), variant.salePrice === undefined ? '' : String(variant.salePrice), String(variant.stock)); }
+    catch { setFormError(isAr ? 'راجع أسعار ومخزون الألوان.' : 'Check variant prices and stock.'); return; }
     setIsSubmitting(true);
     try {
       const priceNum = parseFloat(formData.price) || 0;
@@ -747,9 +758,9 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
 
       // Auto compute stock status
       let status = formData.status;
-      if (stockNum === 0 || formData.availabilityStatus === 'sold_out') {
+      if ((formData.stock.trim() && stockNum === 0) || formData.availabilityStatus === 'sold_out') {
         status = 'outOfStock';
-      } else if (stockNum <= 5 || formData.availabilityStatus === 'limited') {
+      } else if ((formData.stock.trim() && stockNum <= 5) || formData.availabilityStatus === 'limited') {
         status = 'lowStock';
       }
 
@@ -771,6 +782,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
         price: priceNum,
         salePrice: salePriceNum,
         stock: stockNum,
+        stockKnown: hasVariantsEnabled || !!formData.stock.trim(),
         status,
         imageUrl: primaryImage,
         images: combinedAllImages.length > 0 ? combinedAllImages : [primaryImage],
@@ -778,7 +790,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
         descriptionAr: formData.descriptionAr,
         descriptionEn: formData.descriptionEn,
         materialDetails: formData.materialDetails,
-        availabilityStatus: formData.availabilityStatus,
+        availabilityStatus: stockAvailability(hasVariantsEnabled || formData.stock.trim() ? stockNum : null, formData.availabilityStatus),
         isOnOffer: !!salePriceNum,
         hasVariants: hasVariantsEnabled,
         variants: variantsPayload,
@@ -793,6 +805,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
       onClose();
     } catch (err) {
       console.error('Error during product form submission:', err);
+      setFormError(isAr ? 'تعذر إكمال الحفظ. راجع البيانات وحاول ثانية.' : 'Could not complete saving. Check the data and retry.');
     } finally {
       setIsSubmitting(false);
     }
@@ -820,7 +833,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
             ? 'تعديل بيانات المنتج وخيارات الألوان'
             : 'Edit Product & Color Variants'
           : isAr
-          ? 'إضافة منتج جديد للكتالوج (PIM)'
+          ? 'إضافة منتج للكتالوج'
           : 'Add New Catalog Product (PIM)'
       }
       description={
@@ -868,7 +881,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
         </div>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-5 text-start pb-6">
+      {formError && <p role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-300">{formError}</p>}<form onSubmit={handleSubmit} className="space-y-5 text-start pb-6">
         {/* Magic Color Sorting & Dropzone */}
         <ProductMagicColorDropzone
           isAr={isAr}

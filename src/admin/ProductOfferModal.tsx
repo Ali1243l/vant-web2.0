@@ -24,7 +24,7 @@ interface ProductOfferModalProps {
       discountPercent?: number;
     },
     applyToAllInCategory?: boolean
-  ) => void;
+  ) => void | boolean;
   onRemoveOffer: (productId: string, removeFromAllInCategory?: boolean) => void;
   onAddNewOfferCampaign: (campaign: Omit<Offer, 'id' | 'usedCount'>) => void;
   isAr: boolean;
@@ -64,28 +64,12 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
   // Initialize or reset when product opens
   useEffect(() => {
     if (product) {
-      if (product.offerCampaign) {
-        const matched = offers.find(
-          (o) => o.title === product.offerCampaign || o.titleEn === product.offerCampaign
-        );
-        if (matched) {
-          setSelectedOfferId(matched.id);
-        }
-        setActiveTab('campaign');
-      } else if (product.salePrice) {
-        setActiveTab('custom');
-        const calculatedPct = Math.round(
-          ((product.price - product.salePrice) / product.price) * 100
-        );
-        if (calculatedPct > 0) {
-          setDiscountPercent(calculatedPct);
-        }
-        setCustomSalePrice(product.salePrice.toString());
-      } else {
-        setActiveTab('custom');
-        setDiscountPercent(15);
-        setCustomSalePrice('');
-      }
+      const campaign = offers.find(offer => offer.title === product.offerCampaign || offer.titleEn === product.offerCampaign);
+      setSelectedOfferId(campaign?.id || '');
+      setActiveTab(campaign ? 'campaign' : 'custom');
+      setPricingMode(product.salePrice ? 'fixedPrice' : 'percent');
+      setDiscountPercent(product.salePrice && product.price > 0 ? Math.round((1 - product.salePrice / product.price) * 100) : 15);
+      setCustomSalePrice(product.salePrice ? String(product.salePrice) : '');
       setCustomBadgeText(product.offerBadgeText || '');
       setShowCreateCampaignForm(false);
       setApplyToCategory(false);
@@ -155,7 +139,7 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
       return;
     }
 
-    onApplyOffer(
+    const applied = onApplyOffer(
       product.id,
       {
         isOnOffer: true,
@@ -165,7 +149,7 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
       },
       applyToCategory
     );
-    onClose();
+    if (applied !== false) onClose();
   };
 
   // Handle creating new campaign on the fly
@@ -203,7 +187,7 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
       finalPrice = Math.max(0, product.price - matched.discountValue);
     }
 
-    onApplyOffer(
+    const applied = onApplyOffer(
       product.id,
       {
         isOnOffer: true,
@@ -217,7 +201,7 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
       },
       applyToCategory
     );
-    onClose();
+    if (applied !== false) onClose();
   };
 
   const hasCurrentOffer = Boolean(product.isOnOffer || product.salePrice);

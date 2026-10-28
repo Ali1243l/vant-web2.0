@@ -31,6 +31,7 @@ export interface Product {
   offer_badge_ar?: string;
   offer_badge_en?: string;
   sku?: string;
+  stock?: number;
   variants?: any[];
 }
 

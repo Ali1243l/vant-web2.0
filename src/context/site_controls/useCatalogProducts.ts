@@ -65,7 +65,7 @@ export function useCatalogProducts() {
 
       return {
         id: p.id,
-        title: enh.title_ar || p.title || 'قطعة فاخرة',
+        title: p.title || enh.title_ar || 'قطعة فاخرة',
         title_ar: enh.title_ar || p.title || 'قطعة فاخرة',
         price: typeof p.price === 'number' ? p.price : parseFloat(p.price || 0),
         original_price: enh.original_price,
@@ -75,8 +75,8 @@ export function useCatalogProducts() {
         category: p.category || 'Tailoring',
         category_ar: enh.category_ar || p.category || 'الأزياء الرسمية',
         description: p.description || '',
-        description_ar: p.description || '',
-        material: p.material || 'صوف كشمير إيطالي',
+        description_ar: enh.description_ar ?? p.description ?? '',
+        material: p.material || '',
         fit_details: p.fit_details || 'قصة إيطالية سليم فيت محددة بدقة',
         availability,
         sizes: Array.isArray(p.sizes) && p.sizes.length > 0 ? p.sizes : ['S', 'M', 'L', 'XL'],
@@ -84,6 +84,8 @@ export function useCatalogProducts() {
         images: imagesList,
         colors: enh.colors ?? p.colors,
         variants: enh.variants ?? p.variants,
+        sku: enh.sku ?? p.sku,
+        stock: enh.stock ?? p.stock,
         created_at: p.created_at,
         tags: enh.tags || [],
       };
@@ -242,6 +244,7 @@ export function useCatalogProducts() {
 
     saveProductEnhancement(tempId, {
       title_ar: prodData.title_ar,
+      description_ar: prodData.description_ar,
       category_ar: prodData.category_ar,
       is_offer: prodData.is_offer,
       original_price: prodData.original_price,
@@ -252,6 +255,8 @@ export function useCatalogProducts() {
       images: prodData.images,
       colors: prodData.colors,
       variants: prodData.variants,
+      sku: prodData.sku,
+      stock: prodData.stock,
     });
 
     setProducts((prev) => [newProduct, ...prev]);
@@ -289,6 +294,7 @@ export function useCatalogProducts() {
           } else if (inserted) {
             saveProductEnhancement(inserted.id, {
               title_ar: prodData.title_ar,
+      description_ar: prodData.description_ar,
               category_ar: prodData.category_ar,
               is_offer: prodData.is_offer,
               original_price: prodData.original_price,
@@ -299,6 +305,8 @@ export function useCatalogProducts() {
               images: prodData.images,
               colors: prodData.colors,
               variants: prodData.variants,
+      sku: prodData.sku,
+      stock: prodData.stock,
             });
 
             const imagesList =
@@ -344,6 +352,7 @@ export function useCatalogProducts() {
   const updateProduct = (id: string | number, updates: Partial<Product>) => {
     saveProductEnhancement(id, {
       title_ar: updates.title_ar,
+      description_ar: updates.description_ar,
       category_ar: updates.category_ar,
       is_offer: updates.is_offer,
       original_price: updates.original_price,
@@ -352,6 +361,8 @@ export function useCatalogProducts() {
       tags: updates.tags,
       image_url: updates.image_url,
       images: updates.images,
+      ...(updates.sku !== undefined ? { sku: updates.sku } : {}),
+      ...(updates.stock !== undefined ? { stock: updates.stock } : {}),
       ...(updates.colors !== undefined ? { colors: updates.colors } : {}),
       ...(updates.variants !== undefined ? { variants: updates.variants } : {}),
     });

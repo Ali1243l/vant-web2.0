@@ -183,34 +183,34 @@ export const ProductMagicColorDropzone: React.FC<Props> = ({
                   <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4 text-amber-400" />
                     {isAr
-                      ? '✨ الرفع والفرز الذكي للألوان (Magic Smart Upload)'
-                      : '✨ Magic Smart Upload (AI Color Sorting)'}
+                      ? 'اقتراح ألوان من صور المنتج'
+                      : 'Suggest colors from product images'}
                   </h4>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
-                    HTML5 Canvas API
+                    {isAr ? 'معالجة داخل المتصفح' : 'Processed in your browser'}
                   </span>
                 </div>
 
                 <p className="text-xs text-slate-400 mt-1 leading-relaxed max-w-xl">
                   {isAr
-                    ? 'اسحب وأفلت حزمة صور للمنتج بمختلف ألوانه دفعة واحدة (مثلاً 20 صورة). يتعرف النظام بدقة على أي خلفية (خشب، ورق ملون، استوديو أبيض)، ويميز التيشيرت الأبيض بدقة، ويجمع كل لون كمتغير مستقل مع معرض صوره.'
-                    : 'Drag & drop a bulk batch of product images. The engine automatically adapts to any background (wood, colored paper, white studio), accurately detects white t-shirts, and synthesizes variants automatically.'}
+                    ? 'ارفع صور المنتج لاقتراح مجموعات ألوان. الإضاءة والخلفية تؤثران على النتيجة؛ راجع اللون والصور والمقاسات والكمية قبل الحفظ.'
+                    : 'Upload product images to suggest color groups. Lighting and backgrounds affect results; review colors, images, sizes and quantities before saving.'}
                 </p>
 
                 <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-400 flex-wrap">
                   <span className="flex items-center gap-1 text-slate-300">
                     <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    {isAr ? 'عزل ذكي لأي خلفية (خشب/ملون/أبيض)' : 'Universal background isolation (wood/color/white)'}
+                    {isAr ? 'تجميع تقريبي حسب اللون' : 'Approximate color grouping'}
                   </span>
                   <span className="text-slate-600">•</span>
                   <span className="flex items-center gap-1 text-slate-300">
                     <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    {isAr ? 'تمييز دقيق للتيشيرت الأبيض' : 'Accurate white t-shirt detection'}
+                    {isAr ? 'مراجعة يدوية قبل الحفظ' : 'Review before saving'}
                   </span>
                   <span className="text-slate-600">•</span>
                   <span className="flex items-center gap-1 text-slate-300">
                     <Zap className="w-3.5 h-3.5 text-amber-400" />
-                    {isAr ? 'دعم حزم 20+ قميص فورياً' : 'Supports 20+ shirts bulk upload'}
+                    {isAr ? 'الكمية والسعر تُحددان يدوياً' : 'Set quantities and prices manually'}
                   </span>
                 </div>
               </div>

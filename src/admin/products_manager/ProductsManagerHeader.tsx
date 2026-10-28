@@ -1,210 +1,34 @@
-import React, { useState } from 'react';
-import { Search, Plus, List, LayoutGrid, SlidersHorizontal } from 'lucide-react';
-import { Button, Card, Input } from '../ui';
+import React from 'react';
+import { Search, Plus, List, LayoutGrid } from 'lucide-react';
+import { Button, Input } from '../ui';
 import { PriceRangeFilterWidget } from '../../components/admin/widgets/PriceRangeFilterWidget';
 
-interface ProductsManagerHeaderProps {
-  isAr: boolean;
-  productsCount: number;
-  viewMode: 'table' | 'grid';
-  setViewMode: (mode: 'table' | 'grid') => void;
-  onNewProduct: () => void;
-  search: string;
-  setSearch: (val: string) => void;
-  selectedCategory: string;
-  setSelectedCategory: (val: string) => void;
-  categories: string[];
-  selectedStatus: string;
-  setSelectedStatus: (val: string) => void;
-  sortBy: 'default' | 'price-asc' | 'price-desc' | 'sales' | 'stock';
-  setSortBy: (val: 'default' | 'price-asc' | 'price-desc' | 'sales' | 'stock') => void;
-  filteredCount: number;
-  totalUnits: number;
-  activeOffersCount: number;
-  outOfStockCount: number;
-  priceRange?: number[];
-  setPriceRange?: (val: number[]) => void;
-  onResetPriceRange?: () => void;
+interface Props {
+  isAr: boolean; productsCount: number; filteredCount: number; totalUnits: number; unknownStockCount: number; activeOffersCount: number; outOfStockCount: number;
+  viewMode: 'table' | 'grid'; setViewMode: (value: 'table' | 'grid') => void; onNewProduct: () => void;
+  search: string; setSearch: (value: string) => void; selectedCategory: string; setSelectedCategory: (value: string) => void; categories: string[];
+  selectedStatus: string; setSelectedStatus: (value: string) => void; sortBy: 'default' | 'price-asc' | 'price-desc' | 'sales' | 'stock'; setSortBy: (value: Props['sortBy']) => void;
+  priceRange: number[]; setPriceRange: (value: number[]) => void; onResetPriceRange: () => void; priceCeiling: number; onResetFilters: () => void;
 }
-
-export const ProductsManagerHeader: React.FC<ProductsManagerHeaderProps> = ({
-  isAr,
-  productsCount,
-  viewMode,
-  setViewMode,
-  onNewProduct,
-  search,
-  setSearch,
-  selectedCategory,
-  setSelectedCategory,
-  categories,
-  selectedStatus,
-  setSelectedStatus,
-  sortBy,
-  setSortBy,
-  filteredCount,
-  totalUnits,
-  activeOffersCount,
-  outOfStockCount,
-  priceRange,
-  setPriceRange,
-  onResetPriceRange,
-}) => {
-  const [showPriceSlider, setShowPriceSlider] = useState(false);
-  return (
-    <div className="space-y-6">
-      {/* Top Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            <span>{isAr ? 'كتالوج المنتجات والمخزون' : 'Products & Stock Inventory'}</span>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 font-mono">
-              CMS V3
-            </span>
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-            {isAr
-              ? `إدارة ${productsCount} من السلع، الإجراءات السريعة (العروض، التعديل، مشاركة الرابط)، والمقاسات بالدينار العراقي.`
-              : `Manage ${productsCount} catalog items with Quick Actions (Toggle Offer, Quick Edit, Copy Link) and cloud media.`}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* View toggle (Grid / Table) */}
-          <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-md transition-colors cursor-pointer ${
-                viewMode === 'table' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'
-              }`}
-              title={isAr ? 'عرض جدولي' : 'Table view'}
-            >
-              <List className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-md transition-colors cursor-pointer ${
-                viewMode === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'
-              }`}
-              title={isAr ? 'عرض بطاقات' : 'Grid view'}
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </button>
-          </div>
-          <Button
-            variant="primary"
-            leftIcon={<Plus className="w-4 h-4" />}
-            onClick={onNewProduct}
-          >
-            {isAr ? 'إضافة منتج جديد' : 'New Product'}
-          </Button>
-        </div>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <Card className="p-4 space-y-3">
-        <div className="flex flex-col md:flex-row items-center gap-3">
-          {/* Search Input */}
-          <div className="w-full md:flex-1">
-            <Input
-              icon={Search}
-              placeholder={isAr ? 'بحث بالاسم، الباركود أو الـ SKU...' : 'Search product title or SKU...'}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          {/* Category Filter */}
-          <div className="w-full md:w-48">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-100 text-sm rounded-lg px-3 py-2 h-9.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="all">{isAr ? 'جميع الفئات' : 'All Categories'}</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
-          {/* Status Filter */}
-          <div className="w-full md:w-44">
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-100 text-sm rounded-lg px-3 py-2 h-9.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="all">{isAr ? 'جميع الحالات' : 'All Statuses'}</option>
-              <option value="active">{isAr ? 'متوفر نشط' : 'Active'}</option>
-              <option value="lowStock">{isAr ? 'مخزون منخفض' : 'Low Stock'}</option>
-              <option value="outOfStock">{isAr ? 'نفد من المخزون' : 'Out of Stock'}</option>
-              <option value="draft">{isAr ? 'مسودة' : 'Draft'}</option>
-            </select>
-          </div>
-          {/* Sort By */}
-          <div className="w-full md:w-44">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="w-full bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-100 text-sm rounded-lg px-3 py-2 h-9.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="default">{isAr ? 'الترتيب: الافتراضي' : 'Sort: Default'}</option>
-              <option value="price-asc">{isAr ? 'السعر: الأقل أولاً' : 'Price: Low to High'}</option>
-              <option value="price-desc">{isAr ? 'السعر: الأعلى أولاً' : 'Price: High to Low'}</option>
-              <option value="sales">{isAr ? 'الأكثر مبيعاً' : 'Top Sales'}</option>
-              <option value="stock">{isAr ? 'الأقل مخزوناً' : 'Lowest Stock'}</option>
-            </select>
-          </div>
-        </div>
-
-        {/* RangeSlider Price Filter Widget Row */}
-        {priceRange && setPriceRange && (
-          <div className="pt-2 border-t border-slate-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex-1 max-w-md">
-              <PriceRangeFilterWidget
-                value={priceRange}
-                onChange={setPriceRange}
-                min={0}
-                max={500000}
-                step={5000}
-                currency={isAr ? 'د.ع' : 'IQD'}
-                lang={isAr ? 'ar' : 'en'}
-                label={isAr ? 'تصفية نطاق الأسعار (RangeSlider)' : 'Price Filter (RangeSlider)'}
-                onReset={onResetPriceRange}
-              />
-            </div>
-            <div className="text-[11px] text-slate-400 font-mono">
-              {isAr
-                ? `النطاق المحدد: من ${priceRange[0].toLocaleString()} إلى ${priceRange[1].toLocaleString()} د.ع`
-                : `Range: ${priceRange[0].toLocaleString()} - ${priceRange[1].toLocaleString()} IQD`}
-            </div>
-          </div>
-        )}
-
-        {/* Quick status counters */}
-        <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-slate-800/60 text-xs text-slate-400">
-          <span>
-            {isAr ? 'النتائج المعروضة:' : 'Results:'}{' '}
-            <strong className="text-white">{filteredCount}</strong>
-          </span>
-          <span>·</span>
-          <span>
-            {isAr ? 'إجمالي المخزون:' : 'Total Units:'}{' '}
-            <strong className="text-emerald-400">{totalUnits}</strong>{' '}
-            {isAr ? 'قطعة' : 'units'}
-          </span>
-          <span>·</span>
-          <span>
-            {isAr ? 'عروض نشطة:' : 'Active Offers:'}{' '}
-            <strong className="text-amber-400">{activeOffersCount}</strong>
-          </span>
-          <span>·</span>
-          <span>
-            {isAr ? 'نفد المخزون:' : 'Out of Stock:'}{' '}
-            <strong className="text-rose-400">{outOfStockCount}</strong>
-          </span>
-        </div>
-      </Card>
+export const ProductsManagerHeader: React.FC<Props> = props => {
+  const { isAr, productsCount, viewMode, setViewMode, search, setSearch, selectedCategory, selectedStatus, sortBy, priceRange, priceCeiling } = props;
+  const filtered = !!search || selectedCategory !== 'all' || selectedStatus !== 'all' || sortBy !== 'default' || priceRange[0] > 0 || priceRange[1] < priceCeiling;
+  const selectClass = 'mt-2 w-full min-h-11 rounded-xl border border-slate-700 bg-slate-950 px-3 text-sm text-slate-200';
+  return <div className="space-y-4">
+    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+      <div><h2 className="text-xl sm:text-2xl font-bold text-white">{isAr ? 'كتالوج المنتجات' : 'Product catalog'}</h2><p className="text-sm text-slate-400 mt-2">{productsCount} {isAr ? 'منتج محمّل · إدارة الأسعار والتوفّر والصور والألوان.' : 'loaded products · Manage pricing, availability, images and colors.'}</p></div>
+      <div className="flex flex-wrap gap-2 items-center"><div role="group" aria-label={isAr ? 'طريقة عرض المنتجات' : 'Product display'} className="flex gap-1 rounded-xl border border-slate-700 p-1">{(['table', 'grid'] as const).map(value => <Button key={value} size="icon" variant={viewMode === value ? 'primary' : 'ghost'} aria-label={isAr ? (value === 'table' ? 'عرض جدولي' : 'عرض بطاقات') : (value === 'table' ? 'Table view' : 'Grid view')} aria-pressed={viewMode === value} onClick={() => setViewMode(value)}>{value === 'table' ? <List className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}</Button>)}</div><Button onClick={props.onNewProduct} leftIcon={<Plus className="w-4 h-4" />}>{isAr ? 'إضافة منتج' : 'Add product'}</Button></div>
     </div>
-  );
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">{[[isAr ? 'النتائج المطابقة' : 'Matching products', props.filteredCount], [isAr ? 'المخزون المسجّل' : 'Known stock', props.totalUnits], [isAr ? 'عروض بسعر مخفّض' : 'Valid offers', props.activeOffersCount], [isAr ? 'نفد المخزون' : 'Out of stock', props.outOfStockCount]].map(([title, value]) => <div key={title} className="min-w-0 rounded-xl bg-slate-900 border border-slate-800 p-4"><p className="text-xs text-slate-400">{title}</p><p className="text-xl font-bold text-white mt-2">{value}</p></div>)}</div>
+    <div className="rounded-2xl bg-slate-900/60 border border-slate-800 p-4 space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 items-end">
+        <label className="text-xs text-slate-400">{isAr ? 'البحث بالاسم أو SKU أو المعرّف' : 'Search name, SKU or ID'}<Input className="mt-2 min-h-11" aria-label={isAr ? 'بحث المنتجات' : 'Search products'} icon={Search} value={search} onChange={event => setSearch(event.target.value)} /></label>
+        <label className="text-xs text-slate-400">{isAr ? 'التصنيف' : 'Category'}<select value={selectedCategory} onChange={event => props.setSelectedCategory(event.target.value)} className={selectClass}><option value="all">{isAr ? 'كل التصنيفات' : 'All categories'}</option>{props.categories.map(category => <option key={category} value={category}>{category}</option>)}</select></label>
+        <label className="text-xs text-slate-400">{isAr ? 'التوفّر' : 'Availability'}<select value={selectedStatus} onChange={event => props.setSelectedStatus(event.target.value)} className={selectClass}><option value="all">{isAr ? 'كل الحالات' : 'All statuses'}</option><option value="active">{isAr ? 'متوفر' : 'Available'}</option><option value="lowStock">{isAr ? 'محدود' : 'Limited'}</option><option value="outOfStock">{isAr ? 'نفد المخزون' : 'Out of stock'}</option><option value="draft">{isAr ? 'قريباً' : 'Coming soon'}</option></select></label>
+        <label className="text-xs text-slate-400">{isAr ? 'الترتيب' : 'Sort'}<select value={sortBy} onChange={event => props.setSortBy(event.target.value as Props['sortBy'])} className={selectClass}><option value="default">{isAr ? 'ترتيب الكتالوج' : 'Catalog order'}</option><option value="price-asc">{isAr ? 'السعر الأقل' : 'Lowest price'}</option><option value="price-desc">{isAr ? 'السعر الأعلى' : 'Highest price'}</option><option value="sales">{isAr ? 'القطع المسلّمة الأكثر' : 'Most delivered items'}</option><option value="stock">{isAr ? 'المخزون الأقل المسجّل' : 'Lowest known stock'}</option></select></label>
+      </div>
+      <details><summary className="cursor-pointer py-2 text-sm text-indigo-300">{isAr ? 'تصفية سعر البيع' : 'Filter selling price'}</summary><div className="mt-3 max-w-xl"><PriceRangeFilterWidget value={[Math.min(priceRange[0], priceCeiling), Math.min(priceRange[1], priceCeiling)]} onChange={props.setPriceRange} min={0} max={priceCeiling} step={1} lang={isAr ? 'ar' : 'en'} currency="IQD" label={isAr ? 'السعر الفعلي بعد الخصم' : 'Effective price after discount'} onReset={props.onResetPriceRange} /></div></details>
+      <div className="flex flex-wrap justify-between items-center gap-3 border-t border-slate-800 pt-3"><p role="status" className="text-xs text-slate-400">{props.filteredCount} / {productsCount} {isAr ? `منتج · ${props.unknownStockCount} بدون كمية مخزون مسجّلة` : `products · ${props.unknownStockCount} without recorded stock`}</p>{filtered && <Button size="sm" variant="outline" onClick={props.onResetFilters}>{isAr ? 'مسح الفلاتر' : 'Clear filters'}</Button>}</div>
+    </div>
+  </div>;
 };

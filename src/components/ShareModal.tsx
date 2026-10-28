@@ -44,7 +44,7 @@ export default function ShareModal({ isOpen, onClose, product, lang }: ShareModa
 
   // Construct clean direct item URL
   const shareUrl = typeof window !== 'undefined' && product
-    ? `${window.location.origin}?item=${product.id}`
+    ? `${window.location.origin}?item=${encodeURIComponent(String(product.id))}`
     : product ? `https://vant-fashion.com?item=${product.id}` : '';
 
   const shareText = isAr

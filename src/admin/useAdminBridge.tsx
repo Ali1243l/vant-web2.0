@@ -7,6 +7,7 @@ import { saveOrdersToSupabase, fetchOrdersFromSupabase, saveOffersToSupabase, fe
 import { updateSystemErrorStatus } from '../lib/analytics';
 import { normalizeOrders } from '../lib/orderModel';
 import { saveOrderChange, type OrderChange } from '../lib/saveOrderChange';
+import { productPricePatch, recordedProductStock } from './products_manager/catalogModel';
 
 export type AdminView = 'dashboard' | 'orders' | 'products' | 'sizes' | 'offers' | 'banners' | 'subscribers' | 'welcome_modal' | 'controls' | 'social' | 'backup' | 'settings' | 'security' | 'widgets';
 
@@ -89,6 +90,7 @@ export interface Product {
   price: number;
   salePrice?: number;
   stock: number;
+  stockKnown?: boolean;
   status: 'active' | 'draft' | 'outOfStock' | 'lowStock';
   imageUrl: string;
   images?: string[];
@@ -358,25 +360,26 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       id: String(sp.id),
       name: sp.title_ar || sp.title,
       nameEn: sp.title,
-      sku: 'VANT-' + sp.id,
+      sku: sp.sku || 'VANT-' + sp.id,
       category: sp.category_ar || sp.category,
       price: basePrice,
       salePrice: salePrice,
-      stock: sp.variants?.length ? sp.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0) : rawAvailability === 'sold_out' ? 0 : 25,
+      stock: recordedProductStock(sp) ?? 0,
+      stockKnown: recordedProductStock(sp) !== null,
       status,
       imageUrl: sp.image_url,
       images: sp.images && sp.images.length > 0 ? sp.images : [sp.image_url],
-      sizes: sp.sizes || ['S', 'M', 'L', 'XL'],
+      sizes: sp.sizes || [],
       descriptionAr: sp.description_ar || sp.description,
       descriptionEn: sp.description,
-      materialDetails: sp.material || 'صوف كشميري إيطالي نقي',
+      materialDetails: sp.material || '',
       availabilityStatus,
       isOnOffer: !!sp.is_offer,
-      offerCampaign: sp.offer_badge_ar || 'عرض حصري',
+      offerCampaign: sp.offer_badge_ar || undefined,
       offerBadgeText: sp.offer_badge_ar || (sp.is_offer ? 'خصم خاص' : undefined),
       salesCount: 0,
       rating: 5.0,
-      createdAt: sp.created_at ? sp.created_at.split('T')[0] : '2026-03-01',
+      createdAt: sp.created_at ? sp.created_at.split('T')[0] : '',
       hasVariants: Boolean(sp.variants?.length),
       variants: sp.variants,
     };
@@ -395,7 +398,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     const salesMap = new Map<string, number>();
-    (orders || []).filter((o) => o.status !== 'cancelled').forEach((order) => {
+    (orders || []).filter((o) => o.status === 'delivered').forEach((order) => {
       if (Array.isArray(order.items)) {
         order.items.forEach((item: any) => {
           const pId = String(item.productId || item.id || item.product_id || '');
@@ -430,7 +433,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     let status = prod.status || 'active';
     let availabilityStatus = prod.availabilityStatus || 'in_stock';
-    if (totalStock === 0) {
+    if (availabilityStatus === 'coming_soon') {
+      status = 'draft';
+    } else if (totalStock === 0) {
       status = 'outOfStock';
       availabilityStatus = 'sold_out';
     } else if (totalStock <= 5) {
@@ -451,6 +456,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return {
       ...prod,
       stock: totalStock,
+      stockKnown: true,
       price: effectivePrice,
       salePrice: effectiveSalePrice,
       status,
@@ -492,6 +498,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       description: enriched.descriptionEn,
       description_ar: enriched.descriptionAr,
       material: enriched.materialDetails,
+      sku: enriched.sku,
+      stock: enriched.stockKnown === false ? undefined : enriched.stock,
       availability,
       is_offer: enriched.isOnOffer,
       offer_badge_ar: enriched.offerBadgeText || enriched.offerCampaign,
@@ -507,19 +515,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     if (updated.name) patch.title_ar = updated.name;
     if (updated.nameEn) patch.title = updated.nameEn;
-    if (updated.price !== undefined) {
-      if (updated.salePrice) {
-        patch.price = updated.salePrice;
-        patch.original_price = updated.price;
-        patch.is_offer = true;
-      } else {
-        patch.price = updated.price;
-        patch.is_offer = false;
-      }
-    } else if (updated.salePrice !== undefined) {
-      patch.price = updated.salePrice;
-      patch.is_offer = true;
-    }
+    const current = products.find(product => product.id === id);
+    if (!current) throw new Error('Product not found');
+    if (updated.price !== undefined || Object.hasOwn(updated, 'salePrice') || updated.isOnOffer !== undefined) Object.assign(patch, productPricePatch(current, updated));
+    if (updated.sku !== undefined) patch.sku = updated.sku.trim();
+    if (updated.stock !== undefined && updated.stockKnown !== false) patch.stock = updated.stock;
+    if (updated.isOnOffer === false) patch.offer_badge_ar = undefined;
     if (updated.category) {
       patch.category = updated.category;
       patch.category_ar = updated.category;
@@ -527,21 +528,21 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (updated.imageUrl) patch.image_url = updated.imageUrl;
     if (updated.images) patch.images = updated.images;
     if (updated.sizes) patch.sizes = updated.sizes;
-    if (updated.descriptionAr) patch.description_ar = updated.descriptionAr;
-    if (updated.descriptionEn) patch.description = updated.descriptionEn;
-    if (updated.materialDetails) patch.material = updated.materialDetails;
+    if (updated.descriptionAr !== undefined) patch.description_ar = updated.descriptionAr;
+    if (updated.descriptionEn !== undefined) patch.description = updated.descriptionEn;
+    if (updated.materialDetails !== undefined) patch.material = updated.materialDetails;
     if (updated.availabilityStatus) {
       patch.availability = updated.availabilityStatus as ProductAvailability;
     }
     if (updated.isOnOffer !== undefined) {
       patch.is_offer = updated.isOnOffer;
     }
-    if (updated.offerBadgeText || updated.offerCampaign) {
-      patch.offer_badge_ar = updated.offerBadgeText || updated.offerCampaign;
+    if (Object.hasOwn(updated, 'offerBadgeText') || updated.offerCampaign) {
+      patch.offer_badge_ar = updated.offerBadgeText || updated.offerCampaign || '';
     }
 
     siteControls.updateProduct(id, patch);
-  }, [siteControls]);
+  }, [siteControls, products]);
 
   const deleteProduct = useCallback((id: string) => {
     siteControls.deleteProduct(id);

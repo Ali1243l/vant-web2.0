@@ -21,7 +21,8 @@ export function saveProductEnhancement(id: string | number, enhancement: Partial
   try {
     const current = getStoredEnhancements();
     const existing = current[String(id)] || {};
-    current[String(id)] = { ...existing, ...enhancement };
+    const provided = Object.fromEntries(Object.entries(enhancement).filter(([, value]) => value !== undefined));
+    current[String(id)] = { ...existing, ...provided, ...(enhancement.is_offer === false ? { original_price: undefined, offer_badge_ar: undefined, offer_badge_en: undefined } : {}) };
     localStorage.setItem(ENHANCEMENTS_STORAGE_KEY, JSON.stringify(current));
   } catch {}
 }

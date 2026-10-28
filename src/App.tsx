@@ -94,6 +94,14 @@ function MainApp() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isOffersOnly, setIsOffersOnly] = useState(false);
   const [selected, setSelected] = useState<Product | null>(null);
+  const openedItemLink = useRef<string | null>(null);
+  useEffect(() => {
+    const item = new URLSearchParams(window.location.search).get('item');
+    if (!item || openedItemLink.current === item) return;
+    const match = products.find(product => String(product.id) === item);
+    if (match) { openedItemLink.current = item; setSelected(match); }
+    else if (hasMore && !loading && !loadingMore) void loadMore();
+  }, [products, hasMore, loading, loadingMore, loadMore]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilterType>('all');

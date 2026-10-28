@@ -310,8 +310,8 @@ export const CustomOfferTab: React.FC<CustomOfferTabProps> = ({
           <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-400" />
           <span>
             {isAr
-              ? `هامش متوازن: خصم جذاب للعميل بنسبة ${actualSavingsPct}% لتحفيز الشراء السريع.`
-              : `Optimal promotional discount (${actualSavingsPct}%) to accelerate checkout.`}
+              ? `نسبة الخصم ${actualSavingsPct}%. الربحية تحتاج معرفة التكلفة ولا يمكن استنتاجها من الخصم وحده.`
+              : `Discount: ${actualSavingsPct}%. Profitability requires cost data and cannot be inferred from the discount.`}
           </span>
         </div>
       ) : null}
@@ -362,6 +362,7 @@ export const CustomOfferTab: React.FC<CustomOfferTabProps> = ({
           type="button"
           variant="primary"
           onClick={onApplyCustomOffer}
+          disabled={!Number.isFinite(currentFinalSalePrice) || currentFinalSalePrice <= 0 || currentFinalSalePrice >= product.price}
           leftIcon={<Check className="w-4 h-4" />}
           className="w-full sm:w-auto"
         >
