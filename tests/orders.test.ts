@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { normalizeOrders, filterOrders, orderMetrics, transitionOrder, allowedOrderStatuses, escapeOrderText } from '../src/lib/orderModel.ts';
-import { createDemoOrders } from '../src/admin/ordersDemo.ts';
+import { createDemoOrders } from './orderFixtures.ts';
 
 const record = (id: string, extra = {}) => ({ id, status: 'pending_payment', total_price: 25000, created_at: '2026-10-28T10:00:00', customer_name: 'Test customer', items: [{ product_id: 'shirt', name: 'تيشيرت', nameEn: 'Shirt', quantity: 2, price: 12500, size: 'M' }], ...extra });
 

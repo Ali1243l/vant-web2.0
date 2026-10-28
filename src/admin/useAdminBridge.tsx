@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, useCallback, useMemo } from 'react';
+import { useState, useEffect, createContext, useContext, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSiteControls } from '../context/SiteControlsContext';
 import type { Product as StoreProduct, ProductAvailability } from '../types';
@@ -6,6 +6,7 @@ import { getStoredSubscribers, addSubscriber as addStoredSubscriber, removeSubsc
 import { saveOrdersToSupabase, fetchOrdersFromSupabase, saveOffersToSupabase, fetchOffersFromSupabase } from '../lib/storage';
 import { updateSystemErrorStatus } from '../lib/analytics';
 import { normalizeOrders } from '../lib/orderModel';
+import { saveOrderChange, type OrderChange } from '../lib/saveOrderChange';
 
 export type AdminView = 'dashboard' | 'orders' | 'products' | 'sizes' | 'offers' | 'banners' | 'subscribers' | 'welcome_modal' | 'controls' | 'social' | 'backup' | 'settings' | 'security' | 'widgets';
 
@@ -264,8 +265,8 @@ interface AdminContextType {
 
   // Order Management System (OMS) & Concierge
   orders: Order[];
-  updateOrderStatus: (id: string, status: OrderStatus, note?: string) => void;
-  updateOrderArtisanNotes: (id: string, notes: string) => void;
+  updateOrderStatus: (id: string, status: OrderStatus, note?: string) => Promise<void>;
+  updateOrderArtisanNotes: (id: string, notes: string) => Promise<void>;
   addOrder: (order: Omit<Order, 'id' | 'orderDate' | 'timeline'>) => void;
 
   notifications: NotificationItem[];
@@ -719,56 +720,23 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     loadOrders();
   }, []);
 
-  const updateOrderStatus = useCallback((id: string, newStatus: OrderStatus, note?: string) => {
-    setOrders((prev) => {
-      const updated = prev.map((order) => {
-        if (order.id !== id) return order;
-        const now = new Date();
-        const timestamp = new Date().toISOString().replace("T", " ").substring(0, 16);
-        const statusTitles: Record<OrderStatus, { ar: string; en: string }> = {
-          pending_payment: { ar: 'بانتظار تأكيد الدفع', en: 'Pending Payment' },
-          processing: { ar: 'جاري العمل في الأتيليه والتجهيز', en: 'In Atelier / Processing' },
-          shipped: { ar: 'تم شحن الطلب وتحديد التتبع', en: 'Order Dispatched / Shipped' },
-          delivered: { ar: 'تم التسليم بنجاح', en: 'Delivered Successfully' },
-          cancelled: { ar: 'تم إلغاء الطلب', en: 'Order Cancelled' },
-        };
-        const newTimelineEvent: OrderTimelineEvent = {
-          status: newStatus,
-          title: statusTitles[newStatus]?.ar || newStatus,
-          titleEn: statusTitles[newStatus]?.en || newStatus,
-          timestamp,
-          note: note || undefined,
-        };
-        return {
-          ...order,
-          status: newStatus,
-          timeline: [...order.timeline, newTimelineEvent],
-        };
-      });
-      try { localStorage.setItem('vant_orders_v1', JSON.stringify(updated)); } catch {}
-      saveOrdersToSupabase(updated);
-      return updated;
-    });
-  }, []);
-
-  const updateOrderArtisanNotes = useCallback((id: string, notes: string) => {
-    setOrders((prev) => {
-      const updated = prev.map((order) => {
-        if (order.id !== id) return order;
-        return {
-          ...order,
-          bespokeDetails: {
-            ...order.bespokeDetails,
-            artisanNotes: notes,
-          },
-        };
-      });
-      try { localStorage.setItem('vant_orders_v1', JSON.stringify(updated)); } catch {}
-      saveOrdersToSupabase(updated);
-      return updated;
-    });
-  }, []);
-
+  const savingOrder = useRef(false);
+  const persistOrderChange = useCallback(async (id: string, change: OrderChange) => {
+    if (savingOrder.current) throw new Error('An order save is already in progress');
+    const previous = orders.find(order => order.id === id);
+    if (!previous) throw new Error('Order not found');
+    savingOrder.current = true;
+    try {
+      const saved = await saveOrderChange(supabase, previous, change);
+      const updated = orders.map(order => order.id === id ? saved : order);
+      try { localStorage.setItem('vant_orders_v1', JSON.stringify(updated)); }
+      catch (error) { if (!supabase) throw error; console.warn('Saved order; local cache update failed'); }
+      setOrders(updated);
+      window.dispatchEvent(new CustomEvent('vant:order_created'));
+    } finally { savingOrder.current = false; }
+  }, [orders]);
+  const updateOrderStatus = useCallback((id: string, status: OrderStatus, note?: string) => persistOrderChange(id, { status, note }), [persistOrderChange]);
+  const updateOrderArtisanNotes = useCallback((id: string, notes: string) => persistOrderChange(id, { notes }), [persistOrderChange]);
   const addOrder = useCallback((newOrderData: Omit<Order, 'id' | 'orderDate' | 'timeline'>) => {
     const now = new Date();
     const timestamp = new Date().toISOString().replace("T", " ").substring(0, 16);

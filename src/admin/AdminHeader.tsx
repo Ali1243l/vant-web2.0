@@ -84,7 +84,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
 
   const viewTitles: Record<AdminView, { ar: string; en: string }> = {
     dashboard: { ar: 'نظرة عامة', en: 'Dashboard & Deep Analytics' },
-    orders: { ar: 'الطلبات', en: 'Order Management & VIP Concierge' },
+    orders: { ar: 'الطلبات', en: 'Orders' },
     products: { ar: 'إدارة المنتجات والكتالوج', en: 'Product Catalog & Inventory' },
     sizes: { ar: 'دليل المقاسات', en: 'Master Size Guide & Specs' },
     offers: { ar: 'العروض والخصومات', en: 'Offers & Promo Codes' },

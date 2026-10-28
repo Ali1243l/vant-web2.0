@@ -1,4 +1,4 @@
-import type { Order } from './useAdminBridge';
+import type { Order } from '../src/admin/useAdminBridge';
 
 // In-memory fixtures only: never passed to the order provider or persistence layer.
 export function createDemoOrders(): Order[] {
