@@ -138,6 +138,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
 
           {/* Drawer Panel */}
           <motion.div
+            data-store-panel
             initial={{ x: isAr ? '-100%' : '100%' }}
             animate={{ x: 0 }}
             exit={{ x: isAr ? '-100%' : '100%' }}

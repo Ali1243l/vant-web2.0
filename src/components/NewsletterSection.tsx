@@ -275,7 +275,7 @@ export default function NewsletterSection({ lang }: Props) {
         aria-label={isAr ? 'النشرة البريدية وحساب المشترك' : 'Newsletter & Member Account'}
         className="mx-auto max-w-[1920px] w-full px-3 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 mt-2 sm:mt-3 mb-6 sm:mb-8"
       >
-        <div className={`relative mx-auto max-w-4xl lg:max-w-5xl xl:max-w-6xl overflow-hidden rounded-2xl sm:rounded-3xl md:rounded-[32px] border ${getNewsletterGradientClasses(gradientTheme)} p-5 sm:p-7 md:p-9 lg:p-11 shadow-[0_4px_24px_rgba(0,0,0,0.02)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.35)]`}>
+        <div data-store-newsletter className={`relative mx-auto max-w-4xl lg:max-w-5xl xl:max-w-6xl overflow-hidden rounded-2xl sm:rounded-3xl md:rounded-[32px] border ${getNewsletterGradientClasses(gradientTheme)} p-5 sm:p-7 md:p-9 lg:p-11 shadow-[0_4px_24px_rgba(0,0,0,0.02)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.35)]`}>
           {/* Ambient signature cobalt blue glow */}
           {showGlow && (
             <>
@@ -391,6 +391,7 @@ export default function NewsletterSection({ lang }: Props) {
                     />
 
                     <button
+                      data-store-primary
                       type="submit"
                       disabled={isSubmitting}
                       className="shrink-0 inline-flex items-center justify-center gap-1.5 md:gap-2 rounded-full bg-[#004ad7] hover:bg-[#003db3] dark:bg-[#3b82f6] dark:hover:bg-[#2563eb] px-4 py-2 md:h-12 md:px-6 text-xs md:text-sm font-bold text-white transition-all active:scale-95 shadow-sm cursor-pointer disabled:opacity-60"

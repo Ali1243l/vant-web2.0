@@ -21,6 +21,9 @@ import { Heart, Loader2, Check, X, Sparkles, Gift, Percent, Tag, ArrowUpDown, La
 import type { Product, Language, Theme } from './types';
 
 import { scrollStorefrontTo } from './lib/pageScroll';
+import { STORE_THEME_CONTROL, parseStoreTheme, storeThemeVariables } from './lib/storefrontTheme';
+import { BANNER_TARGET_CONTROL, parseBannerTarget, matchesBannerTarget, bannerPageRequestKey, type BannerTarget } from './lib/bannerTarget';
+import './storefront-theme.css';
 
 const ALL = 'All';
 const AdminDrawer = lazy(() => import('./components/AdminDrawer'));
@@ -93,6 +96,19 @@ function MainApp() {
   const [isWishlistOnly, setIsWishlistOnly] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isOffersOnly, setIsOffersOnly] = useState(false);
+  const [bannerSelection, setBannerSelection] = useState<BannerTarget | null>(null);
+  const lastBannerPageAttempt = useRef<string | null>(null);
+  const storeThemeRaw = getControl(STORE_THEME_CONTROL).actionValue;
+  useEffect(() => {
+    const root = document.documentElement;
+    const settings = parseStoreTheme(storeThemeRaw);
+    const variables = storeThemeVariables(settings, theme);
+    if (settings.enabled) {
+      root.setAttribute('data-storefront-theme', 'active');
+      for (const [key, value] of Object.entries(variables)) root.style.setProperty(key, value);
+    }
+    return () => { root.removeAttribute('data-storefront-theme'); for (const key of Object.keys(variables)) root.style.removeProperty(key); };
+  }, [storeThemeRaw, theme]);
   const [selected, setSelected] = useState<Product | null>(null);
   const openedItemLink = useRef<string | null>(null);
   useEffect(() => {
@@ -273,7 +289,8 @@ function MainApp() {
       : isOffersOnly
       ? products.filter((p) => p.is_offer)
       : products;
-    const categoryFiltered = category === ALL ? base : base.filter((p) => p.category === category);
+    const scoped = bannerSelection ? base.filter(p => matchesBannerTarget(p, bannerSelection)) : base;
+    const categoryFiltered = category === ALL ? scoped : scoped.filter((p) => p.category === category);
     const searchFiltered = searchQuery.trim()
       ? categoryFiltered.filter((p) => productMatchesQuery(p, searchQuery))
       : categoryFiltered;
@@ -293,11 +310,12 @@ function MainApp() {
     });
 
     return counts;
-  }, [products, isWishlisted, isWishlistOnly, isOffersOnly, category, searchQuery]);
+  }, [products, isWishlisted, isWishlistOnly, isOffersOnly, category, searchQuery, bannerSelection]);
 
   // Combined Filtering & Sorting Pipeline: Offers -> Wishlist -> Category -> Availability -> Search -> Sort
   const visible = useMemo(() => {
     const filtered = products.filter((p) => {
+      if (bannerSelection && !matchesBannerTarget(p, bannerSelection)) return false;
       // 0. Offers Only Filter
       if (isOffersOnly && !p.is_offer) {
         return false;
@@ -335,7 +353,14 @@ function MainApp() {
     }
     // Default: 'newest' (products are ordered in natural chronological order, latest first)
     return filtered;
-  }, [products, isOffersOnly, category, wishlist, isWishlistOnly, availabilityFilter, searchQuery, catalogSort]);
+  }, [products, isOffersOnly, category, wishlist, isWishlistOnly, availabilityFilter, searchQuery, catalogSort, bannerSelection]);
+  useEffect(() => {
+    const key = searchQuery.trim() ? null : bannerPageRequestKey(products, bannerSelection, isOffersOnly, visible.length);
+    if (!key) { lastBannerPageAttempt.current = null; return; }
+    if (!hasMore || loading || loadingMore || error || lastBannerPageAttempt.current === key) return;
+    lastBannerPageAttempt.current = key;
+    void loadMore();
+  }, [bannerSelection, products, hasMore, loading, loadingMore, error, isOffersOnly, visible.length, searchQuery, loadMore]);
   useEffect(() => {
     if (isAdminOpen || loading || searchQuery.trim().length < 3) return;
     const timer = setTimeout(() => trackEvent('search_query', {
@@ -346,19 +371,19 @@ function MainApp() {
   }, [searchQuery, visible.length, hasMore, loading, isAdminOpen, category, availabilityFilter, isOffersOnly, isWishlistOnly]);
 
   // One navigation owner handles filters after React commits their layout changes.
-  const prevCategoryFilterRef = useRef({ category, isOffersOnly, availabilityFilter });
+  const prevCategoryFilterRef = useRef({ category, isOffersOnly, availabilityFilter, bannerSelection });
   useEffect(() => {
     const prev = prevCategoryFilterRef.current;
     if (
       prev.category !== category ||
       prev.isOffersOnly !== isOffersOnly ||
-      prev.availabilityFilter !== availabilityFilter
+      prev.availabilityFilter !== availabilityFilter || prev.bannerSelection !== bannerSelection
     ) {
-      prevCategoryFilterRef.current = { category, isOffersOnly, availabilityFilter };
+      prevCategoryFilterRef.current = { category, isOffersOnly, availabilityFilter, bannerSelection };
 
       scrollStorefrontTo('catalog');
     }
-  }, [category, isOffersOnly, availabilityFilter]);
+  }, [category, isOffersOnly, availabilityFilter, bannerSelection]);
 
   const closeDrawer = useCallback(() => setSelected(null), []);
 
@@ -410,6 +435,7 @@ function MainApp() {
         </>
       ) : (
         <div
+          data-store-root
           className={`relative min-h-[100dvh] w-full max-w-full overflow-x-clip flex flex-col font-sans transition-colors duration-300 ${
             theme === 'dark' ? 'bg-[#0d0f12] text-[#f3f4f6]' : 'bg-[#f8f9fa] text-[#15171c]'
           }`}
@@ -473,7 +499,7 @@ function MainApp() {
         onToggleSearch={setIsSearchOpen}
         wishlistCount={wishlistCount}
         isWishlistOnly={isWishlistOnly}
-        onToggleWishlistOnly={() => setIsWishlistOnly((prev) => !prev)}
+        onToggleWishlistOnly={() => { setBannerSelection(null); setIsWishlistOnly((prev) => !prev); }}
         onOpenCart={() => setIsCartOpen(true)}
         isCartOpen={isCartOpen}
       >
@@ -481,20 +507,22 @@ function MainApp() {
         <CategoryFilter
           categories={categories}
           active={category}
-          onChange={setCategory}
+          onChange={value => { setBannerSelection(null); setCategory(value); }}
           getLabel={getCategoryLabel}
           lang={lang}
           availability={availabilityFilter}
           onAvailabilityChange={setAvailabilityFilter}
           availabilityCounts={availabilityCounts}
           isOffersOnly={isOffersOnly}
-          onToggleOffersOnly={setIsOffersOnly}
+          onToggleOffersOnly={value => { setBannerSelection(null); setIsOffersOnly(value); }}
           offersCount={offersCount}
         />
       </Header>
 
       {/* Main Content Area: Responsive Fluid Sizing for 16:9 Widescreen & 9:16 Mobile */}
       <main className="mx-auto w-full max-w-[1920px] flex-1 px-3 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 pt-2 sm:pt-3 md:pt-4 pb-2 sm:pb-3 lg:pb-4 overflow-x-clip">
+        {(bannerSelection || isOffersOnly) && hasMore && visible.length === 0 && <button type="button" disabled={loadingMore} onClick={() => void loadMore()} className="mb-4 min-h-11 rounded-xl border border-current px-4 text-sm disabled:opacity-50">{lang === 'ar' ? (loadingMore ? 'جاري تحميل باقي الاختيارات…' : 'تحميل المزيد من الاختيارات أو إعادة المحاولة') : (loadingMore ? 'Loading selections…' : 'Load more selections or retry')}</button>}
+        {bannerSelection && <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-500/30 bg-blue-500/10 p-4 text-sm"><span>{lang === 'ar' ? 'اختيارات البانر' : 'Banner selection'} · {visible.length}{hasMore ? '+' : ''}</span><button type="button" onClick={() => { setBannerSelection(null); setIsOffersOnly(false); setSearchQuery(''); setAvailabilityFilter('all'); }} className="min-h-11 underline">{lang === 'ar' ? 'عرض التشكيلة الكاملة' : 'View full collection'}</button></div>}
         {/* Offers Active Filter Banner (Refined Minimalist Luxury Aesthetic) */}
         {isOffersOnly && (
           <div className="mb-5 flex items-center justify-between rounded-2xl border border-black/8 dark:border-white/10 bg-white/70 dark:bg-[#12151e]/80 px-4 py-2.5 sm:px-5 sm:py-3 text-xs sm:text-sm backdrop-blur-xl shadow-xs transition-all">
@@ -523,14 +551,17 @@ function MainApp() {
         {/* Restored & Enhanced Welcome Brand Story Banner with Trends & Quick Categories */}
         <WelcomeHeroBanner
           lang={lang}
-          isOpen={!isBannerDismissed && (category === ALL || !category || category === 'all') && !isWishlistOnly && !isOffersOnly && !searchQuery.trim()}
+          isOpen={!isBannerDismissed && !bannerSelection && (category === ALL || !category || category === 'all') && !isWishlistOnly && !isOffersOnly && !searchQuery.trim()}
           onExplore={() => {
             scrollStorefrontTo('catalog');
           }}
           onViewOffers={() => {
+            const target = parseBannerTarget(getControl(BANNER_TARGET_CONTROL).actionValue);
             setCategory(ALL);
             setAvailabilityFilter('all');
-            setIsOffersOnly(true);
+            setSearchQuery(''); setIsWishlistOnly(false);
+            setBannerSelection(target.mode === 'all_offers' ? null : target);
+            setIsOffersOnly(target.mode === 'all_offers');
           }}
           onDismiss={() => setIsBannerDismissed(true)}
           onSelectCategory={(cat) => setCategory(cat)}

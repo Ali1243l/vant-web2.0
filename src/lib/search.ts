@@ -29,6 +29,7 @@ export function productMatchesQuery(product: Product, query: string): boolean {
     [
       product.title,
       product.title_ar,
+      product.sku,
       product.category,
       product.category_ar,
       product.description,

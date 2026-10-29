@@ -186,6 +186,7 @@ export default React.memo(function ProductCard({
 
   return (
     <motion.article
+      data-store-card
       custom={index}
       initial="hidden"
       animate="visible"
@@ -200,6 +201,7 @@ export default React.memo(function ProductCard({
       <div className="flex flex-col h-full w-full text-start outline-none">
         {/* Main Image Container with Precision Fixed Aspect Ratio */}
         <div
+          data-store-card-image
           className="relative overflow-hidden rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] transition-all duration-300 group-hover:shadow-[0_12px_32px_rgba(0,0,0,0.12)] dark:group-hover:shadow-[0_14px_36px_rgba(0,0,0,0.45)] group-hover:-translate-y-1 w-full"
           style={dynamicRatioStyle}
         >
@@ -322,7 +324,7 @@ export default React.memo(function ProductCard({
           {/* 1. Category name - Subtle, smaller, refined grayish color */}
           {cardCategoryControl.visible && (
             <div className="flex items-center rtl:justify-start ltr:justify-start">
-              <span className="text-[11px] sm:text-xs md:text-[12.5px] font-medium text-black/45 dark:text-white/45 tracking-tight line-clamp-1">
+              <span data-store-muted className="text-[11px] sm:text-xs md:text-[12.5px] font-medium text-black/45 dark:text-white/45 tracking-tight line-clamp-1">
                 {lang === 'ar' && product.category_ar ? product.category_ar : product.category}
               </span>
             </div>
@@ -338,7 +340,7 @@ export default React.memo(function ProductCard({
           {/* 3. Price - Bold, distinct signature blue */}
           {cardPriceControl.visible && (
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 pt-0.5 rtl:justify-start ltr:justify-start">
-              <span className="whitespace-nowrap font-mono font-black text-sm sm:text-base md:text-[17px] lg:text-lg text-[#004ad7] dark:text-[#3b82f6] tabular-nums tracking-tight">
+              <span data-store-price className="whitespace-nowrap font-mono font-black text-sm sm:text-base md:text-[17px] lg:text-lg text-[#004ad7] dark:text-[#3b82f6] tabular-nums tracking-tight">
                 {formatPrice(activeVariant.price)}
               </span>
               {originalPrice && originalPrice > activeVariant.price && (

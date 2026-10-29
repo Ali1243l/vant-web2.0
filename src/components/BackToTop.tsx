@@ -33,6 +33,7 @@ export default function BackToTop({ lang }: Props) {
     <AnimatePresence>
       {visible && (
         <motion.button
+          data-store-primary
           type="button"
           initial={{ opacity: 0, scale: 0.8, y: 12 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}

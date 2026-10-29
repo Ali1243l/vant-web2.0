@@ -63,7 +63,7 @@ export default function MasonryGrid({
   }
 
   return (
-    <div className={gridClasses}>
+    <div data-store-grid className={gridClasses}>
       {products.map((p, i) => (
         <BlurFade key={`blur-fade-${p.id}`} delay={(i % 4) * 0.08} duration={0.6}>
           <PremiumGlowWrapper>

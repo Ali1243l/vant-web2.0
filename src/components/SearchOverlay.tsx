@@ -147,7 +147,7 @@ export default function SearchOverlay({
             className="relative z-10 w-full max-w-2xl"
             dir={lang === 'ar' ? 'rtl' : 'ltr'}
           >
-            <div className="bg-white/95 dark:bg-[#0d0f12]/95 backdrop-blur-2xl shadow-2xl rounded-full px-4 sm:px-6 h-14 flex items-center gap-3 border border-black/10 dark:border-white/15">
+            <div data-store-panel className="bg-white/95 dark:bg-[#0d0f12]/95 backdrop-blur-2xl shadow-2xl rounded-full px-4 sm:px-6 h-14 flex items-center gap-3 border border-black/10 dark:border-white/15">
               <div className="relative flex flex-1 items-center">
                 <Search
                   className={`absolute pointer-events-none h-4 w-4 text-[#6b7280] dark:text-[#9ca3af] ${

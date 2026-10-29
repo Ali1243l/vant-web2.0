@@ -160,6 +160,7 @@ export default function Header({
                   <button
                     type="button"
                     id="header-cart-icon"
+                    data-store-cart-active={isCartOpen || undefined}
                     onClick={onOpenCart}
                     className={`relative flex items-center justify-center rounded-full transition-all active:scale-90 cursor-pointer ${
                       'h-11 w-11'

@@ -259,6 +259,9 @@ export const DEFAULT_SITE_CONTROLS: Record<string, SiteControlItem> = {
     name_ar: 'تدرّج وصورة البانر', name_en: 'Banner image and fade',
     visible: true, enabled: true, label_ar: 'المظهر', label_en: 'Appearance', actionValue: '{}',
   },
+  store_theme: { id: 'store_theme', category: 'hero_banner', name_ar: 'هوية المتجر', name_en: 'Store theme', visible: true, enabled: true, label_ar: 'هوية المتجر', label_en: 'Store theme', actionValue: '{}' },
+  store_custom_themes: { id: 'store_custom_themes', category: 'hero_banner', name_ar: 'ثيماتي', name_en: 'My themes', visible: true, enabled: true, label_ar: 'ثيماتي', label_en: 'My themes', actionValue: '[]' },
+  banner_hero_target: { id: 'banner_hero_target', category: 'hero_banner', name_ar: 'وجهة زر البانر', name_en: 'Banner button destination', visible: true, enabled: true, label_ar: 'وجهة البانر', label_en: 'Banner destination', actionValue: '{"mode":"all_offers","productIds":[]}' },
   banner_hero_bg: {
     id: 'banner_hero_bg',
     category: 'hero_banner',

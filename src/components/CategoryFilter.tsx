@@ -268,6 +268,7 @@ export default function CategoryFilter({
                     exit={{ opacity: 0, scale: 0.98, y: 6 }}
                     transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                     role="menu"
+                    data-store-panel
                     className="absolute top-full mt-2 end-0 ltr:right-0 rtl:left-0 z-[100000] max-h-[min(420px,65dvh)] overflow-y-auto overscroll-contain min-w-[240px] sm:min-w-[255px] md:min-w-[270px] rounded-2xl border border-black/10 dark:border-white/15 bg-white/95 dark:bg-[#12141a]/95 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.18),0_6px_18px_rgba(0,0,0,0.08)] dark:shadow-[0_24px_55px_rgba(0,0,0,0.9),0_6px_20px_rgba(0,0,0,0.6)] backdrop-blur-2xl text-[#15171c] dark:text-white max-w-[calc(100vw-32px)] will-change-transform transform-gpu ring-1 ring-black/5 dark:ring-white/10"
                   >
                     {/* Header */}

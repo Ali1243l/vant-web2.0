@@ -39,6 +39,7 @@ export default function ProductSheet({ title, lang, onClose, children, footer, s
       />
       <div className="product-sheet-positioner pointer-events-none fixed inset-0 z-[1001] flex items-end justify-center md:items-center md:p-6">
         <motion.section
+          data-store-panel
           ref={panelRef}
           role="dialog" aria-modal="true" aria-label={title} aria-busy={busy || undefined}
           dir={isAr ? 'rtl' : 'ltr'} tabIndex={-1}

@@ -239,6 +239,7 @@ export default function WelcomeHeroBanner({
                     {heroBtnControl.visible && (
                       <div className="shrink-0 flex items-center">
                         <button
+                          data-store-primary
                           type="button"
                           onClick={onViewOffers || onExplore}
                           className="group inline-flex items-center gap-2 rounded-full bg-[#15171c] hover:bg-black dark:bg-white dark:hover:bg-white/95 min-h-11 px-5 py-2.5 sm:px-6 sm:py-3 text-xs sm:text-sm font-bold text-white dark:text-[#15171c] transition-all active:scale-95 shadow-md hover:shadow-lg dark:shadow-[0_4px_20px_rgba(255,255,255,0.12)] border border-black/10 dark:border-white/20 cursor-pointer"
