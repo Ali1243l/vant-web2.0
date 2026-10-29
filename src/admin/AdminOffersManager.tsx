@@ -1,430 +1,111 @@
-import React, { useState } from 'react';
-import {
-  Tag,
-  Plus,
-  Copy,
-  Check,
-  Calendar,
-  Percent,
-  DollarSign,
-  TrendingUp,
-  Trash2,
-  Edit2,
-  Clock,
-  Sparkles,
-} from 'lucide-react';
-import { useAdminBridge, Offer } from './useAdminBridge';
-import { formatCurrency, formatNumber, formatDate, toEnglishDigits } from './format';
-import { Card, Button, StatusBadge, Modal, Input } from './ui';
+import React, { useEffect, useState } from 'react';
+import { Plus, Search, Copy, Pencil, Trash2 } from 'lucide-react';
+import { useAdminBridge, type Offer } from './useAdminBridge';
+import { Button, Input } from './ui';
+import { Sheet } from './Sheet';
+import { formatCurrency } from './format';
+import { offerBoundary, offerDay, offerState, parseOfferNumber, quoteOffer, validateOffer, type OfferState } from './offers/offerModel';
 
 export const AdminOffersManager: React.FC = () => {
   const { offers, addOffer, updateOffer, deleteOffer, lang, isOfferModalOpen, setIsOfferModalOpen } = useAdminBridge();
   const isAr = lang === 'ar';
-
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-
-  // Form State
-  const [formTitle, setFormTitle] = useState('');
-  const [formTitleEn, setFormTitleEn] = useState('');
-  const [formCode, setFormCode] = useState('');
-  const [formType, setFormType] = useState<'percentage' | 'fixed'>('percentage');
-  const [formValue, setFormValue] = useState('');
-  const [formMinSpend, setFormMinSpend] = useState('');
-  const [formMaxUses, setFormMaxUses] = useState('');
-  const [formEndDate, setFormEndDate] = useState('2026-12-31');
-
-  const filteredOffers = offers.filter((o) => {
-    if (filterStatus === 'all') return true;
-    return o.status === filterStatus;
-  });
-
-  const handleCopy = (code: string) => {
-    navigator.clipboard?.writeText(code);
-    setCopiedCode(code);
-    setTimeout(() => setCopiedCode(null), 2000);
+  const t = (ar: string, en: string) => isAr ? ar : en;
+  const money = (value: number) => formatCurrency(value, 'IQD', isAr ? 'ar' : 'en');
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [editing, setEditing] = useState<Offer | null>(null);
+  const [removing, setRemoving] = useState<Offer | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [title, setTitle] = useState('');
+  const [titleEn, setTitleEn] = useState('');
+  const [code, setCode] = useState('');
+  const [type, setType] = useState<'percentage' | 'fixed'>('percentage');
+  const [value, setValue] = useState('');
+  const [minimum, setMinimum] = useState('');
+  const [maximum, setMaximum] = useState('');
+  const [start, setStart] = useState(offerDay());
+  const [end, setEnd] = useState(offerDay(Date.now() + 30 * 86400000));
+  const [enabled, setEnabled] = useState(true);
+  const [sample, setSample] = useState('');
+  useEffect(() => { setError(''); }, [title, titleEn, code, type, value, minimum, maximum, start, end, enabled]);
+  const labels: Record<OfferState, string> = {
+    active: t('ضمن الصلاحية', 'Within validity'), scheduled: t('مجدول', 'Scheduled'), paused: t('موقوف', 'Paused'), expired: t('منتهي', 'Expired'), exhausted: t('مستنفد', 'Limit reached'), invalid: t('يحتاج تصحيحاً', 'Needs correction'),
   };
-
-  const handleCreateOffer = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formCode || !formValue || !formTitle) return;
-
-    addOffer({
-      title: formTitle,
-      titleEn: formTitleEn || formTitle,
-      code: formCode.toUpperCase().trim(),
-      discountType: formType,
-      discountValue: parseFloat(formValue) || 0,
-      minSpend: formMinSpend ? parseFloat(formMinSpend) : undefined,
-      maxUses: formMaxUses ? parseInt(formMaxUses, 10) : undefined,
-      status: 'active',
-      startDate: new Date().toISOString().split('T')[0],
-      endDate: formEndDate,
-    });
-
-    // Reset
-    setFormTitle('');
-    setFormTitleEn('');
-    setFormCode('');
-    setFormValue('');
-    setFormMinSpend('');
-    setFormMaxUses('');
-    setIsOfferModalOpen(false);
+  const message = (issue: string) => ({
+    title: t('اكتب عنوان الحملة.', 'Enter a campaign title.'), code: t('الكود: 3–40 حرفاً إنجليزياً أو رقماً مع - أو _ فقط.', 'Code: 3–40 English letters/digits, - or _.'),
+    duplicate: t('هذا الكود موجود مسبقاً.', 'This code already exists.'), amount: t('النسبة أكبر من صفر وأقل من 100؛ المبلغ الثابت عدد صحيح موجب بالدينار.', 'Percentage must be above zero and below 100; fixed IQD must be a positive integer.'),
+    minimum: t('الحد الأدنى مبلغ صحيح غير سالب.', 'Minimum spend must be a nonnegative integer.'), limit: t('حد الاستخدام عدد صحيح موجب ولا يقل عن الاستخدام المسجّل.', 'Usage limit must be a positive integer, no lower than recorded usage.'),
+    dates: t('راجع التاريخين: تاريخ البداية لا يتجاوز نهاية الصلاحية.', 'Check dates: start must not be after expiry.'), status: t('حالة العرض غير صالحة.', 'Invalid campaign status.'),
+    busy: t('انتظر اكتمال العملية الحالية.', 'Wait for the current operation.'), save: t('تعذر الحفظ السحابي. بقيت البيانات كما هي؛ حاول مرة ثانية.', 'Cloud save failed. Data remains unchanged; try again.'),
+  }[issue] || t('تعذر إكمال العملية. راجع الاتصال وحاول ثانية.', 'Could not complete the operation. Check connectivity and try again.'));
+  const fill = (offer?: Offer) => {
+    setTitle(offer?.title || ''); setTitleEn(offer?.titleEn || ''); setCode(offer?.code || ''); setType(offer?.discountType === 'fixed' ? 'fixed' : 'percentage');
+    setValue(offer ? String(offer.discountValue) : ''); setMinimum(offer?.minSpend === undefined ? '' : String(offer.minSpend)); setMaximum(offer?.maxUses === undefined ? '' : String(offer.maxUses));
+    setStart(offer && Number.isFinite(offerBoundary(offer.startDate)) ? offerDay(offerBoundary(offer.startDate)) : offerDay());
+    setEnd(offer && Number.isFinite(offerBoundary(offer.endDate, true)) ? offerDay(offerBoundary(offer.endDate, true)) : offerDay(Date.now() + 30 * 86400000));
+    setEnabled(!offer || !['paused', 'expired'].includes(offer.status)); setSample(''); setError('');
   };
-
-  const totalUsed = offers.reduce((acc, curr) => acc + curr.usedCount, 0);
-
-  return (
-    <div className="space-y-6 pb-12">
-      {/* Top Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-            {isAr ? 'إدارة العروض وقسائم التخفيض' : 'Offers & Promotional Coupons'}
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-            {isAr
-              ? 'إنشاء أكواد الخصم، متابعة معدلات الاستخدام، وتفعيل الحملات الترويجية.'
-              : 'Create promotional vouchers, track redemption rates, and boost conversions.'}
-          </p>
-        </div>
-
-        <Button
-          variant="primary"
-          leftIcon={<Plus className="w-4 h-4" />}
-          onClick={() => setIsOfferModalOpen(true)}
-        >
-          {isAr ? 'إنشاء كود خصم جديد' : 'Create New Coupon'}
-        </Button>
-      </div>
-
-      {/* Metrics Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-            <span>{isAr ? 'القسائم النشطة حالياً' : 'Active Coupons'}</span>
-            <Tag className="w-4 h-4 text-indigo-400" />
-          </div>
-          <div className="text-2xl font-bold text-white">
-            {offers.filter((o) => o.status === 'active').length}
-          </div>
-          <p className="text-[11px] text-slate-500 mt-1">
-            {isAr ? 'جاهزة للاستخدام عند الدفع' : 'Ready for checkout redemption'}
-          </p>
-        </Card>
-
-        <Card>
-          <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-            <span>{isAr ? 'إجمالي عمليات الاستخدام' : 'Total Redemptions'}</span>
-            <TrendingUp className="w-4 h-4 text-emerald-400" />
-          </div>
-          <div className="text-2xl font-bold text-emerald-400">
-            {formatNumber(totalUsed, isAr ? 'ar' : 'en')}
-          </div>
-          <p className="text-[11px] text-slate-500 mt-1">
-            {isAr ? 'في جميع فروع ومنافذ المتجر' : 'Across all channels'}
-          </p>
-        </Card>
-
-        <Card>
-          <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-            <span>{isAr ? 'القسائم المنتهية' : 'Expired Coupons'}</span>
-            <Clock className="w-4 h-4 text-amber-400" />
-          </div>
-          <div className="text-2xl font-bold text-slate-300">
-            {offers.filter((o) => o.status === 'expired').length}
-          </div>
-          <p className="text-[11px] text-slate-500 mt-1">
-            {isAr ? 'أنهت فترة الصلاحية المحددة' : 'Exceeded validity period'}
-          </p>
-        </Card>
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-        {[
-          { id: 'all', labelAr: 'جميع العروض', labelEn: 'All Offers' },
-          { id: 'active', labelAr: 'النشطة', labelEn: 'Active' },
-          { id: 'expired', labelAr: 'المنتهية', labelEn: 'Expired' },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setFilterStatus(tab.id)}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
-              filterStatus === tab.id
-                ? 'bg-indigo-600 text-white'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            {isAr ? tab.labelAr : tab.labelEn}
-          </button>
-        ))}
-      </div>
-
-      {/* Offers Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredOffers.map((offer) => {
-          const isExpired = offer.status === 'expired';
-          const isCopied = copiedCode === offer.code;
-
-          return (
-            <Card key={offer.id} hoverable className="space-y-4">
-              {/* Header with Title and Status */}
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-bold text-white text-base">
-                    {isAr ? offer.title : offer.titleEn}
-                  </h3>
-                  <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
-                    <span>{isAr ? 'الصلاحية حتى:' : 'Valid until:'} {offer.endDate}</span>
-                    {offer.minSpend && (
-                      <>
-                        <span>·</span>
-                        <span>{isAr ? 'الحد الأدنى:' : 'Min Spend:'} {formatCurrency(offer.minSpend, 'IQD', isAr ? 'ar' : 'en')}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                <StatusBadge
-                  status={isExpired ? 'inactive' : 'active'}
-                  label={
-                    isExpired
-                      ? isAr
-                        ? 'منتهي'
-                        : 'Expired'
-                      : isAr
-                      ? 'نشط'
-                      : 'Active'
-                  }
-                />
-              </div>
-
-              {/* Coupon Ticket Box */}
-              <div className="flex items-center justify-between p-3 rounded-lg bg-slate-950/60 border border-dashed border-slate-700">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold">
-                    {offer.discountType === 'percentage' ? (
-                      <span className="text-sm">%{offer.discountValue}</span>
-                    ) : (
-                      <span className="text-[11px] leading-tight text-center font-mono">{offer.discountValue.toLocaleString('en-US')}<br/>IQD</span>
-                    )}
-                  </div>
-                  <div>
-                    <div className="font-mono text-base font-extrabold text-white tracking-widest">
-                      {offer.code}
-                    </div>
-                    <div className="text-[11px] text-slate-400">
-                      {offer.discountType === 'percentage'
-                        ? isAr
-                          ? `خصم ${offer.discountValue}% على الطلب`
-                          : `${offer.discountValue}% off order`
-                        : isAr
-                        ? `خصم ${offer.discountValue.toLocaleString('en-US')} IQD`
-                        : `${offer.discountValue.toLocaleString('en-US')} IQD flat discount`}
-                    </div>
-                  </div>
-                </div>
-
-                <Button
-                  variant={isCopied ? 'emerald' : 'secondary'}
-                  size="sm"
-                  onClick={() => handleCopy(offer.code)}
-                  leftIcon={isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                >
-                  {isCopied ? (isAr ? 'تم النسخ' : 'Copied') : isAr ? 'نسخ' : 'Copy'}
-                </Button>
-              </div>
-
-              {/* Progress & Stats */}
-              <div className="space-y-1.5 pt-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">
-                    {isAr ? 'استخدامات الكود:' : 'Redemptions:'}{' '}
-                    <strong className="text-white">{offer.usedCount}</strong>
-                    {offer.maxUses ? ` / ${offer.maxUses}` : ''}
-                  </span>
-                  <span className="text-slate-500 font-mono text-[11px]">
-                    {offer.maxUses
-                      ? `${Math.round((offer.usedCount / offer.maxUses) * 100)}%`
-                      : isAr
-                      ? 'غير محدود'
-                      : 'Unlimited'}
-                  </span>
-                </div>
-
-                {offer.maxUses && (
-                  <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                    <div
-                      style={{ width: `${Math.min(100, (offer.usedCount / offer.maxUses) * 100)}%` }}
-                      className="h-full bg-indigo-500 rounded-full"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Actions Footer */}
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800/80">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    updateOffer(offer.id, {
-                      status: offer.status === 'active' ? 'expired' : 'active',
-                    })
-                  }
-                >
-                  {offer.status === 'active'
-                    ? isAr
-                      ? 'إيقاف مؤقت'
-                      : 'Deactivate'
-                    : isAr
-                    ? 'إعادة التفعيل'
-                    : 'Activate'}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => deleteOffer(offer.id)}
-                  className="text-rose-400 hover:text-rose-300"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* New Offer Modal */}
-      <Modal
-        isOpen={isOfferModalOpen}
-        onClose={() => setIsOfferModalOpen(false)}
-        title={isAr ? 'إنشاء كود خصم أو عرض جديد' : 'Create New Promotional Offer'}
-        description={isAr ? 'أدخل تفاصيل القسيمة ونسبة الخصم والشروط.' : 'Configure coupon code, discounts and rules.'}
-        maxWidth="md"
-      >
-        {/* Quick Offer Templates for Admin Convenience */}
-        <div className="space-y-1.5 pb-2 border-b border-slate-800">
-          <span className="text-[11px] font-semibold text-slate-400 block">
-            {isAr ? 'قوالب سريعة لتسهيل الإنشاء:' : 'Quick Templates:'}
-          </span>
-          <div className="flex flex-wrap gap-1.5">
-            {[
-              { title: 'تخفيضات الشتاء 20%', titleEn: 'Winter Sale 20%', code: 'WINTER20', type: 'percentage' as const, val: '20' },
-              { title: 'عرض نهاية الأسبوع 15%', titleEn: 'Weekend Deal 15%', code: 'WEEKEND15', type: 'percentage' as const, val: '15' },
-              { title: 'خصم خاص 25,000 د.ع', titleEn: 'Special 25,000 IQD', code: 'SAVE25K', type: 'fixed' as const, val: '25000' },
-              { title: 'شحن مجاني للطلبات', titleEn: 'Free Delivery', code: 'FREESHIP', type: 'fixed' as const, val: '5000' },
-            ].map((tmpl) => (
-              <button
-                key={tmpl.code}
-                type="button"
-                onClick={() => {
-                  setFormTitle(tmpl.title);
-                  setFormTitleEn(tmpl.titleEn);
-                  setFormCode(tmpl.code);
-                  setFormType(tmpl.type);
-                  setFormValue(tmpl.val);
-                }}
-                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-300 border border-slate-700 transition-colors cursor-pointer"
-              >
-                {tmpl.title}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <form onSubmit={handleCreateOffer} className="space-y-4 pt-2">
-          <Input
-            label={isAr ? 'عنوان العرض (عربي)' : 'Offer Title (Arabic)'}
-            placeholder={isAr ? 'مثال: تخفيضات الصيف الكبرى 20%' : 'e.g. Summer Sale 20%'}
-            required
-            value={formTitle}
-            onChange={(e) => setFormTitle(e.target.value)}
-          />
-
-          <Input
-            label={isAr ? 'عنوان العرض (إنجليزي)' : 'Offer Title (English)'}
-            placeholder="e.g. Grand Summer Discount"
-            value={formTitleEn}
-            onChange={(e) => setFormTitleEn(e.target.value)}
-          />
-
-          <Input
-            label={isAr ? 'رمز الكود الترويجي' : 'Coupon Code'}
-            placeholder="SUMMER20"
-            required
-            value={formCode}
-            onChange={(e) => setFormCode(toEnglishDigits(e.target.value).toUpperCase())}
-          />
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                {isAr ? 'نوع الخصم' : 'Discount Type'}
-              </label>
-              <select
-                value={formType}
-                onChange={(e) => setFormType(e.target.value as any)}
-                className="w-full bg-slate-900 border border-slate-800 text-slate-100 text-sm rounded-lg px-3 py-2 h-9.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-              >
-                <option value="percentage">{isAr ? 'نسبة مئوية (%)' : 'Percentage (%)'}</option>
-                <option value="fixed">{isAr ? 'مبلغ ثابت (IQD)' : 'Fixed Amount (IQD)'}</option>
-              </select>
-            </div>
-
-            <Input
-              label={isAr ? 'قيمة الخصم' : 'Discount Value'}
-              type="text"
-              inputMode="numeric"
-              dir="ltr"
-              placeholder={formType === 'percentage' ? '20' : '15000'}
-              required
-              value={formValue}
-              onChange={(e) => setFormValue(toEnglishDigits(e.target.value).replace(/[^0-9.]/g, ''))}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label={isAr ? 'الحد الأدنى للشراء (IQD)' : 'Min Spend (IQD)'}
-              type="text"
-              inputMode="numeric"
-              dir="ltr"
-              placeholder="35000"
-              value={formMinSpend}
-              onChange={(e) => setFormMinSpend(toEnglishDigits(e.target.value).replace(/[^0-9.]/g, ''))}
-            />
-
-            <Input
-              label={isAr ? 'الحد الأقصى للاستخدام' : 'Max Redemptions'}
-              type="text"
-              inputMode="numeric"
-              dir="ltr"
-              placeholder="500"
-              value={formMaxUses}
-              onChange={(e) => setFormMaxUses(toEnglishDigits(e.target.value).replace(/[^0-9]/g, ''))}
-            />
-          </div>
-
-          <Input
-            label={isAr ? 'تاريخ انتهاء الصلاحية' : 'Expiry Date'}
-            type="date"
-            value={formEndDate}
-            onChange={(e) => setFormEndDate(e.target.value)}
-          />
-
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
-            <Button variant="ghost" onClick={() => setIsOfferModalOpen(false)}>
-              {isAr ? 'إلغاء' : 'Cancel'}
-            </Button>
-            <Button variant="primary" type="submit">
-              {isAr ? 'إنشاء وتفعيل الآن' : 'Publish Offer'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
-    </div>
-  );
+  useEffect(() => { if (isOfferModalOpen && !editing) fill(); }, [isOfferModalOpen]);
+  const close = () => { if (!busy) { setIsOfferModalOpen(false); setEditing(null); setError(''); } };
+  const proposal: Offer = {
+    id: editing?.id || '', title: title.trim(), titleEn: titleEn.trim() || title.trim(), code: code.trim().toUpperCase(), discountType: type, discountValue: parseOfferNumber(value),
+    minSpend: minimum.trim() ? parseOfferNumber(minimum) : undefined, maxUses: maximum.trim() ? parseOfferNumber(maximum) : undefined,
+    status: enabled ? 'active' : 'paused', usedCount: editing?.usedCount || 0, startDate: start, endDate: end,
+  };
+  const issue = validateOffer(proposal, offers) || (proposal.maxUses !== undefined && proposal.maxUses < proposal.usedCount ? 'limit' : null);
+  const preview = !issue ? quoteOffer(proposal, parseOfferNumber(sample), now) : null;
+  const save = async () => {
+    if (busy) return;
+    if (issue) { setError(message(issue)); return; }
+    setBusy(true); setError('');
+    try {
+      const destination = editing ? await updateOffer(editing.id, proposal) : await addOffer(proposal);
+      setNotice(destination === 'cloud' ? t('تم حفظ سجل الحملة سحابياً. لم تتغير أسعار المنتجات أو السلة.', 'Campaign record saved to cloud. Product and cart prices were not changed.') : t('تم الحفظ محلياً فقط؛ الاتصال السحابي غير مهيّأ.', 'Saved locally only; cloud connection is not configured.'));
+      setIsOfferModalOpen(false); setEditing(null);
+    } catch (err) { setError(message(err instanceof Error ? err.message : 'save')); }
+    finally { setBusy(false); }
+  };
+  const toggle = async (offer: Offer) => {
+    if (busy) return;
+    setBusy(true); setNotice('');
+    try { const destination = await updateOffer(offer.id, { status: ['paused', 'expired'].includes(offer.status) ? 'active' : 'paused' }); setNotice(destination === 'cloud' ? t('تم حفظ حالة الحملة سحابياً. أسعار المنتجات المطبّقة سابقاً لا تتغير تلقائياً.', 'Campaign state saved to cloud. Previously applied product prices do not change automatically.') : t('تم تغيير الحالة محلياً فقط.', 'State changed locally only.')); }
+    catch (err) { setNotice(message(err instanceof Error ? err.message : 'save')); }
+    finally { setBusy(false); }
+  };
+  const filtered = offers.filter(offer => (filter === 'all' || offerState(offer, now) === filter) && [offer.title, offer.titleEn, offer.code].join(' ').toLowerCase().includes(search.trim().toLowerCase()));
+  const counts = { active: offers.filter(o => offerState(o, now) === 'active').length, scheduled: offers.filter(o => offerState(o, now) === 'scheduled').length };
+  return <div className="offers-manager min-w-0 space-y-5 pb-8">
+    <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-xl font-bold text-white">{t('الحملات وأكواد الخصم', 'Campaigns & discount codes')}</h2><p className="mt-2 text-sm text-slate-400">{t('إدارة الصلاحية والشروط، مع معاينة حساب الخصم قبل الحفظ.', 'Manage validity and conditions, and preview discounts before saving.')}</p></div><Button className="min-h-11" disabled={busy} leftIcon={<Plus className="h-4 w-4" />} onClick={() => { setEditing(null); fill(); setIsOfferModalOpen(true); }}>{t('إنشاء حملة', 'Create campaign')}</Button></div>
+    <p className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4 text-sm leading-6 text-slate-300">{t('هذه سجلات حملات. أكواد الخصم وحدود الاستخدام غير مرتبطة بتحصيل الطلبات حالياً، ولا تضيف خصماً في السلة. تطبيق حملة على سعر منتج إجراء منفصل من الكتالوج، ولا ينتهي تلقائياً بانتهاء الحملة.', 'These are campaign records. Coupon codes and usage limits are not connected to order redemption and do not discount the cart. Applying a campaign to product prices is a separate catalog action; those prices do not expire automatically.')}</p>
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{[[t('كل الحملات', 'All campaigns'), offers.length], [labels.active, counts.active], [labels.scheduled, counts.scheduled], [t('الاستخدام المسجّل', 'Recorded uses'), offers.reduce((sum, o) => sum + (Number.isSafeInteger(o.usedCount) && o.usedCount > 0 ? o.usedCount : 0), 0)]].map(([label, count]) => <div key={label} className="rounded-xl border border-slate-800 bg-slate-900 p-4"><p className="text-xs text-slate-400">{label}</p><p className="mt-2 text-xl font-bold text-white">{count}</p></div>)}</div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><Input label={t('بحث بالعنوان أو الكود', 'Search title or code')} icon={Search} value={search} onChange={e => setSearch(e.target.value)} className="min-h-11" /><label className="text-xs text-slate-300">{t('حالة الحملة', 'Campaign state')}<select aria-label={t('حالة الحملة', 'Campaign state')} value={filter} onChange={e => setFilter(e.target.value)} className="mt-1.5 min-h-11 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white"><option value="all">{t('جميع الحالات', 'All states')}</option>{Object.entries(labels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label></div>
+    {notice && <p role="status" className="rounded-xl border border-slate-700 p-3 text-sm text-slate-200">{notice}</p>}
+    <p role="status" className="text-xs text-slate-400">{t(`${filtered.length} من ${offers.length} حملة · الصلاحية بتوقيت بغداد`, `${filtered.length} of ${offers.length} campaigns · Baghdad time`)}</p>
+    {!filtered.length && <div className="rounded-2xl border border-dashed border-slate-700 py-12 px-4 text-center"><h3 className="font-bold text-white">{t(offers.length ? 'لا توجد نتائج مطابقة' : 'لا توجد حملات محفوظة', offers.length ? 'No matching campaigns' : 'No saved campaigns')}</h3><p className="mt-2 text-sm text-slate-400">{t('أنشئ حملة أو غيّر البحث والحالة للعثور عليها.', 'Create a campaign or adjust search and state.')}</p>{(search || filter !== 'all') && <Button variant="secondary" className="mt-4 min-h-11" onClick={() => { setSearch(''); setFilter('all'); }}>{t('مسح الفلاتر', 'Clear filters')}</Button>}</div>}
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">{filtered.map(offer => { const state = offerState(offer, now); return <article key={offer.id} className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-4 space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="min-w-0 flex-1 font-bold text-white break-words">{isAr ? offer.title : offer.titleEn || offer.title}</h3><span className="rounded-full border border-slate-700 px-2 py-1 text-xs text-indigo-200">{labels[state]}</span></div>
+      <div className="flex items-center gap-2 rounded-xl border border-dashed border-slate-700 bg-slate-950/60 p-3"><code dir="ltr" className="min-w-0 flex-1 break-all font-bold text-white">{offer.code}</code><Button variant="secondary" disabled={busy} className="min-h-11" aria-label={t(`نسخ ${offer.code}`, `Copy ${offer.code}`)} onClick={async () => { try { await navigator.clipboard.writeText(offer.code); setNotice(t('تم نسخ الكود.', 'Code copied.')); } catch { setNotice(t('تعذر النسخ. يمكنك تحديد الكود ونسخه يدوياً.', 'Copy failed. Select and copy the code manually.')); } }}><Copy className="h-4 w-4" /></Button></div>
+      <p className="text-xl font-bold text-indigo-300"><bdi dir="ltr">{Number.isFinite(offer.discountValue) ? offer.discountType === 'percentage' ? `${offer.discountValue}%` : money(offer.discountValue) : '—'}</bdi></p>
+      <dl className="grid grid-cols-2 gap-3 text-sm"><div><dt className="text-slate-500">{t('البداية', 'Starts')}</dt><dd className="break-all text-slate-200"><bdi>{offer.startDate}</bdi></dd></div><div><dt className="text-slate-500">{t('النهاية', 'Ends')}</dt><dd className="break-all text-slate-200"><bdi>{offer.endDate}</bdi></dd></div><div><dt className="text-slate-500">{t('أدنى شراء', 'Minimum spend')}</dt><dd className="break-all text-slate-200"><bdi>{offer.minSpend === undefined ? '—' : money(offer.minSpend)}</bdi></dd></div><div><dt className="text-slate-500">{t('الاستخدام المسجّل / الحد', 'Recorded uses / limit')}</dt><dd dir="ltr" className="text-slate-200">{offer.usedCount} / {offer.maxUses ?? '∞'}</dd></div></dl>
+      <div className="flex flex-wrap gap-2 border-t border-slate-800 pt-3"><Button variant="secondary" className="min-h-11" disabled={busy} leftIcon={<Pencil className="h-4 w-4" />} aria-label={t(`تعديل ${offer.code}`, `Edit ${offer.code}`)} onClick={() => { setEditing(offer); fill(offer); setIsOfferModalOpen(true); }}>{t('تعديل', 'Edit')}</Button><Button variant="secondary" className="min-h-11" disabled={busy || ['expired', 'exhausted', 'invalid'].includes(state)} onClick={() => toggle(offer)}>{t(state === 'paused' ? 'استئناف' : 'إيقاف', state === 'paused' ? 'Resume' : 'Pause')}</Button><Button variant="secondary" className="min-h-11 text-rose-300" disabled={busy} aria-label={t(`حذف ${offer.code}`, `Delete ${offer.code}`)} onClick={() => { setError(''); setRemoving(offer); }}><Trash2 className="h-4 w-4" /></Button></div>
+    </article>; })}</div>
+    <Sheet isOpen={isOfferModalOpen} onClose={close} title={t(editing ? 'تعديل الحملة' : 'إنشاء حملة', editing ? 'Edit campaign' : 'Create campaign')} description={t('الحفظ يسجل الحملة فقط. نهاية اليوم محسوبة بتوقيت بغداد.', 'Saving records the campaign only. End dates include the full Baghdad day.')} footer={<div className="space-y-3">{error && <p role="alert" className="text-sm text-rose-300">{error}</p>}<div className="flex gap-2"><Button className="min-h-11" isLoading={busy} onClick={save}>{t('حفظ الحملة', 'Save campaign')}</Button><Button variant="secondary" className="min-h-11" disabled={busy} onClick={close}>{t('إلغاء', 'Cancel')}</Button></div></div>}>
+      <form onSubmit={e => e.preventDefault()}><fieldset disabled={busy} className="space-y-4">
+        <Input label={t('العنوان بالعربي', 'Arabic title')} value={title} maxLength={160} onChange={e => setTitle(e.target.value)} className="min-h-11" />
+        <Input label={t('العنوان بالإنجليزي (اختياري)', 'English title (optional)')} value={titleEn} maxLength={160} onChange={e => setTitleEn(e.target.value)} className="min-h-11" />
+        <Input label={t('كود الحملة', 'Campaign code')} dir="ltr" value={code} maxLength={40} onChange={e => setCode(e.target.value.toUpperCase())} className="min-h-11" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><label className="text-xs text-slate-300">{t('نوع الخصم', 'Discount type')}<select aria-label={t('نوع الخصم', 'Discount type')} value={type} onChange={e => setType(e.target.value as 'percentage' | 'fixed')} className="mt-1.5 min-h-11 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white"><option value="percentage">{t('نسبة مئوية', 'Percentage')}</option><option value="fixed">{t('مبلغ ثابت IQD', 'Fixed IQD')}</option></select></label><Input label={t('قيمة الخصم', 'Discount value')} dir="ltr" inputMode="decimal" value={value} onChange={e => setValue(e.target.value)} className="min-h-11" /></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><Input label={t('أدنى شراء IQD (اختياري)', 'Minimum spend IQD (optional)')} dir="ltr" inputMode="numeric" value={minimum} onChange={e => setMinimum(e.target.value)} className="min-h-11" /><Input label={t('حد الاستخدام المخطط (اختياري)', 'Planned usage limit (optional)')} dir="ltr" inputMode="numeric" value={maximum} onChange={e => setMaximum(e.target.value)} className="min-h-11" /></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><Input label={t('تاريخ البداية', 'Start date')} type="date" value={start} onChange={e => setStart(e.target.value)} className="min-h-11" /><Input label={t('تاريخ النهاية', 'End date')} type="date" value={end} onChange={e => setEnd(e.target.value)} className="min-h-11" /></div>
+        <label className="flex min-h-11 items-center gap-3 text-sm text-slate-200"><input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} />{t('السماح باستخدام الحملة ضمن الصلاحية', 'Allow campaign use within its validity')}</label>
+        <section className="space-y-3 rounded-xl border border-slate-700 p-4"><h3 className="font-bold text-white">{t('معاينة حسابية فقط', 'Calculation preview only')}</h3><Input label={t('مبلغ الشراء للاختبار IQD', 'Sample subtotal IQD')} dir="ltr" inputMode="numeric" value={sample} onChange={e => setSample(e.target.value)} className="min-h-11" /><p role="status" className="text-sm leading-6 text-indigo-200">{preview ? t(`الخصم ${money(preview.discount)} · المتبقي ${money(preview.total)}`, `Discount ${money(preview.discount)} · Total ${money(preview.total)}`) : t('أكمل البيانات وأدخل مبلغاً يحقق الشروط؛ الحملة يجب أن تكون ضمن الصلاحية وغير موقوفة.', 'Complete valid details and a qualifying subtotal; the campaign must be within validity and not paused.')}</p></section>
+      </fieldset></form>
+    </Sheet>
+    <Sheet isOpen={!!removing} onClose={() => { if (!busy) setRemoving(null); }} title={t('تأكيد حذف الحملة', 'Confirm campaign deletion')} footer={<div className="space-y-3">{error && <p role="alert" className="text-sm text-rose-300">{error}</p>}<div className="flex gap-2"><Button variant="danger" className="min-h-11" isLoading={busy} onClick={async () => { if (!removing || busy) return; setBusy(true); try { const destination = await deleteOffer(removing.id); setRemoving(null); setNotice(destination === 'cloud' ? t('حُذف سجل الحملة سحابياً. أسعار المنتجات السابقة لم تتغير.', 'Campaign record deleted from cloud. Existing product prices were not changed.') : t('حُذف السجل محلياً فقط.', 'Record deleted locally only.')); } catch (err) { setError(message(err instanceof Error ? err.message : 'save')); } finally { setBusy(false); } }}>{t('حذف السجل', 'Delete record')}</Button><Button variant="secondary" className="min-h-11" disabled={busy} onClick={() => setRemoving(null)}>{t('إلغاء', 'Cancel')}</Button></div></div>}><p className="text-sm leading-7 text-slate-300">{t(`حذف الحملة ${removing?.code || ''}؟ يمكنك إيقافها للحفاظ على سجلها. حذفها لا يلغي خصومات المنتجات المطبّقة سابقاً.`, `Delete ${removing?.code || ''}? Pause it to preserve its record. Deleting does not remove previously applied product discounts.`)}</p></Sheet>
+  </div>;
 };
 export default AdminOffersManager;

@@ -39,7 +39,7 @@ test('known zero stock cannot stay available, while unknown quantities and comin
   assert.equal(stockAvailability(0, 'coming_soon'), 'coming_soon');
 });
 test('category offer planning validates all items before applying and preserves fixed campaign discounts', () => {
-  const campaign = { discountType: 'fixed', discountValue: 250 } as any;
+  const campaign = { id: 'test', title: 'Test', code: 'TEST', discountType: 'fixed', discountValue: 250, status: 'active', usedCount: 0, startDate: '2020-01-01', endDate: '2099-12-31' } as any;
   assert.deepEqual(catalogOfferPlan([product('a'), product('b', { price: 2000 })], { discountPercent: 25 }, campaign).map(row => row.salePrice), [750, 1750]);
   assert.throws(() => catalogOfferPlan([product('a'), product('b', { price: 100 })], {}, campaign));
   const link = new URL(productLink('https://example.test/?admin', 'piece & 1'));

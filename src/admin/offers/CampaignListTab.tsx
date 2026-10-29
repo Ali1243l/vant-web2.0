@@ -1,3 +1,4 @@
+import { productCampaignPrice } from './offerModel';
 import React from 'react';
 import { Search, Plus, Sparkles, Check, Tag } from 'lucide-react';
 import type { Product, Offer } from '../useAdminBridge';
@@ -25,6 +26,7 @@ interface CampaignListTabProps {
   applyToCategory: boolean;
   categoryCount: number;
   filteredCampaigns: Offer[];
+  campaignSaving: boolean;
   handleCreateNewCampaign: (e: React.FormEvent) => void;
   handleApplyCampaignOffer: () => void;
   onClose: () => void;
@@ -49,6 +51,7 @@ export const CampaignListTab: React.FC<CampaignListTabProps> = ({
   applyToCategory,
   categoryCount,
   filteredCampaigns,
+  campaignSaving,
   handleCreateNewCampaign,
   handleApplyCampaignOffer,
   onClose,
@@ -156,31 +159,28 @@ export const CampaignListTab: React.FC<CampaignListTabProps> = ({
                 ))}
               </div>
             </div>
-            <Button type="submit" variant="emerald" size="sm" className="w-full sm:w-auto">
+            <Button type="submit" isLoading={campaignSaving} variant="emerald" size="sm" className="w-full sm:w-auto">
               {isAr ? 'حفظ وإضافة للقوائم' : 'Save Campaign'}
             </Button>
           </div>
         </form>
       )}
 
+      <p className="text-xs text-slate-400">{isAr ? 'تظهر الحملات ضمن الصلاحية فقط، بدون حد شراء أو استخدام؛ الشروط الخاصة تحتاج ربطاً بالدفع.' : 'Only valid campaigns without spend or usage conditions appear; conditional codes require checkout integration.'}</p>
+      {!filteredCampaigns.length && <p role="status" className="p-4 text-sm text-slate-400">{isAr ? 'لا توجد حملات مؤهلة لهذا المنتج.' : 'No eligible campaigns for this product.'}</p>}
       {/* Campaign Options List */}
       <div className="space-y-2.5 max-h-80 overflow-y-auto pe-1 scrollbar-thin scrollbar-thumb-slate-700">
         {filteredCampaigns.map((campaign) => {
           const isSelected = selectedOfferId === campaign.id;
 
           // Calculate product price under this campaign
-          let promoPrice = product.price;
-          if (campaign.discountType === 'percentage') {
-            promoPrice =
-              Math.round((product.price * (1 - campaign.discountValue / 100)) / 250) * 250;
-          } else {
-            promoPrice = Math.max(0, product.price - campaign.discountValue);
-          }
+          const promoPrice = productCampaignPrice(campaign, product.price);
+          if (promoPrice === null) return null;
           const savings = product.price - promoPrice;
 
           // Count items assigned to this campaign
           const assignedCount = products.filter(
-            (p) => p.offerCampaign === campaign.title || p.offerCampaign === campaign.titleEn
+            (p) => p.offerCampaign === campaign.code || p.offerBadgeText === campaign.code || p.offerCampaign === campaign.title || p.offerCampaign === campaign.titleEn
           ).length;
 
           return (

@@ -1,3 +1,4 @@
+import { productCampaignPrice } from './offers/offerModel';
 import React, { useState, useEffect } from 'react';
 import { Tag, Layers } from 'lucide-react';
 import { Product, Offer } from './useAdminBridge';
@@ -26,7 +27,7 @@ interface ProductOfferModalProps {
     applyToAllInCategory?: boolean
   ) => void | boolean;
   onRemoveOffer: (productId: string, removeFromAllInCategory?: boolean) => void;
-  onAddNewOfferCampaign: (campaign: Omit<Offer, 'id' | 'usedCount'>) => void;
+  onAddNewOfferCampaign: (campaign: Omit<Offer, 'id' | 'usedCount'>) => Promise<'cloud' | 'local'>;
   isAr: boolean;
 }
 
@@ -60,11 +61,13 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
   const [newCampaignTitle, setNewCampaignTitle] = useState<string>('');
   const [newCampaignCode, setNewCampaignCode] = useState<string>('');
   const [newCampaignPercent, setNewCampaignPercent] = useState<number>(20);
+  const [campaignError, setCampaignError] = useState('');
+  const [campaignSaving, setCampaignSaving] = useState(false);
 
   // Initialize or reset when product opens
   useEffect(() => {
     if (product) {
-      const campaign = offers.find(offer => offer.title === product.offerCampaign || offer.titleEn === product.offerCampaign);
+      const campaign = offers.find(offer => offer.code === product.offerCampaign || offer.code === product.offerBadgeText || offer.title === product.offerCampaign || offer.titleEn === product.offerCampaign);
       setSelectedOfferId(campaign?.id || '');
       setActiveTab(campaign ? 'campaign' : 'custom');
       setPricingMode(product.salePrice ? 'fixedPrice' : 'percent');
@@ -105,9 +108,9 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
 
   // Active campaigns filtered by search
   const filteredCampaigns = offers.filter((o) => {
-    if (o.status !== 'active') return false;
+    if (productCampaignPrice(o, product.price) === null) return false;
     if (!campaignSearch.trim()) return true;
-    const q = campaignSearch.toLowerCase();
+    const q = campaignSearch.trim().toLowerCase();
     return (
       o.title.toLowerCase().includes(q) ||
       (o.titleEn && o.titleEn.toLowerCase().includes(q)) ||
@@ -153,11 +156,11 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
   };
 
   // Handle creating new campaign on the fly
-  const handleCreateNewCampaign = (e: React.FormEvent) => {
+  const handleCreateNewCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCampaignTitle.trim() || !newCampaignCode.trim()) return;
-
-    onAddNewOfferCampaign({
+    if (campaignSaving || !newCampaignTitle.trim() || !newCampaignCode.trim()) return;
+    setCampaignSaving(true); setCampaignError('');
+    try { await onAddNewOfferCampaign({
       title: newCampaignTitle.trim(),
       titleEn: newCampaignTitle.trim(),
       code: newCampaignCode.trim().toUpperCase(),
@@ -171,6 +174,8 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
     setShowCreateCampaignForm(false);
     setNewCampaignTitle('');
     setNewCampaignCode('');
+    } catch { setCampaignError(isAr ? 'تعذر حفظ الحملة؛ راجع الكود والنسبة والاتصال.' : 'Campaign could not be saved; check code, percentage and connectivity.'); }
+    finally { setCampaignSaving(false); }
   };
 
   // Handle applying selected campaign offer
@@ -180,19 +185,15 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
     const matched = offers.find((o) => o.id === selectedOfferId);
     if (!matched) return;
 
-    let finalPrice = product.price;
-    if (matched.discountType === 'percentage') {
-      finalPrice = Math.round((product.price * (1 - matched.discountValue / 100)) / 250) * 250;
-    } else {
-      finalPrice = Math.max(0, product.price - matched.discountValue);
-    }
+    const finalPrice = productCampaignPrice(matched, product.price);
+    if (finalPrice === null) return;
 
     const applied = onApplyOffer(
       product.id,
       {
         isOnOffer: true,
         salePrice: finalPrice,
-        offerCampaign: matched.title,
+        offerCampaign: matched.code,
         offerBadgeText: matched.code,
         discountPercent:
           matched.discountType === 'percentage'
@@ -219,6 +220,7 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
       maxWidth="xl"
     >
       <div className="space-y-5">
+        {campaignError && <p role="alert" className="text-sm text-rose-300">{campaignError}</p>}
         {/* Product Identity Bar & Bulk Category Switch */}
         <ProductIdentityBar
           product={product}
@@ -308,6 +310,7 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
             setNewCampaignPercent={setNewCampaignPercent}
             applyToCategory={applyToCategory}
             categoryCount={categoryCount}
+            campaignSaving={campaignSaving}
             filteredCampaigns={filteredCampaigns}
             handleCreateNewCampaign={handleCreateNewCampaign}
             handleApplyCampaignOffer={handleApplyCampaignOffer}

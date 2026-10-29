@@ -1,3 +1,4 @@
+import { productCampaignPrice } from '../offers/offerModel.ts';
 import type { Product, Offer } from '../useAdminBridge';
 
 export const hasProductOffer = (product: Product) => !!product.isOnOffer && typeof product.salePrice === 'number' && product.salePrice > 0 && product.salePrice < product.price;
@@ -44,7 +45,7 @@ export function productLink(origin: string, id: string | number) {
 
 export function catalogOfferPlan(products: Product[], updates: { salePrice?: number; discountPercent?: number }, campaign?: Offer) {
   return products.map(product => {
-    const salePrice = campaign ? campaign.discountType === 'percentage' ? Math.round(product.price * (1 - campaign.discountValue / 100) / 250) * 250 : product.price - campaign.discountValue
+    const salePrice = campaign ? productCampaignPrice(campaign, product.price) ?? undefined
       : updates.discountPercent !== undefined ? Math.round(product.price * (1 - updates.discountPercent / 100) / 250) * 250 : updates.salePrice;
     productPricePatch(product, { isOnOffer: true, salePrice });
     return { id: product.id, salePrice };

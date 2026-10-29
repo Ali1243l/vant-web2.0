@@ -86,7 +86,8 @@ export const ProductsManager: React.FC = () => {
       const product = products.find(item => item.id === productId);
       if (!product) throw new Error('Product not found');
       const targets = applyToAllInCategory ? products.filter(item => item.category === product.category) : [product];
-      const campaign = updates.offerCampaign ? offers.find(offer => offer.title === updates.offerCampaign || offer.titleEn === updates.offerCampaign) : undefined;
+      const campaign = updates.offerCampaign ? offers.find(offer => offer.code === updates.offerCampaign || offer.title === updates.offerCampaign || offer.titleEn === updates.offerCampaign) : undefined;
+      if (updates.offerCampaign && !campaign) throw new Error('Campaign no longer exists');
       const plan = catalogOfferPlan(targets, applyToAllInCategory ? updates : { salePrice: updates.salePrice }, campaign);
       for (const item of plan) updateProduct(item.id, { ...updates, salePrice: item.salePrice });
       showToast(isAr ? `حُدثت بيانات العرض في الكتالوج (${plan.length} منتج).` : `Catalog offer updated (${plan.length} products).`, 'info');

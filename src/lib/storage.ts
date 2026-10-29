@@ -1,3 +1,4 @@
+import { saveOfferSnapshot, fetchOfferSnapshot } from './offerStorage';
 import { supabase } from './supabase';
 import { normalizeOrders } from './orderModel';
 
@@ -486,85 +487,9 @@ export async function fetchOrdersFromSupabase(): Promise<any[] | null> {
   return null;
 }
 
-/**
- * Persists promotional offers directly into Supabase SQL table `offers` and cloud storage backup
- */
-export async function saveOffersToSupabase(offers: any[]): Promise<boolean> {
-  if (!supabase) return false;
-  try {
-    if (Array.isArray(offers) && offers.length > 0) {
-      const dbRows = offers.map((off) => ({
-        id: String(off.id),
-        title: off.title || '',
-        title_en: off.titleEn || off.title_en || '',
-        code: off.code || '',
-        discount_type: off.discountType || off.discount_type || 'percentage',
-        discount_value: Number(off.discountValue || off.discount_value || 0),
-        status: off.status || 'active',
-        start_date: off.startDate || off.start_date || new Date().toISOString(),
-        end_date: off.endDate || off.end_date || new Date().toISOString(),
-      }));
-      await supabase.from('offers').upsert(dbRows, { onConflict: 'id' });
-    }
-
-    const payload = JSON.stringify(offers, null, 2);
-    const blob = new Blob([payload], { type: 'application/json' });
-    const { error } = await supabase.storage.from('product-images').upload('config/offers.json', blob, {
-      contentType: 'application/json',
-      cacheControl: '0',
-      upsert: true,
-    });
-    if (!error) {
-      console.log('✓ Offers permanently synced to Supabase Cloud');
-      return true;
-    }
-  } catch (err) {
-    console.warn('Failed to save offers to Supabase:', err);
-  }
-  return false;
-}
-
-/**
- * Loads latest promotional offers from Supabase SQL table `offers` with fallback to Supabase Storage
- */
-export async function fetchOffersFromSupabase(): Promise<any[] | null> {
-  if (!supabase) return null;
-  try {
-    const { data: dbData, error: dbErr } = await supabase
-      .from('offers')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (!dbErr && Array.isArray(dbData) && dbData.length > 0) {
-      return dbData.map((d: any) => ({
-        id: String(d.id),
-        title: d.title || '',
-        titleEn: d.title_en || d.titleEn || '',
-        code: d.code || '',
-        discountType: d.discount_type || d.discountType || 'percentage',
-        discountValue: Number(d.discount_value || d.discountValue || 0),
-        status: d.status || 'active',
-        startDate: d.start_date || d.startDate || new Date().toISOString(),
-        endDate: d.end_date || d.endDate || new Date().toISOString(),
-        usedCount: Number(d.used_count || d.usedCount || 0),
-      }));
-    }
-
-    const { data: pubData } = supabase.storage.from('product-images').getPublicUrl('config/offers.json');
-    if (pubData?.publicUrl) {
-      const response = await fetch(`${pubData.publicUrl}?t=${Date.now()}`, { cache: 'no-store' });
-      if (response.ok) {
-        const json = await response.json();
-        if (Array.isArray(json)) {
-          return json;
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('Failed to fetch offers from Supabase:', err);
-  }
-  return null;
-}
+// Full snapshots preserve conditions and deletions; SQL is a legacy read fallback only.
+export const saveOffersToSupabase = (offers: any[]) => saveOfferSnapshot(supabase, offers);
+export const fetchOffersFromSupabase = () => fetchOfferSnapshot(supabase);
 
 /**
  * Recursively extracts all image files from DataTransferItemList (supports dragged folders and nested directories!)

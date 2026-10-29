@@ -70,7 +70,7 @@ export const ProductSizeSection: React.FC<ProductSizeSectionProps> = ({
   return (
     <div className="space-y-3">
       {/* Sizing Header Row: Title + Guide Trigger */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <span className="text-xs md:text-sm font-bold text-[#15171c] dark:text-white uppercase tracking-wider">
             {lang === 'ar' ? 'المقاس:' : 'Size:'}
@@ -248,23 +248,16 @@ export const ProductSizeSection: React.FC<ProductSizeSectionProps> = ({
                   <motion.div
                     initial={{ opacity: 0, y: 3 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`rounded-xl md:rounded-2xl p-3 md:p-3.5 border flex flex-col gap-2 ${
-                      dynamicRecommendation.isBespoke
-                        ? 'border-amber-500/30 bg-amber-500/[0.08] dark:bg-amber-500/[0.1]'
-                        : 'border-[#004ad7]/20 bg-[#004ad7]/[0.05] dark:bg-[#3b82f6]/[0.08]'
-                    }`}
+                    role="status"
+                    className="rounded-xl md:rounded-2xl border border-[#004ad7]/20 dark:border-[#3b82f6]/25 bg-white/60 dark:bg-[#11151c] p-4 space-y-3"
                   >
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-xs md:text-sm text-[#15171c] dark:text-white font-medium">
-                          {lang === 'ar' ? 'المقاس المقترح:' : 'Recommended Fit:'}
+                          {dynamicRecommendation.isBespoke ? (lang === 'ar' ? 'نتيجة دليل القياسات' : 'Size guide result') : (lang === 'ar' ? 'المقاس المقترح' : 'Suggested size')}
                         </span>
                         <span
-                          className={`rounded-md md:rounded-lg px-2 py-0.5 md:px-2.5 md:py-1 text-xs md:text-sm font-bold text-white shadow-2xs ${
-                            dynamicRecommendation.isBespoke
-                              ? 'bg-amber-600 dark:bg-amber-500'
-                              : 'bg-[#004ad7] dark:bg-[#3b82f6]'
-                          }`}
+                          className="rounded-lg border border-[#004ad7]/20 dark:border-[#3b82f6]/30 bg-[#004ad7]/[0.06] dark:bg-[#3b82f6]/10 px-3 py-1.5 text-sm font-bold text-[#004ad7] dark:text-[#60a5fa]"
                         >
                           {(dynamicRecommendation.isBespoke ? (lang === 'ar' ? 'لا توجد مطابقة' : 'No match') : dynamicRecommendation.displaySize)}
                         </span>
@@ -276,7 +269,7 @@ export const ProductSizeSection: React.FC<ProductSizeSectionProps> = ({
                             href={bespokeWhatsappUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="rounded-lg md:rounded-xl bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 px-2.5 py-1 md:px-3.5 md:py-1.5 text-[11px] md:text-xs font-semibold text-white shadow-2xs cursor-pointer"
+                            className="inline-flex min-h-11 w-full sm:w-auto items-center justify-center rounded-xl border border-[#004ad7]/25 dark:border-[#3b82f6]/35 px-4 text-xs font-semibold text-[#004ad7] dark:text-[#60a5fa] hover:bg-[#3b82f6]/10 focus-visible:outline-2 focus-visible:outline-[#3b82f6]"
                           >
                             {lang === 'ar' ? 'استفسار عن القياسات' : 'Ask about measurements'}
                           </a>
@@ -286,7 +279,7 @@ export const ProductSizeSection: React.FC<ProductSizeSectionProps> = ({
                           type="button"
                           disabled={isSoldOut || !availableSizes.has(dynamicRecommendation.size!)}
                           onClick={() => onSizeClick(dynamicRecommendation.size!)}
-                          className="rounded-lg md:rounded-xl bg-[#004ad7] dark:bg-[#3b82f6] px-2.5 py-1 md:px-3.5 md:py-1.5 text-[11px] md:text-xs font-semibold text-white shadow-2xs cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="min-h-11 w-full sm:w-auto rounded-lg md:rounded-xl bg-[#004ad7] dark:bg-[#3b82f6] px-3 py-2 md:px-3.5 text-[11px] md:text-xs font-semibold text-white shadow-2xs cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           {lang === 'ar'
                             ? (availableSizes.has(dynamicRecommendation.size!) && !isSoldOut ? `اختيار مقاس (${dynamicRecommendation.displaySize})` : 'المقاس غير متوفر لهذه القطعة')
@@ -295,7 +288,7 @@ export const ProductSizeSection: React.FC<ProductSizeSectionProps> = ({
                       ) : null}
                     </div>
 
-                    <p className="text-[10px] md:text-xs text-[#6b7280] dark:text-[#9ca3af] leading-relaxed">
+                    <p className="text-xs text-[#6b7280] dark:text-[#9ca3af] leading-6">
                       {lang === 'ar' ? dynamicRecommendation.note_ar : dynamicRecommendation.note_en}
                     </p>
                   </motion.div>

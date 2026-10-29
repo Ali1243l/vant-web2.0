@@ -163,7 +163,7 @@ function MainApp() {
     return () => clearInterval(interval);
   }, [isAdminOpen]);
 
-  // Auto-Apply Coupon & Offer Direct Routing from 1-Click Email Link (?coupon=... & ?filter=offers)
+  // Coupon links identify a code; they do not apply a cart discount.
   const [appliedCouponNotification, setAppliedCouponNotification] = useState<string | null>(null);
 
   useEffect(() => {
@@ -179,9 +179,7 @@ function MainApp() {
 
       if (couponParam) {
         const cleanCoupon = couponParam.trim().toUpperCase();
-        try {
-          localStorage.setItem('vant_applied_coupon', cleanCoupon);
-        } catch {}
+        if (!/^[A-Z0-9_-]{3,40}$/.test(cleanCoupon)) return;
         setAppliedCouponNotification(cleanCoupon);
         const timer = setTimeout(() => setAppliedCouponNotification(null), 8000);
         return () => clearTimeout(timer);
@@ -430,26 +428,27 @@ function MainApp() {
             transition={{ duration: 0.25, ease: 'easeOut' }}
             className="fixed top-20 left-1/2 -translate-x-1/2 z-[10000] w-[92%] max-w-md bg-[#0e121b]/95 border border-[#3b82f6]/60 text-white px-4 py-3.5 rounded-2xl shadow-2xl backdrop-blur-2xl flex items-center justify-between gap-3 text-start"
           >
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 items-center gap-3">
               <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-[#004ad7] to-[#3b82f6] flex items-center justify-center text-white shadow-lg shadow-[#004ad7]/30 shrink-0">
                 <Gift className="h-4.5 w-4.5" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <span className="text-xs font-bold block text-white">
-                  {lang === 'ar' ? 'تم تفعيل كود الخصم الحصري بنجاح!' : 'VIP Discount Code Activated!'}
+                  {lang === 'ar' ? 'كود مرفق بالرابط' : 'Code included in this link'}
                 </span>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="text-[11px] font-mono font-black text-[#60a5fa] bg-[#004ad7]/20 px-2 py-0.5 rounded-md border border-[#3b82f6]/40">
+                <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                  <span className="min-w-0 break-all text-[11px] font-mono font-black text-[#60a5fa] bg-[#004ad7]/20 px-2 py-0.5 rounded-md border border-[#3b82f6]/40">
                     {appliedCouponNotification}
                   </span>
                   <span className="text-[11px] text-zinc-300">
-                    {lang === 'ar' ? 'سارٍ على مشترياتك' : 'applied to your session'}
+                    {lang === 'ar' ? 'لم يُطبّق خصم بالسلة' : 'No cart discount has been applied'}
                   </span>
                 </div>
               </div>
             </div>
             <button
               type="button"
+              aria-label={lang === 'ar' ? 'إغلاق إشعار الكود' : 'Close code notice'}
               onClick={() => setAppliedCouponNotification(null)}
               className="text-zinc-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
             >

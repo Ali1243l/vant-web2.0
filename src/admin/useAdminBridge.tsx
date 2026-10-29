@@ -1,5 +1,6 @@
 import { useState, useEffect, createContext, useContext, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { normalizeOffers, validateOffer } from './offers/offerModel';
 import { useSiteControls } from '../context/SiteControlsContext';
 import type { Product as StoreProduct, ProductAvailability } from '../types';
 import { getStoredSubscribers, addSubscriber as addStoredSubscriber, removeSubscriber as removeStoredSubscriber, syncSubscribersFromCloud, saveSubscribers } from '../lib/newsletter';
@@ -118,7 +119,7 @@ export interface Offer {
   discountType: 'percentage' | 'fixed';
   discountValue: number;
   minSpend?: number;
-  status: 'active' | 'scheduled' | 'expired';
+  status: 'active' | 'scheduled' | 'paused' | 'expired';
   usedCount: number;
   maxUses?: number;
   startDate: string;
@@ -257,9 +258,9 @@ interface AdminContextType {
   toggleProductOffer: (id: string) => void;
   
   offers: Offer[];
-  addOffer: (offer: Omit<Offer, 'id' | 'usedCount'>) => void;
-  updateOffer: (id: string, offer: Partial<Offer>) => void;
-  deleteOffer: (id: string) => void;
+  addOffer: (offer: Omit<Offer, 'id' | 'usedCount'>) => Promise<'cloud' | 'local'>;
+  updateOffer: (id: string, offer: Partial<Offer>) => Promise<'cloud' | 'local'>;
+  deleteOffer: (id: string) => Promise<'cloud' | 'local'>;
   
   subscribers: Subscriber[];
   addSubscriber: (sub: Omit<Subscriber, 'id' | 'joinedDate' | 'totalOrders' | 'totalSpent'>) => void;
@@ -563,56 +564,56 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [siteControls]);
 
-  // Offers System (integrated with campaigns and synced with Supabase Cloud)
   const [offers, setOffers] = useState<Offer[]>(() => {
-    try {
-      const saved = localStorage.getItem('vant_offers_v1');
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return defaultOffers;
+    try { return normalizeOffers(JSON.parse(localStorage.getItem('vant_offers_v1') || '[]')); }
+    catch { return defaultOffers; }
   });
-
-  // Load latest offers from Supabase on mount
+  const offersRef = useRef(offers);
+  const offerWriteBusy = useRef(false);
   useEffect(() => {
-    fetchOffersFromSupabase().then((remoteOffers) => {
-      if (remoteOffers && Array.isArray(remoteOffers) && remoteOffers.length > 0) {
-        setOffers(remoteOffers);
-        try { localStorage.setItem('vant_offers_v1', JSON.stringify(remoteOffers)); } catch {}
+    let cancelled = false;
+    const original = offersRef.current;
+    fetchOffersFromSupabase().then(remote => {
+      if (!cancelled && remote !== null && !offerWriteBusy.current && offersRef.current === original) {
+        const next = normalizeOffers(remote);
+        offersRef.current = next;
+        setOffers(next);
+        try { localStorage.setItem('vant_offers_v1', JSON.stringify(next)); } catch {}
       }
     }).catch(() => {});
+    return () => { cancelled = true; };
   }, []);
-
-  const addOffer = useCallback((newOff: Omit<Offer, 'id' | 'usedCount'>) => {
-    const offer: Offer = {
-      ...newOff,
-      id: 'off-' + Date.now(),
-      usedCount: 0,
-    };
-    setOffers((prev) => {
-      const next = [offer, ...prev];
-      try { localStorage.setItem('vant_offers_v1', JSON.stringify(next)); } catch {}
-      saveOffersToSupabase(next);
-      return next;
-    });
+  const persistOffers = useCallback(async (next: Offer[]): Promise<'cloud' | 'local'> => {
+    if (offerWriteBusy.current) throw new Error('busy');
+    offerWriteBusy.current = true;
+    try {
+      if (supabase && !await saveOffersToSupabase(next)) throw new Error('save');
+      if (supabase) {
+        try { localStorage.setItem('vant_offers_v1', JSON.stringify(next)); } catch {}
+      } else localStorage.setItem('vant_offers_v1', JSON.stringify(next));
+      offersRef.current = next;
+      setOffers(next);
+      return supabase ? 'cloud' : 'local';
+    } finally { offerWriteBusy.current = false; }
   }, []);
-
-  const updateOffer = useCallback((id: string, updated: Partial<Offer>) => {
-    setOffers((prev) => {
-      const next = prev.map((o) => (o.id === id ? { ...o, ...updated } : o));
-      try { localStorage.setItem('vant_offers_v1', JSON.stringify(next)); } catch {}
-      saveOffersToSupabase(next);
-      return next;
-    });
-  }, []);
-
-  const deleteOffer = useCallback((id: string) => {
-    setOffers((prev) => {
-      const next = prev.filter((o) => o.id !== id);
-      try { localStorage.setItem('vant_offers_v1', JSON.stringify(next)); } catch {}
-      saveOffersToSupabase(next);
-      return next;
-    });
-  }, []);
+  const addOffer = useCallback(async (newOff: Omit<Offer, 'id' | 'usedCount'>) => {
+    const offer: Offer = { ...newOff, code: newOff.code.trim().toUpperCase(), id: `off-${crypto.randomUUID()}`, usedCount: 0 };
+    const issue = validateOffer(offer, offersRef.current);
+    if (issue) throw new Error(issue);
+    return persistOffers([offer, ...offersRef.current]);
+  }, [persistOffers]);
+  const updateOffer = useCallback(async (id: string, updates: Partial<Offer>) => {
+    const current = offersRef.current.find(row => row.id === id);
+    if (!current) throw new Error('missing');
+    const updated = { ...current, ...updates, id, usedCount: current.usedCount, code: (updates.code ?? current.code).trim().toUpperCase() };
+    const issue = validateOffer(updated, offersRef.current) || (updated.maxUses !== undefined && updated.maxUses < updated.usedCount ? 'limit' : null);
+    if (issue) throw new Error(issue);
+    return persistOffers(offersRef.current.map(row => row.id === id ? updated : row));
+  }, [persistOffers]);
+  const deleteOffer = useCallback(async (id: string) => {
+    if (!offersRef.current.some(row => row.id === id)) throw new Error('missing');
+    return persistOffers(offersRef.current.filter(row => row.id !== id));
+  }, [persistOffers]);
 
   // Subscribers adapter (bridged with newsletter.ts & Supabase Cloud)
   const [subscribers, setSubscribers] = useState<Subscriber[]>(() => {
