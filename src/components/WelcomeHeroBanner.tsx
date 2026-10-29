@@ -189,14 +189,14 @@ export default function WelcomeHeroBanner({
                 {heroTagControl.visible && (
                   <div className="flex items-center justify-between pb-3 border-b border-black/8 dark:border-white/10">
                     <div className="flex items-center gap-2.5">
-                      <span className="flex h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-[#004ad7] dark:bg-[#3b82f6]" />
+                      <span style={appearance.motif !== 'none' ? { backgroundColor: appearance.accentColor } : undefined} className="flex h-1.5 w-1.5 sm:h-2 sm:w-2 shrink-0 rounded-full bg-[#004ad7] dark:bg-[#3b82f6]" />
                       <span className={`text-[10.5px] sm:text-xs font-semibold text-[#15171c] dark:text-[#f3f4f6] ${isAr ? 'tracking-normal' : 'tracking-[0.16em] uppercase'}`}>
                         {tagText}
                       </span>
-                      <span className="hidden sm:inline text-black/20 dark:text-white/20">|</span>
+                      {appearance.motif === 'none' && <><span className="hidden sm:inline text-black/20 dark:text-white/20">|</span>
                       <span className="hidden sm:inline text-[11px] text-[#15171c]/60 dark:text-white/60">
                         {isAr ? 'إصدار أرشيفي استثنائي' : 'Archived Capsule Release'}
-                      </span>
+                      </span></>}
                     </div>
 
                     {/* Dismiss / Close Button */}

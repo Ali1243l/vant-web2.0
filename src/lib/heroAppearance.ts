@@ -1,7 +1,12 @@
 export const HERO_APPEARANCE_CONTROL = 'banner_hero_appearance';
 export type FadeDirection = 'caption' | 'left' | 'right' | 'top' | 'bottom' | 'custom';
+export const HERO_MOTIFS = ['none', 'snow', 'sun', 'bloom', 'leaf', 'celebration', 'crescent', 'gift', 'sale', 'school'] as const;
+export type HeroMotif = typeof HERO_MOTIFS[number];
 
 export interface HeroAppearance {
+  motif: HeroMotif;
+  accentColor: string;
+  motifOpacity: number;
   fadeEnabled: boolean;
   direction: FadeDirection;
   mobileDirection: FadeDirection;
@@ -32,6 +37,7 @@ export interface HeroAppearance {
 }
 
 export const DEFAULT_HERO_APPEARANCE: HeroAppearance = {
+  motif: 'none', accentColor: '#3b82f6', motifOpacity: 55,
   fadeEnabled: true, direction: 'caption', mobileDirection: 'bottom',
   angle: 90, mobileAngle: 0, start: 0, middle: 42, end: 100,
   startOpacity: 96, middleOpacity: 78, endOpacity: 6,
@@ -43,6 +49,7 @@ export const DEFAULT_HERO_APPEARANCE: HeroAppearance = {
 };
 
 const bounds: Partial<Record<keyof HeroAppearance, [number, number]>> = {
+  motifOpacity: [0, 100],
   angle: [0, 360], mobileAngle: [0, 360], start: [0, 100], middle: [0, 100], end: [0, 100],
   startOpacity: [0, 100], middleOpacity: [0, 100], endOpacity: [0, 100],
   mobileStartOpacity: [0, 100], mobileMiddleOpacity: [0, 100], mobileEndOpacity: [0, 100],
@@ -65,10 +72,11 @@ export function parseHeroAppearance(raw?: string): HeroAppearance {
   for (const key of ['direction', 'mobileDirection'] as const) {
     if (['caption', 'left', 'right', 'top', 'bottom', 'custom'].includes(input[key] as string)) result[key] = input[key] as FadeDirection;
   }
-  for (const key of ['lightColor', 'darkColor'] as const) {
+  for (const key of ['lightColor', 'darkColor', 'accentColor'] as const) {
     if (typeof input[key] === 'string' && /^#[0-9a-f]{6}$/i.test(input[key])) result[key] = input[key];
   }
   if (typeof input.fadeEnabled === 'boolean') result.fadeEnabled = input.fadeEnabled;
+  if (HERO_MOTIFS.includes(input.motif as HeroMotif)) result.motif = input.motif as HeroMotif;
   result.middle = Math.max(result.start, result.middle);
   result.end = Math.max(result.middle, result.end);
   return result;
@@ -92,6 +100,7 @@ export function heroBackgroundVariables(settings: HeroAppearance, isAr: boolean)
     `rgb(var(--hero-rgb) / ${settings.mobileEndOpacity / 100}) ${settings.end}%`,
   ].join(', ');
   return {
+    '--hero-accent': settings.accentColor,
     '--hero-light-rgb': rgb(settings.lightColor), '--hero-dark-rgb': rgb(settings.darkColor),
     '--hero-desktop-angle': `${heroFadeAngle(settings.direction, settings.angle, isAr)}deg`,
     '--hero-mobile-angle': `${heroFadeAngle(settings.mobileDirection, settings.mobileAngle, isAr)}deg`,
