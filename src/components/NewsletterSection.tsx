@@ -23,6 +23,7 @@ import {
 } from '../lib/newsletter';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { useScrollLock } from '../hooks/useScrollLock';
+import { controlActive } from '../lib/siteControlModel';
 
 interface Props {
   lang: Language;
@@ -34,10 +35,12 @@ const IP_MAP_KEY = 'vant_ip_subscribers_map';
 export default function NewsletterSection({ lang }: Props) {
   const isAr = lang === 'ar';
   const {
+    getControl,
     siteSettings,
     isPreviewWelcomeModal,
     setIsPreviewWelcomeModal,
   } = useSiteControls();
+  const signupControl = getControl('btn_newsletter_subscribe');
 
   const welcomeTitle = isAr
     ? siteSettings.welcome_title_ar || 'أهلاً بك في ڤانت!'
@@ -139,6 +142,7 @@ export default function NewsletterSection({ lang }: Props) {
   // 2. Submit new email subscription
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!controlActive(signupControl)) return;
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail) {
       setErrorMsg(isAr ? 'يرجى كتابة البريد الإلكتروني في الحقل' : 'Please enter your email address');
@@ -376,7 +380,7 @@ export default function NewsletterSection({ lang }: Props) {
                     <input
                       type="email"
                       value={email}
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || !controlActive(signupControl)}
                       onChange={(e) => {
                         setEmail(e.target.value);
                         if (errorMsg) setErrorMsg('');
@@ -390,24 +394,24 @@ export default function NewsletterSection({ lang }: Props) {
                       className="w-full min-w-0 bg-transparent px-2.5 py-1.5 md:px-3.5 md:py-2 text-xs sm:text-[13px] md:text-sm text-[#15171c] dark:text-white placeholder-[#6b7280] dark:placeholder-white/50 outline-none disabled:opacity-50"
                     />
 
-                    <button
+                    {signupControl.visible && <button
                       data-store-primary
                       type="submit"
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || !controlActive(signupControl)}
                       className="shrink-0 inline-flex items-center justify-center gap-1.5 md:gap-2 rounded-full bg-[#004ad7] hover:bg-[#003db3] dark:bg-[#3b82f6] dark:hover:bg-[#2563eb] px-4 py-2 md:h-12 md:px-6 text-xs md:text-sm font-bold text-white transition-all active:scale-95 shadow-sm cursor-pointer disabled:opacity-60"
                     >
                       {isSubmitting ? (
                         <>
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          <span>{isAr ? 'جاري التوثيق...' : 'ENCRYPTING...'}</span>
+                          <span>{isAr ? 'جاري الاشتراك...' : 'Subscribing…'}</span>
                         </>
                       ) : (
                         <>
-                          <span>{isAr ? siteSettings.newsletter_button_ar || 'اشتراك' : siteSettings.newsletter_button_en || 'Subscribe'}</span>
+                          <span>{signupControl.actionValue === 'custom-label' ? (isAr ? signupControl.label_ar : signupControl.label_en) : isAr ? siteSettings.newsletter_button_ar || signupControl.label_ar : siteSettings.newsletter_button_en || signupControl.label_en}</span>
                           <ArrowRight className={`h-3.5 w-3.5 transition-transform ${isAr ? 'rotate-180' : ''}`} />
                         </>
                       )}
-                    </button>
+                    </button>}
                   </motion.form>
                 ) : (
                   /* 2. Clean, Minimalist Logged-in Account Card */

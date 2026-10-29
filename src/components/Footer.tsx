@@ -1,3 +1,4 @@
+import { controlActive } from '../lib/siteControlModel';
 import { useRef } from 'react';
 import type { Language } from '../types';
 import { useSiteControls } from '../context/SiteControlsContext';
@@ -77,7 +78,7 @@ export default function Footer({ lang, onAdminTrigger }: Props) {
             {activeLinks.map((social, index) => (
               <div key={social.id} className="flex items-center gap-2 sm:gap-3.5">
                 <a
-                  href={social.href || '#'}
+                  aria-disabled={!controlActive(socialLinksControl)} tabIndex={controlActive(socialLinksControl) ? 0 : -1} href={controlActive(socialLinksControl) ? social.href || '#' : undefined}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group inline-flex items-center gap-1.5 rounded-full border border-black/8 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.04] px-2.5 py-1 sm:px-3 sm:py-1.5 text-[#15171c]/75 dark:text-white/75 hover:text-[#004ad7] dark:hover:text-[#3b82f6] hover:border-[#004ad7]/30 dark:hover:border-[#3b82f6]/40 hover:bg-black/[0.04] dark:hover:bg-white/[0.08] active:scale-95 transition-all shadow-2xs"

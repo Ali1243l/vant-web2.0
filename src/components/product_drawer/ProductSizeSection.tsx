@@ -1,3 +1,4 @@
+import { controlActive } from '../../lib/siteControlModel';
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Ruler, Check, AlertCircle, X } from 'lucide-react';
@@ -87,9 +88,10 @@ export const ProductSizeSection: React.FC<ProductSizeSectionProps> = ({
         </div>
 
         {sizeGuideControl.visible && (
-          <button
+          <button disabled={!controlActive(sizeGuideControl)}
             type="button"
             onClick={() => {
+              if (!controlActive(sizeGuideControl)) return;
               const next = !showSizeGuide;
               setShowSizeGuide(next);
               if (next && product) {
@@ -99,7 +101,7 @@ export const ProductSizeSection: React.FC<ProductSizeSectionProps> = ({
             className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 py-1.5 bg-black/[0.03] dark:bg-white/[0.05] border border-black/8 dark:border-white/10 text-xs font-semibold text-[#004ad7] dark:text-[#3b82f6] hover:bg-[#004ad7]/10 dark:hover:bg-[#3b82f6]/15 cursor-pointer transition-all active:scale-95"
           >
             <Ruler className="h-3.5 w-3.5" />
-            <span>{lang === 'ar' ? sizeGuideControl.label_ar : sizeGuideControl.label_en}</span>
+            <span className="min-w-0 max-w-48 truncate">{lang === 'ar' ? sizeGuideControl.label_ar : sizeGuideControl.label_en}</span>
           </button>
         )}
       </div>
@@ -152,7 +154,7 @@ export const ProductSizeSection: React.FC<ProductSizeSectionProps> = ({
 
       {/* Tabbed Expandable Size Guide (Calculators & Tables) */}
       <AnimatePresence>
-        {showSizeGuide && (
+        {showSizeGuide && controlActive(sizeGuideControl) && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
@@ -266,12 +268,12 @@ export const ProductSizeSection: React.FC<ProductSizeSectionProps> = ({
                       {dynamicRecommendation.isBespoke ? (
                         bespokeControl.visible ? (
                           <a
-                            href={bespokeWhatsappUrl}
+                            aria-disabled={!controlActive(bespokeControl)} tabIndex={controlActive(bespokeControl) ? 0 : -1} href={controlActive(bespokeControl) ? bespokeWhatsappUrl : undefined}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex min-h-11 w-full sm:w-auto items-center justify-center rounded-xl border border-[#004ad7]/25 dark:border-[#3b82f6]/35 px-4 text-xs font-semibold text-[#004ad7] dark:text-[#60a5fa] hover:bg-[#3b82f6]/10 focus-visible:outline-2 focus-visible:outline-[#3b82f6]"
                           >
-                            {lang === 'ar' ? 'استفسار عن القياسات' : 'Ask about measurements'}
+                            {lang === 'ar' ? bespokeControl.label_ar : bespokeControl.label_en}
                           </a>
                         ) : null
                       ) : dynamicRecommendation.size ? (

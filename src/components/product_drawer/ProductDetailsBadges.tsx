@@ -1,3 +1,4 @@
+import { controlActive } from '../../lib/siteControlModel';
 import React from 'react';
 import { Check, Copy, Share2, Truck, Sparkles } from 'lucide-react';
 import type { Language } from '../../types';
@@ -89,11 +90,11 @@ export const ProductDetailsBadges: React.FC<ProductDetailsBadgesProps> = ({
 
       {/* 3. Utility Actions (Copy Title & Share) - Understated Row */}
       {(shareControl.visible || copyControl.visible) && (
-        <div className="flex items-center gap-2 pt-1 border-t border-black/5 dark:border-white/5">
+        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-black/5 dark:border-white/5">
           {copyControl.visible && (
             <button
               type="button"
-              onClick={handleCopyTitle}
+              disabled={!controlActive(copyControl)} onClick={handleCopyTitle}
               className="relative flex h-11 items-center gap-1.5 rounded-lg border border-black/8 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.04] hover:bg-black/[0.05] dark:hover:bg-white/8 px-2.5 text-[11px] text-[#15171c] dark:text-white hover:border-[#004ad7] dark:hover:border-[#3b82f6] hover:text-[#004ad7] dark:hover:text-[#3b82f6] transition-all active:scale-95 cursor-pointer font-medium select-none"
               title={isAr ? copyControl.label_ar : copyControl.label_en}
             >
@@ -107,7 +108,7 @@ export const ProductDetailsBadges: React.FC<ProductDetailsBadgesProps> = ({
               ) : (
                 <>
                   <Copy className="h-3 w-3 text-[#6b7280] dark:text-[#9ca3af] shrink-0" />
-                  <span>{isAr ? copyControl.label_ar : copyControl.label_en}</span>
+                  <span className="min-w-0 max-w-32 truncate">{isAr ? copyControl.label_ar : copyControl.label_en}</span>
                 </>
               )}
             </button>
@@ -116,13 +117,13 @@ export const ProductDetailsBadges: React.FC<ProductDetailsBadgesProps> = ({
           {shareControl.visible && (
             <button
               type="button"
-              onClick={onOpenShareModal}
+              disabled={!controlActive(shareControl)} onClick={onOpenShareModal}
               className="flex h-11 items-center gap-1.5 rounded-lg border border-black/8 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.04] hover:bg-black/[0.05] dark:hover:bg-white/8 px-2.5 text-[11px] text-[#15171c] dark:text-white hover:border-[#004ad7] dark:hover:border-[#3b82f6] hover:text-[#004ad7] dark:hover:text-[#3b82f6] transition-all active:scale-95 cursor-pointer font-medium select-none"
               title={isAr ? shareControl.label_ar : shareControl.label_en}
               aria-label={isAr ? shareControl.label_ar : shareControl.label_en}
             >
               <Share2 className="h-3 w-3 text-[#6b7280] dark:text-[#9ca3af] shrink-0" />
-              <span>{isAr ? shareControl.label_ar : shareControl.label_en}</span>
+              <span className="min-w-0 max-w-32 truncate">{isAr ? shareControl.label_ar : shareControl.label_en}</span>
             </button>
           )}
         </div>

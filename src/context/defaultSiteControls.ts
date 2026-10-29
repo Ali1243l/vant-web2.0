@@ -28,17 +28,20 @@ export const DEFAULT_SITE_CONTROLS: Record<string, SiteControlItem> = {
     description_ar: 'أيقونة إظهار دراج سلة التسوق وشارة عدد القطع المضافة بالترويسة',
     description_en: 'Triggers the dedicated shopping cart drawer and count badge',
   },
+  btn_cart_whatsapp: { id: 'btn_cart_whatsapp', category: 'cart', name_ar: 'تثبيت السلة عبر واتساب', name_en: 'Confirm cart via WhatsApp', visible: true, enabled: true, label_ar: 'تثبيت الطلب عبر واتساب', label_en: 'Confirm order via WhatsApp', description_ar: 'فتح رسالة السلة للتثبيت والدفع عند الاستلام؛ لا يوجد دفع إلكتروني.', description_en: 'Open the cart message for cash-on-delivery confirmation; no online payment.' },
+  feature_whatsapp: { id: 'feature_whatsapp', category: 'whatsapp', name_ar: 'المفتاح الرئيسي لطلبات واستفسارات واتساب', name_en: 'WhatsApp order & inquiry master switch', visible: true, enabled: true, label_ar: 'تشغيل واتساب', label_en: 'Enable WhatsApp', description_ar: 'يوقف روابط استفسار القطعة وتثبيت السلة والتفصيل الخاص مع الاحتفاظ بأرقامها وإعداداتها. لا يرسل أي رسالة.', description_en: 'Stops product inquiry, cart confirmation and bespoke links while preserving numbers and settings. Sends no message.' },
+  btn_newsletter_subscribe: { id: 'btn_newsletter_subscribe', category: 'brand_footer', name_ar: 'زر الاشتراك بالنشرة', name_en: 'Newsletter signup button', visible: true, enabled: true, label_ar: 'اشتراك', label_en: 'Subscribe' },
   enableCartAnimation: {
     id: 'enableCartAnimation',
     category: 'cart',
-    name_ar: 'أنيميشن طيران الصورة نحو أيقونة السلة (60fps)',
+    name_ar: 'حركة انتقال صورة القطعة إلى السلة',
     name_en: 'Cart Thumbnail Drop Flying Animation',
     visible: true,
     enabled: true,
     label_ar: 'تفعيل أنيميشن سقوط الصورة للسلة',
     label_en: 'Enable Cart Drop Flying Effect',
     description_ar: 'أنيميشن سقوط وانزلاق صورة المنتج بنعومة نحو أيقونة السلة بالترويسة عند الإضافة',
-    description_en: '60fps smooth arc thumbnail animation traveling toward cart icon upon adding item',
+    description_en: 'Thumbnail animation traveling toward the cart icon when adding an item; respects the animation switch.',
   },
 
   // =========================================================================
@@ -490,7 +493,7 @@ export const DEFAULT_SITE_CONTROLS: Record<string, SiteControlItem> = {
   footer_copyright_brand: {
     id: 'footer_copyright_brand',
     category: 'brand_footer',
-    name_ar: 'نص حقوق النشر وتوقيع الدار',
+    name_ar: 'نص حقوق النشر وتوقيع فانت',
     name_en: 'Footer Copyright & Brand Mark',
     visible: true,
     enabled: true,

@@ -1,4 +1,5 @@
 import type { BannerEdits, TrendEdits } from '../lib/bannerEditor';
+import type { ControlEdits } from '../lib/siteControlModel';
 import type { Product, ProductAvailability, TrendItem } from "../types";
 import type { FooterSocialLink } from "../data/socialPlatforms";
 import type { MasterSizeItem } from "../data/sizeGuide";
@@ -286,6 +287,7 @@ export interface SiteControlsContextType {
   toggleEnabled: (id: string) => void;
   updateControl: (id: string, updates: Partial<SiteControlItem>) => void;
   saveBannerEdits: (controls: BannerEdits, trends: TrendEdits) => Promise<'cloud' | 'local'>;
+  saveControlEdits: (edits: ControlEdits) => Promise<'cloud' | 'local'>;
   resetControl: (id: string) => void;
   resetAllControls: () => void;
   exportConfigJSON: () => string;

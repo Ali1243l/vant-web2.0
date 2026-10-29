@@ -24,6 +24,7 @@ import { scrollStorefrontTo } from './lib/pageScroll';
 import { STORE_THEME_CONTROL, parseStoreTheme, storeThemeVariables } from './lib/storefrontTheme';
 import { BANNER_TARGET_CONTROL, parseBannerTarget, matchesBannerTarget, bannerPageRequestKey, type BannerTarget } from './lib/bannerTarget';
 import './storefront-theme.css';
+import { controlActive } from './lib/siteControlModel';
 
 const ALL = 'All';
 const AdminDrawer = lazy(() => import('./components/AdminDrawer'));
@@ -124,6 +125,18 @@ function MainApp() {
   const [isBannerDismissed, setIsBannerDismissed] = useState(false);
   const [catalogSort, setCatalogSort] = useState<'newest' | 'price_asc' | 'price_desc' | 'offers'>('newest');
   const [gridLayout, setGridLayout] = useState<'grid-4' | 'grid-2'>('grid-4');
+  const searchAvailable = controlActive(getControl('btn_header_search'));
+  const cartAvailable = controlActive(getControl('btn_header_cart'));
+  const wishlistAvailable = controlActive(getControl('btn_header_wishlist'));
+  const categoriesAvailable = controlActive(getControl('sec_category_tabs'));
+  const availabilityAvailable = controlActive(getControl('btn_filter_availability'));
+  useEffect(() => {
+    if (!searchAvailable) { setSearchQuery(''); setIsSearchOpen(false); }
+    if (!cartAvailable) setIsCartOpen(false);
+    if (!wishlistAvailable) setIsWishlistOnly(false);
+    if (!categoriesAvailable) setCategory(ALL);
+    if (!availabilityAvailable) setAvailabilityFilter('all');
+  }, [searchAvailable, cartAvailable, wishlistAvailable, categoriesAvailable, availabilityAvailable]);
 
   // Clear any old sessionStorage flag on mount so the banner returns fresh and re-opens on refresh
   useEffect(() => {

@@ -1,3 +1,4 @@
+import { controlActive } from '../lib/siteControlModel';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUp } from 'lucide-react';
@@ -39,7 +40,7 @@ export default function BackToTop({ lang }: Props) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.8, y: 12 }}
           transition={{ type: 'spring', stiffness: 320, damping: 24 }}
-          onClick={scrollToTop}
+          disabled={!controlActive(backToTopControl)} onClick={scrollToTop}
           whileTap={{ scale: 0.9 }}
           whileHover={{ y: -2 }}
           aria-label={isAr ? backToTopControl.label_ar : backToTopControl.label_en}

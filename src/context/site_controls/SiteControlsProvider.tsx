@@ -1,5 +1,6 @@
 import { buildBannerChanges, storeBannerDraft, type BannerEdits, type TrendEdits } from '../../lib/bannerEditor';
 import { isSupabaseConfigured } from '../../lib/supabase';
+import { buildControlChanges, type ControlEdits } from '../../lib/siteControlModel';
 import React, { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import type { CurrencyType, SiteControlsContextType, SiteControlItem } from '../siteControlsTypes';
 import { DEFAULT_SITE_CONTROLS } from '../defaultSiteControls';
@@ -118,6 +119,14 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
   };
 
   const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
+  const saveControlEdits = async (edits: ControlEdits): Promise<'cloud' | 'local'> => {
+    const changed = buildControlChanges(controls, edits);
+    if (isSupabaseConfigured && !await saveSiteConfigToSupabase({ controls: changed })) throw new Error('save');
+    const next = { ...controls, ...changed };
+    if (!isSupabaseConfigured) localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    setControls(prev => ({ ...prev, ...changed }));
+    return isSupabaseConfigured ? 'cloud' : 'local';
+  };
 
   // Sync entire configuration to Supabase Cloud Storage
   const syncAllToSupabaseCloud = useCallback(async (): Promise<boolean> => {
@@ -339,6 +348,7 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
         toggleEnabled,
         updateControl,
         saveBannerEdits,
+        saveControlEdits,
         resetControl,
         resetAllControls,
         exportConfigJSON,

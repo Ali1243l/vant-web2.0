@@ -1,3 +1,4 @@
+import { controlActive } from '../lib/siteControlModel';
 import React, { useState, useMemo } from 'react';
 import { motion, type Variants } from 'framer-motion';
 import { Heart, Tag, Check } from 'lucide-react';
@@ -124,7 +125,8 @@ export default React.memo(function ProductCard({
   const displayTitle = lang === 'ar' && product.title_ar ? product.title_ar : product.title;
   const isAr = lang === 'ar';
 
-  const handleCardClick = () => {
+  const handleCardClick = (event: React.MouseEvent) => {
+    if ((event.target as Element).closest('button')) return;
     // Preserve catalog data so the drawer can resolve every color without losing its settings.
     const enrichedProduct: Product = {
       ...product,
@@ -137,6 +139,7 @@ export default React.memo(function ProductCard({
 
   const handleHeartClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!controlActive(cardWishlistControl)) return;
     if (onToggleWishlist) {
       onToggleWishlist(product.id);
     }
@@ -293,13 +296,13 @@ export default React.memo(function ProductCard({
           {cardWishlistControl.visible && (
             <button
               type="button"
-              onClick={handleHeartClick}
+              disabled={!controlActive(cardWishlistControl)} onClick={handleHeartClick}
               className={`absolute top-2.5 sm:top-3 ltr:right-2.5 rtl:left-2.5 ltr:sm:right-3 rtl:sm:left-3 z-20 flex h-11 w-11 items-center justify-center rounded-full transition-all duration-200 cursor-pointer backdrop-blur-md active:scale-90 hover:scale-105 group/heart ${
                 isWishlisted
                   ? 'bg-[#004ad7] dark:bg-[#3b82f6] text-white shadow-md shadow-[#004ad7]/25 border border-[#004ad7]/40 dark:border-[#3b82f6]/50'
                   : 'bg-white/90 dark:bg-[#12141a]/90 text-neutral-600 dark:text-neutral-300 hover:text-[#004ad7] dark:hover:text-[#3b82f6] hover:bg-white dark:hover:bg-[#181a22] border border-black/8 dark:border-white/12 shadow-2xs'
               }`}
-              aria-label={isWishlisted ? (isAr ? 'إزالة من المفضلة' : 'Remove from Wishlist') : (isAr ? 'إضافة إلى المفضلة' : 'Add to Wishlist')}
+              aria-label={(isAr ? cardWishlistControl.label_ar : cardWishlistControl.label_en) + (isWishlisted ? (isAr ? ' · محفوظ' : ' · Saved') : '')}
               title={isWishlisted ? (isAr ? 'في المفضلة' : 'Wishlisted') : (isAr ? 'إضافة للمفضلة' : 'Add to Wishlist')}
             >
               <Heart

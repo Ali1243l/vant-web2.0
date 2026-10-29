@@ -1,3 +1,4 @@
+import { controlActive } from '../lib/siteControlModel';
 import { useEffect, useLayoutEffect, useState, useRef, type ReactNode } from 'react';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent, useReducedMotion } from 'framer-motion';
 import { Search, Sun, Moon, Globe, Heart, ShoppingCart } from 'lucide-react';
@@ -144,11 +145,11 @@ export default function Header({
                 {searchControl.visible && (
                   <button
                     type="button"
-                    onClick={() => onToggleSearch(true)}
+                    disabled={!controlActive(searchControl)} onClick={() => onToggleSearch(true)}
                     className={`flex items-center justify-center rounded-full text-[#15171c]/80 dark:text-white/80 transition-all hover:bg-black/5 dark:hover:bg-white/10 active:scale-95 cursor-pointer ${
                       'h-11 w-11'
                     }`}
-                    aria-label={lang === 'ar' ? 'فتح شريط البحث' : 'Open search'}
+                    aria-label={lang === 'ar' ? searchControl.label_ar : searchControl.label_en}
                     title={lang === 'ar' ? searchControl.label_ar : searchControl.label_en}
                   >
                     <Search className={`stroke-[1.8] transition-all ${scrolled ? 'h-4 w-4' : 'h-4.5 w-4.5'}`} />
@@ -156,12 +157,12 @@ export default function Header({
                 )}
 
                 {/* 1. Dedicated Shopping Cart Icon Button */}
-                {(!cartControl || (cartControl.visible !== false && cartControl.enabled !== false)) && (
+                {(!cartControl || cartControl.visible !== false) && (
                   <button
                     type="button"
                     id="header-cart-icon"
                     data-store-cart-active={isCartOpen || undefined}
-                    onClick={onOpenCart}
+                    disabled={!controlActive(cartControl)} onClick={onOpenCart}
                     className={`relative flex items-center justify-center rounded-full transition-all active:scale-90 cursor-pointer ${
                       'h-11 w-11'
                     } ${
@@ -169,7 +170,7 @@ export default function Header({
                         ? 'bg-[#004ad7] text-white shadow-md shadow-[#004ad7]/30'
                         : 'text-[#15171c]/80 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10'
                     }`}
-                    aria-label={lang === 'ar' ? 'سلة التسوق' : 'Shopping Cart'}
+                    aria-label={lang === 'ar' ? cartControl.label_ar : cartControl.label_en}
                     title={lang === 'ar' ? cartControl?.label_ar || 'سلة التسوق' : cartControl?.label_en || 'Shopping Cart'}
                   >
                     <motion.div
@@ -200,7 +201,7 @@ export default function Header({
                 {wishlistControl.visible && onToggleWishlistOnly && (
                   <button
                     type="button"
-                    onClick={onToggleWishlistOnly}
+                    disabled={!controlActive(wishlistControl)} onClick={onToggleWishlistOnly}
                     className={`relative hidden sm:flex items-center justify-center rounded-full transition-all active:scale-90 cursor-pointer ${
                       'h-11 w-11'
                     } ${
@@ -243,7 +244,7 @@ export default function Header({
                           ? 'tracking-[0.06em]'
                           : 'tracking-[0.28em] uppercase font-extrabold'
                       }`}
-                      aria-label={kineticLang === 'ar' ? 'فانت' : 'VANT'}
+                      aria-label={kineticLang === 'ar' ? logoControl.label_ar : logoControl.label_en}
                     >
                       {kineticLang === 'ar' ? (logoControl.label_ar || 'فانت') : (logoControl.label_en || 'VANT')}
                     </motion.h1>
@@ -256,11 +257,11 @@ export default function Header({
                 {themeControl.visible && (
                   <button
                     type="button"
-                    onClick={onToggleTheme}
+                    disabled={!controlActive(themeControl)} onClick={onToggleTheme}
                     className={`relative flex items-center justify-center rounded-full text-[#15171c]/80 dark:text-white/80 transition-all hover:bg-black/5 dark:hover:bg-white/10 active:scale-90 cursor-pointer ${
                       'h-11 w-11'
                     }`}
-                    aria-label={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                    aria-label={lang === 'ar' ? themeControl.label_ar : themeControl.label_en}
                   >
                     <AnimatePresence mode="wait" initial={false}>
                       {theme === 'dark' ? (
@@ -293,11 +294,11 @@ export default function Header({
                 {langControl.visible && (
                   <button
                     type="button"
-                    onClick={onToggleLang}
+                    disabled={!controlActive(langControl)} onClick={onToggleLang}
                     className={`group flex items-center gap-1.5 rounded-full border border-black/8 dark:border-white/15 bg-white/70 dark:bg-white/10 px-2.5 text-[11px] sm:text-xs font-bold tracking-wide text-[#15171c] dark:text-white transition-all hover:bg-black/5 dark:hover:bg-white/15 active:scale-95 cursor-pointer shadow-2xs ${
                       'h-11 min-w-11'
                     }`}
-                    aria-label={lang === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
+                    aria-label={lang === 'ar' ? langControl.label_ar : langControl.label_en}
                   >
                     <motion.span
                       key={lang}
@@ -308,7 +309,7 @@ export default function Header({
                     >
                       <Globe className="h-3.5 w-3.5" />
                     </motion.span>
-                    <span>{lang === 'ar' ? 'EN' : 'عربي'}</span>
+                    <span className="max-w-[4.5rem] truncate">{lang === 'ar' ? langControl.label_ar : langControl.label_en}</span>
                   </button>
                 )}
               </div>
@@ -328,7 +329,7 @@ export default function Header({
             <div ref={categoryContentRef} className="flex min-w-0 items-center gap-1 px-1 sm:block sm:px-0">
               <div className="min-w-0 flex-1">{children}</div>
               {wishlistControl.visible && onToggleWishlistOnly && (
-                <button type="button" onClick={onToggleWishlistOnly} aria-label={lang === 'ar' ? wishlistControl.label_ar : wishlistControl.label_en} aria-pressed={isWishlistOnly}
+                <button type="button" disabled={!controlActive(wishlistControl)} onClick={onToggleWishlistOnly} aria-label={lang === 'ar' ? wishlistControl.label_ar : wishlistControl.label_en} aria-pressed={isWishlistOnly}
                   className={`relative pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full sm:hidden ${isWishlistOnly ? 'bg-blue-500/15 text-blue-500' : 'text-black/65 dark:text-white/70'}`}>
                   <Heart size={18} strokeWidth={1.8} className={isWishlistOnly ? 'fill-current' : ''} />
                   {wishlistCount > 0 && <span className="absolute end-0 top-0 rounded-full bg-blue-600 px-1 text-[9px] font-bold text-white">{wishlistCount}</span>}

@@ -4,6 +4,8 @@ import type { Product, Language } from '../../types';
 import { trackEvent } from '../../lib/analytics';
 import Spinner from '../ui/Spinner';
 import CartInteractionWrapper from './CartInteractionWrapper';
+import { useSiteControls } from '../../context/SiteControlsContext';
+import { controlActive } from '../../lib/siteControlModel';
 
 interface ProductOrderButtonProps {
   whatsappControl: {
@@ -37,8 +39,11 @@ export const ProductOrderButton: React.FC<ProductOrderButtonProps> = ({
   const [isOrdering, setIsOrdering] = useState(false);
 
   const isAr = lang === 'ar';
+  const { getControl } = useSiteControls();
+  const cartControl = getControl('btn_product_add_to_cart');
 
   const handleInquiryClick = () => {
+    if (!controlActive(whatsappControl)) return;
     setIsOrdering(true);
     if (product) {
       trackEvent('whatsapp_order', {
@@ -65,17 +70,17 @@ export const ProductOrderButton: React.FC<ProductOrderButtonProps> = ({
   };
 
   const inquiryText = selectedSize
-    ? `${isAr ? 'استفسار عن المقاس' : 'Inquire Size'} (${selectedSize})`
-    : isAr ? 'استفسار عبر واتساب' : 'Inquire via WhatsApp';
+    ? `${isAr ? whatsappControl.label_ar : whatsappControl.label_en} (${selectedSize})`
+    : isAr ? whatsappControl.label_ar : whatsappControl.label_en;
 
   const cartButtonText = selectedSize
-    ? `${isAr ? 'أضف للسلة' : 'Add to Cart'} (${selectedSize})`
-    : isAr ? 'أضف للسلة' : 'Add to Cart';
+    ? `${isAr ? cartControl.label_ar : cartControl.label_en} (${selectedSize})`
+    : isAr ? cartControl.label_ar : cartControl.label_en;
 
   return (
     <div className="pt-1 flex flex-row md:flex-col items-center gap-2 md:gap-2.5 w-full">
       {/* 1. Primary Action: Add to Cart with Fly Animation & Counter */}
-      <div className="flex-1 w-full min-w-0">
+      {cartControl.visible && <div className="flex-1 w-full min-w-0">
         <CartInteractionWrapper
           productTitle={displayTitle || product?.title}
           productImage={product?.image_url}
@@ -83,33 +88,33 @@ export const ProductOrderButton: React.FC<ProductOrderButtonProps> = ({
           productPrice={activePrice}
           size={selectedSize || undefined}
           color={color}
-          disabled={!product || !selectedSize || unavailable}
+          disabled={!product || !selectedSize || unavailable || !controlActive(cartControl)}
           lang={lang}
           onAddToCart={handleAddToCartTrack}
         >
           <button
             data-store-primary
             type="button"
-            disabled={!product || !selectedSize || unavailable}
+            disabled={!product || !selectedSize || unavailable || !controlActive(cartControl)}
             className="group relative flex h-11.5 sm:h-12 md:h-13 w-full items-center justify-center gap-2 rounded-xl md:rounded-2xl bg-[#004ad7] hover:bg-[#003db3] dark:bg-[#3b82f6] dark:hover:bg-[#2563eb] text-white text-xs sm:text-sm md:text-base font-bold tracking-wide transition-all shadow-md shadow-[#004ad7]/25 dark:shadow-[#3b82f6]/30 active:scale-[0.98] cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed disabled:shadow-none"
           >
             <ShoppingCart className="h-4.5 w-4.5 fill-white/20 stroke-white stroke-[2] shrink-0" />
             <span className="truncate">{cartButtonText}</span>
           </button>
         </CartInteractionWrapper>
-      </div>
+      </div>}
 
       {/* 2. Secondary Action: WhatsApp Inquiry */}
-      {whatsappControl.visible && whatsappControl.enabled !== false && (
+      {whatsappControl.visible && (
         <a
-          href={whatsappUrl}
+          aria-disabled={!controlActive(whatsappControl)} tabIndex={controlActive(whatsappControl) ? 0 : -1} href={controlActive(whatsappControl) ? whatsappUrl : undefined}
           target="_blank"
           rel="noopener noreferrer"
           onClick={handleInquiryClick}
           title={inquiryText}
           aria-label={inquiryText}
           className={`group relative flex h-11.5 sm:h-12 md:h-12 items-center justify-center gap-2 rounded-xl md:rounded-2xl border border-[#004ad7]/25 dark:border-[#3b82f6]/35 bg-[#004ad7]/8 hover:bg-[#004ad7]/15 dark:bg-[#3b82f6]/10 dark:hover:bg-[#3b82f6]/20 text-[#004ad7] dark:text-[#60a5fa] text-xs sm:text-sm md:text-base font-bold transition-all shadow-xs shrink-0 px-3.5 sm:px-4 md:px-0 md:w-full ${
-            isOrdering ? 'opacity-90 cursor-wait' : 'active:scale-[0.98] cursor-pointer'
+            !cartControl.visible ? 'flex-1 w-full' : isOrdering ? 'opacity-90 cursor-wait' : 'active:scale-[0.98] cursor-pointer'
           }`}
         >
           {isOrdering ? (
@@ -122,8 +127,8 @@ export const ProductOrderButton: React.FC<ProductOrderButtonProps> = ({
           ) : (
             <>
               <MessageCircle className="h-4.5 w-4.5 fill-[#004ad7]/15 dark:fill-[#3b82f6]/20 stroke-[#004ad7] dark:stroke-[#60a5fa] stroke-[2] shrink-0" />
-              <span className="hidden sm:inline md:inline">{inquiryText}</span>
-              <span className="sm:hidden md:hidden text-xs">{isAr ? 'استفسار' : 'Inquire'}</span>
+              <span className="hidden min-w-0 max-w-full truncate sm:inline md:inline">{inquiryText}</span>
+              <span className="sm:hidden md:hidden max-w-24 truncate text-xs">{isAr ? whatsappControl.label_ar : whatsappControl.label_en}</span>
             </>
           )}
         </a>

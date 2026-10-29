@@ -1,3 +1,4 @@
+import { controlActive } from '../lib/siteControlModel';
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Check, SlidersHorizontal, LayoutGrid } from 'lucide-react';
@@ -155,10 +156,11 @@ export default function CategoryFilter({
             {onToggleOffersOnly && offersControl.visible && (
               <button
                 type="button"
-                ref={isOffersOnly ? activeRef : undefined}
+                disabled={!controlActive(offersControl)} ref={isOffersOnly ? activeRef : undefined}
                 role="tab"
                 aria-selected={isOffersOnly}
                 onClick={() => {
+                  if (!controlActive(offersControl)) return;
                   const nextState = !isOffersOnly;
                   onToggleOffersOnly(nextState);
                   trackEvent('category_filter', { category: 'offers', isOffersOnly: nextState });
@@ -187,10 +189,11 @@ export default function CategoryFilter({
               return (
                 <button
                   key={c}
-                  ref={isActive ? activeRef : undefined}
+                  disabled={!controlActive(tabsControl)} ref={isActive ? activeRef : undefined}
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => {
+                    if (!controlActive(tabsControl)) return;
                     if (onToggleOffersOnly) onToggleOffersOnly(false);
                     const allCat = categories[0] || 'all';
                     if (isActive && c !== allCat && c !== 'all') {
@@ -230,12 +233,12 @@ export default function CategoryFilter({
             <div className={`relative shrink-0 ${isOpen ? 'z-40' : 'z-20'}`} ref={dropdownRef}>
               <button
                 type="button"
-                ref={triggerRef}
+                disabled={!controlActive(filterControl)} ref={triggerRef}
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsOpen((prev) => !prev);
                 }}
-                aria-expanded={isOpen}
+                aria-label={isAr ? filterControl.label_ar : filterControl.label_en} aria-expanded={isOpen}
                 aria-haspopup="true"
                 className={`flex shrink-0 items-center gap-1.5 md:gap-2 rounded-full px-3.5 py-1.5 md:h-9.5 md:px-4 lg:h-10 lg:px-4.5 text-xs sm:text-[12.5px] md:text-[13px] font-medium md:font-semibold transition-all duration-200 active:scale-95 cursor-pointer border shadow-2xs select-none ${
                   availability !== 'all'
@@ -246,7 +249,7 @@ export default function CategoryFilter({
                 }`}
               >
                 <SlidersHorizontal className="h-3.5 w-3.5 opacity-60" />
-                <span className="hidden sm:inline">{isAr ? currentOption.label_ar : currentOption.label_en}</span><span className="sm:hidden">{availability === 'all' ? (isAr ? 'التوفر' : 'Stock') : (isAr ? currentOption.label_ar : currentOption.label_en)}</span>
+                <span className="hidden max-w-28 truncate sm:inline">{availability === 'all' ? (isAr ? filterControl.label_ar : filterControl.label_en) : (isAr ? currentOption.label_ar : currentOption.label_en)}</span><span className="max-w-20 truncate sm:hidden">{availability === 'all' ? (isAr ? filterControl.label_ar : filterControl.label_en) : (isAr ? currentOption.label_ar : currentOption.label_en)}</span>
                 {currentOption.dot && (
                   <span className={`h-1.5 w-1.5 rounded-full ${currentOption.dot}`} />
                 )}
@@ -261,7 +264,7 @@ export default function CategoryFilter({
 
               {/* Floating Dropdown Menu with Spring Physics & Deep Glass Blur */}
               <AnimatePresence>
-                {isOpen && (
+                {isOpen && controlActive(filterControl) && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.98, y: 6 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}

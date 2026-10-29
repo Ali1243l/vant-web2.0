@@ -9,12 +9,14 @@ interface Props {
   activeImageIndex: number;
   setActiveImageIndex: Dispatch<SetStateAction<number>>;
   carouselNavVisible: boolean;
+  carouselNavEnabled?: boolean;
+  carouselNavLabel?: string;
   lang: Language;
   paginate: (direction: number) => void;
 }
 
 /** Native horizontal snapping leaves vertical swipes free to scroll the sheet. */
-export default function ProductDrawerGallery({ images, product, displayTitle, activeImageIndex, setActiveImageIndex, carouselNavVisible, lang, paginate }: Props) {
+export default function ProductDrawerGallery({ images, product, displayTitle, activeImageIndex, setActiveImageIndex, carouselNavVisible, carouselNavEnabled = true, carouselNavLabel = '', lang, paginate }: Props) {
   const trackRef = useRef<HTMLDivElement>(null);
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeIndexRef = useRef(activeImageIndex);
@@ -73,8 +75,8 @@ export default function ProductDrawerGallery({ images, product, displayTitle, ac
         {images.length > 1 && <>
           <span className="product-gallery-counter" aria-live="polite">{activeImageIndex + 1}<span className="opacity-40"> / </span>{images.length}</span>
           {carouselNavVisible && <>
-            <button type="button" className="product-gallery-arrow left-3" disabled={activeImageIndex === 0} onClick={() => paginate(-1)} aria-label={isAr ? 'الصورة السابقة' : 'Previous image'}><ChevronLeft size={20} /></button>
-            <button type="button" className="product-gallery-arrow right-3" disabled={activeImageIndex >= images.length - 1} onClick={() => paginate(1)} aria-label={isAr ? 'الصورة التالية' : 'Next image'}><ChevronRight size={20} /></button>
+            <button type="button" className="product-gallery-arrow left-3" disabled={!carouselNavEnabled || activeImageIndex === 0} onClick={() => paginate(-1)} aria-label={carouselNavLabel + (isAr ? ' · السابقة' : ' · Previous')}><ChevronLeft size={20} /></button>
+            <button type="button" className="product-gallery-arrow right-3" disabled={!carouselNavEnabled || activeImageIndex >= images.length - 1} onClick={() => paginate(1)} aria-label={carouselNavLabel + (isAr ? ' · التالية' : ' · Next')}><ChevronRight size={20} /></button>
           </>}
         </>}
       </div>

@@ -1,3 +1,4 @@
+import { controlActive } from '../../lib/siteControlModel';
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Minus, ShoppingCart, Trash2 } from 'lucide-react';
@@ -55,7 +56,7 @@ export const CartInteractionWrapper: React.FC<CartInteractionWrapperProps> = ({
   const addToCartBtnControl = getControl('btn_product_add_to_cart');
   const isButtonVisible =
     !addToCartBtnControl ||
-    (addToCartBtnControl.visible !== false && addToCartBtnControl.enabled !== false);
+    addToCartBtnControl.visible !== false;
 
   const cartAnimControl = getControl('enableCartAnimation');
   const isAnimationEnabled =
@@ -163,7 +164,7 @@ export const CartInteractionWrapper: React.FC<CartInteractionWrapperProps> = ({
   const handleIncrement = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    if (disabled) return;
+    if (disabled || !controlActive(addToCartBtnControl)) return;
     const nextQty = quantity + 1;
     setQuantity(nextQty);
     updateGlobalCartCount(1);
@@ -177,7 +178,7 @@ export const CartInteractionWrapper: React.FC<CartInteractionWrapperProps> = ({
   const handleDecrement = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    if (quantity <= 0) return;
+    if (disabled || !controlActive(addToCartBtnControl) || quantity <= 0) return;
     const nextQty = quantity - 1;
     setQuantity(nextQty);
     updateGlobalCartCount(-1);
@@ -241,19 +242,20 @@ export const CartInteractionWrapper: React.FC<CartInteractionWrapperProps> = ({
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.96 }}
-            transition={{ duration: 0.18 }}
+            transition={{ duration: isAnimationEnabled ? 0.18 : 0 }}
             onClick={handleIncrement}
             className="w-full"
           >
             {children ? (
-              children
+              <fieldset disabled={disabled || !controlActive(addToCartBtnControl)} className="min-w-0">{children}</fieldset>
             ) : (
               <button
+                disabled={disabled || !controlActive(addToCartBtnControl)}
                 type="button"
                 className="w-full h-12 md:h-13.5 lg:h-14 flex items-center justify-center gap-2.5 rounded-2xl bg-[#004ad7] hover:bg-[#003db3] dark:bg-[#3b82f6] dark:hover:bg-[#2563eb] text-white font-bold text-sm md:text-base shadow-md shadow-[#004ad7]/25 transition-all active:scale-[0.98] cursor-pointer"
               >
                 <ShoppingCart className="w-4.5 h-4.5 fill-white/20 stroke-white stroke-[2]" />
-                <span>{isAr ? 'أضف للسلة' : 'Add to Cart'}</span>
+                <span>{isAr ? addToCartBtnControl.label_ar : addToCartBtnControl.label_en}</span>
               </button>
             )}
           </motion.div>
@@ -263,14 +265,14 @@ export const CartInteractionWrapper: React.FC<CartInteractionWrapperProps> = ({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.18 }}
+            transition={{ duration: isAnimationEnabled ? 0.18 : 0 }}
             className="w-full h-12 md:h-13.5 lg:h-14 flex items-center justify-between p-1.5 rounded-2xl bg-[#004ad7] dark:bg-[#3b82f6] text-white shadow-lg shadow-[#004ad7]/30 border border-white/20 select-none"
           >
             {/* Decrement Button */}
             <motion.button
               type="button"
               whileTap={{ scale: 0.88 }}
-              onClick={handleDecrement}
+              disabled={disabled || !controlActive(addToCartBtnControl)} onClick={handleDecrement}
               aria-label={isAr ? 'تقليل الكمية' : 'Decrease quantity'}
               className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-white/15 hover:bg-white/25 active:bg-white/30 flex items-center justify-center text-white transition-all cursor-pointer shrink-0"
             >
@@ -304,7 +306,7 @@ export const CartInteractionWrapper: React.FC<CartInteractionWrapperProps> = ({
             <motion.button
               type="button"
               whileTap={{ scale: 0.88 }}
-              onClick={handleIncrement}
+              disabled={disabled || !controlActive(addToCartBtnControl)} onClick={handleIncrement}
               aria-label={isAr ? 'زيادة الكمية' : 'Increase quantity'}
               className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-white/20 hover:bg-white/30 active:bg-white/35 flex items-center justify-center text-white transition-all cursor-pointer shrink-0"
             >

@@ -8,6 +8,7 @@ import { useSiteControls } from '../context/SiteControlsContext';
 import { trackEvent } from '../lib/analytics';
 import { resolveProductColorVariants } from '../lib/productVariants';
 import { useScrollLock } from '../hooks/useScrollLock';
+import { controlActive } from '../lib/siteControlModel';
 
 import ProductDrawerGallery from './product_drawer/ProductDrawerGallery';
 import ProductHeaderInfo from './product_drawer/ProductHeaderInfo';
@@ -355,6 +356,10 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
 
   const isOpen = Boolean(product || loading);
   useScrollLock(isOpen);
+  useEffect(() => {
+    if (!controlActive(sizeGuideControl)) setShowSizeGuide(false);
+    if (!controlActive(shareControl)) setShowShareModal(false);
+  }, [sizeGuideControl.enabled, sizeGuideControl.visible, shareControl.enabled, shareControl.visible]);
 
   useEffect(() => {
     if (!product || showShareModal) return;
@@ -367,9 +372,9 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
         } else {
           onClose();
         }
-      } else if (e.key === 'ArrowRight') {
+      } else if (e.key === 'ArrowRight' && controlActive(carouselNavControl)) {
         paginate(1);
-      } else if (e.key === 'ArrowLeft') {
+      } else if (e.key === 'ArrowLeft' && controlActive(carouselNavControl)) {
         paginate(-1);
       }
     };
@@ -378,7 +383,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     return () => {
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [product, onClose, paginate, showSizeGuide, showShareModal]);
+  }, [product, onClose, paginate, showSizeGuide, showShareModal, carouselNavControl.enabled, carouselNavControl.visible]);
 
   return (
     <AnimatePresence>
@@ -433,6 +438,8 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                     activeImageIndex={activeImageIndex}
                     setActiveImageIndex={setActiveImageIndex}
                     carouselNavVisible={carouselNavControl.visible}
+                    carouselNavEnabled={controlActive(carouselNavControl)}
+                    carouselNavLabel={lang === 'ar' ? carouselNavControl.label_ar : carouselNavControl.label_en}
                     lang={lang}
                     paginate={paginate}
                   />

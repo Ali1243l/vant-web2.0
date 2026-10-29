@@ -6,6 +6,7 @@ import { saveSiteConfigToSupabase } from '../../lib/storage';
 import { STORAGE_KEY, getStoredEnhancements } from './constants';
 import type { TrendItem } from '../../types';
 import type { FooterSocialLink } from '../../data/socialPlatforms';
+import { resolveControl } from '../../lib/siteControlModel';
 
 export function useSiteControlsState(
   currency: CurrencyType,
@@ -64,7 +65,7 @@ export function useSiteControlsState(
         label_en: '',
       };
     return {
-      ...raw,
+      ...resolveControl(raw, controls),
       label_ar: toWesternNumerals(raw.label_ar),
       label_en: toWesternNumerals(raw.label_en),
       name_ar: toWesternNumerals(raw.name_ar),

@@ -1,3 +1,4 @@
+import { controlActive } from '../lib/siteControlModel';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, X, Plus, Minus, Trash2, MessageCircle, ArrowRight, ArrowLeft } from 'lucide-react';
@@ -26,6 +27,7 @@ interface CartDrawerProps {
 export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang }) => {
   const { getControl, formatPrice } = useSiteControls();
   const whatsappPhoneControl = getControl('cfg_whatsapp_phone');
+  const checkoutControl = getControl('btn_cart_whatsapp');
   const whatsappPhone = resolveWhatsAppPhone(whatsappPhoneControl?.actionValue, DEFAULT_WHATSAPP_PHONE);
 
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
@@ -278,15 +280,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
                   </span>
                 </div>
 
-                <a
-                  href={generateWhatsAppUrl()}
+                {checkoutControl.visible && <a
+                  aria-disabled={!controlActive(checkoutControl)} tabIndex={controlActive(checkoutControl) ? 0 : -1} href={controlActive(checkoutControl) ? generateWhatsAppUrl() : undefined}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex h-12 w-full items-center justify-center gap-2.5 rounded-2xl bg-[#004ad7] hover:bg-[#003db3] dark:bg-[#3b82f6] dark:hover:bg-[#2563eb] text-white text-sm font-bold shadow-lg shadow-[#004ad7]/25 transition-all active:scale-[0.98] cursor-pointer"
                 >
                   <MessageCircle className="h-5 w-5 fill-white/20 stroke-white stroke-[2]" />
-                  <span>{isAr ? 'إكمال الطلب عبر واتساب' : 'Complete Order via WhatsApp'}</span>
-                </a>
+                  <span>{isAr ? checkoutControl.label_ar : checkoutControl.label_en}</span>
+                </a>}
 
                 <div className="flex items-center justify-between pt-1">
                   <button
