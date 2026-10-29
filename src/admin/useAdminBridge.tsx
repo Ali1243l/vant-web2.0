@@ -229,6 +229,10 @@ export const defaultSiteSettings: SiteSettings = {
 interface AdminContextType {
   activeView: AdminView;
   setActiveView: (view: AdminView) => void;
+  setHasUnsavedChanges: (dirty: boolean) => void;
+  pendingView: AdminView | null;
+  cancelViewChange: () => void;
+  confirmViewChange: () => void;
   isDrawerOpen: boolean;
   setIsDrawerOpen: (open: boolean) => void;
   toggleDrawer: () => void;
@@ -298,7 +302,10 @@ if (import.meta.hot) import.meta.hot.data.adminContext = AdminContext;
 
 export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const siteControls = useSiteControls();
-  const [activeView, setActiveView] = useState<AdminView>('dashboard');
+  const [activeView, setActiveViewState] = useState<AdminView>('dashboard');
+  const [pendingView, setPendingView] = useState<AdminView | null>(null);
+  const unsavedChanges = useRef(false);
+  const setHasUnsavedChanges = useCallback((dirty: boolean) => { unsavedChanges.current = dirty; }, []);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [isOfferModalOpen, setIsOfferModalOpen] = useState<boolean>(false);
 
@@ -320,6 +327,15 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Language state
   const [lang, setLang] = useState<'ar' | 'en'>('ar');
+  const setActiveView = useCallback((view: AdminView) => {
+    if (view === activeView) return;
+    if (unsavedChanges.current) { setPendingView(view); return; }
+    setActiveViewState(view);
+  }, [activeView]);
+  const cancelViewChange = () => setPendingView(null);
+  const confirmViewChange = () => {
+    if (pendingView) { unsavedChanges.current = false; setActiveViewState(pendingView); setPendingView(null); }
+  };
   const toggleLang = useCallback(() => {
     setLang((prev) => (prev === 'ar' ? 'en' : 'ar'));
   }, []);
@@ -878,6 +894,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       value={{
         activeView,
         setActiveView,
+        setHasUnsavedChanges,
+        pendingView,
+        cancelViewChange,
+        confirmViewChange,
         isDrawerOpen,
         setIsDrawerOpen,
         toggleDrawer,

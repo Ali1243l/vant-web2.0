@@ -1,3 +1,5 @@
+import { buildBannerChanges, storeBannerDraft, type BannerEdits, type TrendEdits } from '../../lib/bannerEditor';
+import { isSupabaseConfigured } from '../../lib/supabase';
 import React, { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import type { CurrencyType, SiteControlsContextType, SiteControlItem } from '../siteControlsTypes';
 import { DEFAULT_SITE_CONTROLS } from '../defaultSiteControls';
@@ -20,7 +22,8 @@ import { useExtrasState } from './useExtrasState';
 import { useSiteSettingsAndAdmin } from './useSiteSettingsAndAdmin';
 import { useSiteControlsState } from './useSiteControlsState';
 
-const SiteControlsContext = createContext<SiteControlsContextType | undefined>(undefined);
+const SiteControlsContext: React.Context<SiteControlsContextType | undefined> = import.meta.hot?.data.siteControlsContext ?? createContext<SiteControlsContextType | undefined>(undefined);
+if (import.meta.hot) import.meta.hot.data.siteControlsContext = SiteControlsContext;
 
 export function SiteControlsProvider({ children }: { children: ReactNode }) {
   const {
@@ -101,6 +104,18 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
     exportConfigJSON,
     importConfigJSON,
   } = useSiteControlsState(currency, trendItems, socialLinks);
+
+  const saveBannerEdits = async (edits: BannerEdits, trendEdits: TrendEdits): Promise<'cloud' | 'local'> => {
+    const next = buildBannerChanges(controls, trendItems, edits, trendEdits);
+    if (isSupabaseConfigured && !await saveSiteConfigToSupabase({ controls: next.controls, ...(Object.keys(trendEdits).length ? { trendItems: next.trendItems } : {}) })) throw new Error('save');
+    const mergedControls = { ...controls, ...next.controls };
+    if (!isSupabaseConfigured) {
+      storeBannerDraft(localStorage, STORAGE_KEY, mergedControls, next.trendItems);
+    }
+    setControls(mergedControls);
+    if (Object.keys(trendEdits).length) setTrendItems(next.trendItems);
+    return isSupabaseConfigured ? 'cloud' : 'local';
+  };
 
   const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
 
@@ -323,6 +338,7 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
         toggleVisibility,
         toggleEnabled,
         updateControl,
+        saveBannerEdits,
         resetControl,
         resetAllControls,
         exportConfigJSON,

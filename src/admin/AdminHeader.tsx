@@ -89,7 +89,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
     sizes: { ar: 'دليل المقاسات', en: 'Master Size Guide & Specs' },
     offers: { ar: 'العروض والخصومات', en: 'Offers & Promo Codes' },
     banners: { ar: 'البانر والترحيب', en: 'Banners, Media & Specs Studio' },
-    welcome_modal: { ar: 'نافذة الترحيب وكوبون الزوار', en: 'Welcome Modal & VIP Voucher' },
+    welcome_modal: { ar: 'الترحيب', en: 'Welcome' },
     subscribers: { ar: 'المشتركون والحملات', en: 'Campaign Studio & Subscribers' },
     controls: { ar: 'عناصر المتجر', en: 'Buttons & Interactive Controls' },
     social: { ar: 'روابط المنصات وقنوات التواصل', en: 'Social Media & Footer Links' },

@@ -1,3 +1,5 @@
+import { Sheet } from './Sheet';
+import { Button } from './ui';
 import React, { useState } from 'react';
 import './admin.css';
 import { AdminProvider, useAdminBridge } from './useAdminBridge';
@@ -27,7 +29,7 @@ interface AdminAppProps {
 }
 
 function MainLayout({ onClose }: AdminAppProps) {
-  const { activeView, setActiveView, lang, setIsOfferModalOpen } = useAdminBridge();
+  const { activeView, setActiveView, lang, setIsOfferModalOpen, pendingView, cancelViewChange, confirmViewChange } = useAdminBridge();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isGlobalProductSheetOpen, setIsGlobalProductSheetOpen] = useState(false);
 
@@ -38,7 +40,7 @@ function MainLayout({ onClose }: AdminAppProps) {
   const tabs = settingsViews.includes(activeView)
     ? [{ id: 'settings', ar: 'عام', en: 'General' }, { id: 'social', ar: 'التواصل', en: 'Social links' }, { id: 'backup', ar: 'النسخ الاحتياطي', en: 'Backup' }, { id: 'security', ar: 'الأمان', en: 'Security' }]
     : bannerViews.includes(activeView)
-    ? [{ id: 'banners', ar: 'البانر والتريندات', en: 'Banner & trends' }, { id: 'welcome_modal', ar: 'نافذة الترحيب', en: 'Welcome popup' }]
+    ? [{ id: 'banners', ar: 'البانر وبطاقات الموسم', en: 'Banner & seasonal cards' }, { id: 'welcome_modal', ar: 'نافذة الترحيب', en: 'Welcome popup' }]
     : [];
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none">
@@ -53,6 +55,8 @@ function MainLayout({ onClose }: AdminAppProps) {
         isOpen={isGlobalProductSheetOpen}
         onClose={() => setIsGlobalProductSheetOpen(false)}
       />
+
+      <Sheet isOpen={pendingView !== null} onClose={cancelViewChange} title={isAr ? 'مسودة غير محفوظة' : 'Unsaved draft'} footer={<div className="flex flex-wrap gap-2"><Button type="button" className="min-h-11" onClick={cancelViewChange}>{isAr ? 'البقاء والتعديل' : 'Keep editing'}</Button><Button type="button" variant="secondary" className="min-h-11" onClick={confirmViewChange}>{isAr ? 'المتابعة بدون حفظ' : 'Leave without saving'}</Button></div>}><p className="text-sm leading-7 text-slate-300">{isAr ? 'بقيت تعديلات في البانر أو الترحيب لم تُحفظ. ابقَ بالصفحة لحفظها أو إلغائها؛ المتابعة تلغي هذه المسودة فقط.' : 'Banner or welcome changes have not been saved. Stay to save or discard them; leaving discards only this draft.'}</p></Sheet>
 
       {/* Desktop App Layout */}
       <div className="flex flex-1 min-h-screen">
@@ -92,8 +96,8 @@ function MainLayout({ onClose }: AdminAppProps) {
 
           <main className="flex-1 p-4 sm:p-6 lg:p-8 xl:p-10 w-full min-w-0 overflow-y-auto">
             <div className="max-w-7xl mx-auto space-y-6">
-              {tabs.length > 0 && <nav aria-label={isAr ? 'أقسام الصفحة' : 'Page sections'} className="flex gap-2 overflow-x-auto border-b border-slate-800 pb-3">
-                {tabs.map((tab) => <button key={tab.id} type="button" aria-current={activeView === tab.id ? 'page' : undefined} onClick={() => setActiveView(tab.id as any)} className={`shrink-0 rounded-xl px-4 py-2 text-sm transition-colors ${activeView === tab.id ? 'bg-[#004ad7] text-white' : 'bg-slate-900 text-slate-400 hover:text-white'}`}>{isAr ? tab.ar : tab.en}</button>)}
+              {tabs.length > 0 && <nav aria-label={isAr ? 'أقسام الصفحة' : 'Page sections'} className={`${bannerViews.includes(activeView) ? 'grid grid-cols-2' : 'flex overflow-x-auto'} gap-2 border-b border-slate-800 pb-3`}>
+                {tabs.map((tab) => <button key={tab.id} type="button" aria-current={activeView === tab.id ? 'page' : undefined} onClick={() => setActiveView(tab.id as any)} className={`min-h-11 min-w-0 shrink-0 rounded-xl px-3 py-2 text-sm transition-colors ${activeView === tab.id ? 'bg-[#004ad7] text-white' : 'bg-slate-900 text-slate-400 hover:text-white'}`}>{isAr ? tab.ar : tab.en}</button>)}
               </nav>}
               {activeView === 'dashboard' && <AdminAnalyticsDashboard />}
               {activeView === 'orders' && <OrdersManager />}
