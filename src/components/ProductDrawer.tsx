@@ -303,8 +303,8 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
 
   const bespokeWhatsappText = encodeURIComponent(
     lang === 'ar'
-      ? `مرحباً ڤانت، أود الاستفسار عن خدمة التفصيل الخاص (Made-to-Measure) لقطعة "${displayTitle ?? ''}" (كود القطعة: ${productCode} - الطول: ${calcHeight} سم، الوزن: ${calcWeight} كغم، السعر: ${formattedProductPrice})`
-      : `Hello Maison VANT, I would like to inquire about Made-to-Measure bespoke tailoring for "${displayTitle ?? ''}" (Code: ${productCode} - Height: ${calcHeight} cm, Weight: ${calcWeight} kg, Price: ${formattedProductPrice})`
+      ? `مرحباً فانت، أود الاستفسار عن قياسات وقصّة القطعة "${displayTitle ?? ''}" قبل اختيار المقاس (كود القطعة: ${productCode})`
+      : `Hello VANT, please share the garment measurements and cut for "${displayTitle ?? ''}" before I select a size (Code: ${productCode})`
   );
   const targetBespokePhone = (bespokePhoneControl?.actionValue || '').replace(/[^0-9]/g, '') || targetPhone;
   const bespokeWhatsappUrl = `https://wa.me/${targetBespokePhone}?text=${bespokeWhatsappText}`;

@@ -1,748 +1,95 @@
 import React, { useState } from 'react';
-import {
-  Ruler,
-  Plus,
-  Trash2,
-  RotateCcw,
-  Check,
-  Edit2,
-  Eye,
-  Sliders,
-  Sparkles,
-  Info,
-  Save,
-  X,
-  ChevronDown,
-  ChevronUp,
-  ArrowUpDown,
-} from 'lucide-react';
+import { Plus, Search, ArrowUp, ArrowDown, Pencil, Trash2, RotateCcw } from 'lucide-react';
 import { useSiteControls } from '../context/SiteControlsContext';
-import type { MasterSizeItem } from '../data/sizeGuide';
+import { Sheet } from '../admin/Sheet';
+import { Button, Input } from '../admin/ui';
+import { activeSizeRows, calculateRecommendedSize, parseFitMeasurement, sizeRange, validateMasterSize, type MasterSizeItem } from '../data/sizeGuide';
 
-const SIZES_STANDARD_RANK: Record<string, number> = {
-  'XS': 1,
-  'S': 2,
-  'M': 3,
-  'L': 4,
-  'XL': 5,
-  'XXL': 6,
-  '2XL': 6,
-  '3XL': 7,
-  '4XL': 8,
-  '5XL': 9,
-  '6XL': 10,
-  'OVERSIZED': 11,
-};
-
-interface Props {
-  isAr?: boolean;
-}
-
-export default function AdminSizesManager({ isAr = true }: Props) {
-  const {
-    masterSizes,
-    updateMasterSize,
-    addMasterSize,
-    deleteMasterSize,
-    toggleMasterSize,
-    reorderMasterSizes,
-    resetMasterSizesToDefault,
-  } = useSiteControls();
-
+export default function AdminSizesManager({ isAr = true }: { isAr?: boolean }) {
+  const { masterSizes, updateMasterSize, addMasterSize, deleteMasterSize, toggleMasterSize, reorderMasterSizes, resetMasterSizesToDefault } = useSiteControls();
   const [search, setSearch] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<Partial<MasterSizeItem>>({});
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [showLivePreview, setShowLivePreview] = useState(true);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  // New Size Initial State (Strictly Height & Weight only)
-  const [newSize, setNewSize] = useState<Omit<MasterSizeItem, 'id'>>({
-    size: '',
-    height: '',
-    weight: '',
-    note_ar: '',
-    note_en: '',
-    minHeight: 160,
-    maxHeight: 185,
-    minWeight: 55,
-    maxWeight: 80,
-    enabled: true,
-  });
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
+  const [draft, setDraft] = useState<MasterSizeItem | null>(null);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [confirmAction, setConfirmAction] = useState<MasterSizeItem | 'reset' | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [height, setHeight] = useState('');
+  const [weight, setWeight] = useState('');
+  const t = (ar: string, en: string) => isAr ? ar : en;
+  const active = activeSizeRows(masterSizes);
+  const invalid = masterSizes.filter(row => validateMasterSize(row, masterSizes));
+  const overlapping = active.some((row, index) => active.slice(index + 1).some(other =>
+    Math.max(row.minHeight, other.minHeight) <= Math.min(row.maxHeight, other.maxHeight)
+    && Math.max(row.minWeight, other.minWeight) <= Math.min(row.maxWeight, other.maxWeight)));
+  const parsedHeight = parseFitMeasurement(height);
+  const parsedWeight = parseFitMeasurement(weight);
+  const result = parsedHeight === null || parsedWeight === null ? null : calculateRecommendedSize(parsedHeight, parsedWeight, masterSizes);
+  const filtered = masterSizes.filter(row => [row.size, sizeRange(row, 'height', isAr), sizeRange(row, 'weight', isAr), row.note_ar, row.note_en].join(' ').toLowerCase().includes(search.trim().toLowerCase()));
+  const openEditor = (row?: MasterSizeItem) => {
+    setError('');
+    setDraft(row ? { ...row } : { id: '', size: '', height: '', weight: '', minHeight: 160, maxHeight: 185, minWeight: 55, maxWeight: 80, enabled: true });
   };
-
-  const handleAutoSortSizes = () => {
-    const sorted = [...masterSizes].sort((a, b) => {
-      const rankA = SIZES_STANDARD_RANK[a.size.trim().toUpperCase()] ?? (100 + (a.minHeight || 0));
-      const rankB = SIZES_STANDARD_RANK[b.size.trim().toUpperCase()] ?? (100 + (b.minHeight || 0));
-      if (rankA !== rankB) return rankA - rankB;
-      return (a.minWeight || 0) - (b.minWeight || 0);
-    });
-    reorderMasterSizes(sorted);
-    showToast(isAr ? 'تم ترتيب قائمة المقاسات تصاعدياً بالاعتماد الكامل على الطول والوزن' : 'Sizes auto-sorted by height and weight');
-  };
-
-  const handleMoveSize = (index: number, direction: 'up' | 'down') => {
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= masterSizes.length) return;
-    const reordered = [...masterSizes];
-    const [removed] = reordered.splice(index, 1);
-    reordered.splice(targetIndex, 0, removed);
-    reorderMasterSizes(reordered);
-  };
-
-  const handleStartEdit = (sizeItem: MasterSizeItem) => {
-    setEditingId(sizeItem.id);
-    setEditForm({ ...sizeItem });
-  };
-
-  const handleSaveEdit = (id: string) => {
-    if (!editForm.size?.trim()) {
-      alert(isAr ? 'يرجى كتابة رمز أو اسم المقاس' : 'Please provide size label');
+  const save = () => {
+    if (!draft) return;
+    const issue = validateMasterSize(draft, masterSizes);
+    if (issue) {
+      setError(issue === 'name' ? t('اكتب رمز المقاس.', 'Enter a size label.') : issue === 'duplicate' ? t('رمز المقاس موجود مسبقاً.', 'This size label already exists.') : t('أدخل حدوداً صحيحة: الطول 120–220 سم والوزن 30–200 كغم، والأدنى لا يتجاوز الأعلى.', 'Use valid ranges: height 120–220 cm, weight 30–200 kg, minimum no greater than maximum.'));
       return;
     }
-    updateMasterSize(id, editForm);
-    setEditingId(null);
-    setEditForm({});
-    showToast(isAr ? 'تم حفظ تعديلات المقاس بنجاح' : 'Size measurements updated successfully');
+    const next = { ...draft, size: draft.size.trim().toUpperCase(), height: sizeRange(draft, 'height'), weight: sizeRange(draft, 'weight') };
+    if (draft.id) updateMasterSize(draft.id, next);
+    else { const { id, ...item } = next; addMasterSize(item); }
+    setDraft(null);
+    setNotice(t('تم تطبيق المقاس في هذه الجلسة. المزامنة السحابية تعمل بالخلفية.', 'Size applied in this session. Cloud sync runs in the background.'));
   };
-
-  const handleCancelEdit = () => {
-    setEditingId(null);
-    setEditForm({});
+  const move = (index: number, delta: number) => {
+    const next = [...masterSizes];
+    [next[index], next[index + delta]] = [next[index + delta], next[index]];
+    reorderMasterSizes(next);
   };
-
-  const handleCreateNewSize = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newSize.size.trim()) {
-      alert(isAr ? 'يرجى إدخال رمز المقاس (مثال: 3XL)' : 'Please enter size name (e.g. 3XL)');
-      return;
-    }
-
-    addMasterSize({
-      ...newSize,
-      size: newSize.size.trim().toUpperCase(),
-      height: newSize.height || `${newSize.minHeight || 175} - ${newSize.maxHeight || 185} سم`,
-      weight: newSize.weight || `${newSize.minWeight || 80} - ${newSize.maxWeight || 95} كغم`,
-      note_ar: newSize.note_ar || 'قصة متناسقة ومريحة مناسبة للطول والوزن',
-      note_en: newSize.note_en || 'Tailored relaxed cut for height and weight',
-    });
-
-    setIsAddModalOpen(false);
-    setNewSize({
-      size: '',
-      height: '',
-      weight: '',
-      note_ar: '',
-      note_en: '',
-      minHeight: 160,
-      maxHeight: 185,
-      minWeight: 55,
-      maxWeight: 80,
-      enabled: true,
-    });
-    showToast(isAr ? 'تمت إضافة المقاس الجديد بنجاح' : 'New size added successfully');
-  };
-
-  const filteredSizes = masterSizes.filter((s) => {
-    const q = search.toLowerCase();
-    return (
-      s.size.toLowerCase().includes(q) ||
-      s.height.toLowerCase().includes(q) ||
-      s.weight.toLowerCase().includes(q) ||
-      (s.chest && s.chest.toLowerCase().includes(q)) ||
-      (s.note_ar && s.note_ar.includes(q))
-    );
-  });
-
-  return (
-    <div className="space-y-6">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed top-6 ltr:right-6 rtl:left-6 z-50 flex items-center gap-2 rounded-2xl bg-emerald-600 text-white px-4 py-3 shadow-xl backdrop-blur-md text-xs font-semibold animate-in fade-in slide-in-from-top-4">
-          <Check className="h-4 w-4" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
-
-      {/* Header Panel */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
-        <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-xl bg-[#004ad7]/20 border border-[#3b82f6]/30 flex items-center justify-center text-[#3b82f6]">
-              <Ruler className="h-4 w-4" />
-            </div>
-            <span>{isAr ? 'التحكم الشامل بالمقاسات (الطول والوزن)' : 'Master Size Guide (Height & Weight)'}</span>
-          </h2>
-          <p className="text-xs text-white/60 mt-1 max-w-2xl leading-relaxed">
-            {isAr
-              ? 'تحكم جذري في كافة المقاسات المعروضة للزبائن (الطول والوزن المقترح فقط)، مع مزامنة فورية لحاسبة المقاسات التلقائية.'
-              : 'Configure ready-to-wear sizing based exclusively on recommended height and weight.'}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#004ad7] to-[#3b82f6] hover:from-[#003db3] hover:to-[#2563eb] px-3.5 py-2 text-xs font-bold text-white shadow-md active:scale-95 transition-all cursor-pointer"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>{isAr ? 'إضافة مقاس جديد' : 'Add New Size'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              if (confirm(isAr ? 'هل أنت متأكد من استعادة كافة المقاسات والأبعاد الافتراضية؟' : 'Reset all sizes to factory default standards?')) {
-                resetMasterSizesToDefault();
-                showToast(isAr ? 'تمت استعادة المقاسات الافتراضية بنجاح' : 'Reset to default sizes');
-              }
-            }}
-            className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.04] hover:bg-white/10 px-3 py-2 text-xs font-semibold text-white/70 hover:text-white transition-all cursor-pointer"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            <span>{isAr ? 'استعادة الافتراضي' : 'Reset Default'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Info Notice Banner */}
-      <div className="rounded-2xl border border-[#004ad7]/20 bg-[#004ad7]/[0.06] p-4 flex items-start gap-3">
-        <Sparkles className="h-4 w-4 text-[#3b82f6] shrink-0 mt-0.5" />
-        <div className="text-xs text-white/80 leading-relaxed space-y-1">
-          <p className="font-semibold text-white">
-            {isAr ? 'مزامنة فورية حية مع شيت تفاصيل المنتج وحاسبة المقاس التلقائية:' : 'Live real-time synchronization with product details & dynamic fit calculator:'}
-          </p>
-          <p className="text-white/60">
-            {isAr
-              ? 'أي تعديل على أرقام الطول أو الوزن يظهر فوراً في جدول القياسات التفاعلي للزبائن، ويتم اعتماده مباشرة في حاسبة المقاسات الذكية المقترحة.'
-              : 'Every numerical edit to height or weight boundaries instantly updates in the size table and smart fit recommender.'}
-          </p>
-        </div>
-      </div>
-
-      {/* Search & Actions Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white/[0.025] border border-white/10 rounded-2xl p-3">
-        <div className="relative flex-1 min-w-[220px]">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={isAr ? 'بحث في المقاسات أو الأرقام...' : 'Search sizes or numbers...'}
-            className="h-9 w-full rounded-xl border border-white/10 bg-black/40 px-3 text-xs text-white placeholder-white/40 outline-none focus:border-[#3b82f6]"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={handleAutoSortSizes}
-            className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/80 hover:text-white transition-all cursor-pointer shadow-xs active:scale-95"
-            title={isAr ? 'ترتيب المقاسات تصاعدياً بالاعتماد الكامل على الطول والوزن' : 'Auto-sort sizes by height & weight'}
-          >
-            <ArrowUpDown className="h-3.5 w-3.5 text-[#3b82f6]" />
-            <span>{isAr ? 'ترتيب حسب الطول والوزن' : 'Sort by Height & Weight'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowLivePreview(!showLivePreview)}
-            className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
-              showLivePreview
-                ? 'border-[#3b82f6]/40 bg-[#004ad7]/15 text-[#60a5fa]'
-                : 'border-white/10 bg-white/[0.03] text-white/60 hover:text-white'
-            }`}
-          >
-            <Eye className="h-3.5 w-3.5" />
-            <span>{isAr ? (showLivePreview ? 'إخفاء معاينة الزبون' : 'عرض معاينة الزبون') : 'Toggle Customer Preview'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* LIVE CUSTOMER SIZING TABLE PREVIEW (Architectural Lookbook Style) */}
-      {showLivePreview && (
-        <div className="rounded-3xl border border-white/15 bg-gradient-to-b from-[#161a23] to-[#0f1218] p-5 shadow-2xl">
-          <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
-            <div className="flex items-center gap-2">
-              <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs font-bold text-white uppercase tracking-wider">
-                {isAr ? 'معاينة مباشرة: كيف يرى الزبائن جدول القياسات والأرقام' : 'Live Preview: Customer Sizing Matrix'}
-              </span>
-            </div>
-            <span className="text-[11px] text-white/40 font-mono">
-              {masterSizes.filter((s) => s.enabled).length} {isAr ? 'مقاسات نشطة' : 'Active Sizes'}
-            </span>
-          </div>
-
-          <div className="overflow-x-auto rounded-2xl border border-white/10 bg-black/40">
-            <table className="w-full text-center text-xs">
-              <thead>
-                <tr className="border-b border-white/10 text-white/60 bg-white/[0.03]">
-                  <th className="py-2.5 px-3 font-semibold text-start">{isAr ? 'المقاس' : 'Size'}</th>
-                  <th className="py-2.5 px-3 font-semibold">{isAr ? 'الطول المقترح' : 'Height'}</th>
-                  <th className="py-2.5 px-3 font-semibold">{isAr ? 'الوزن المقترح' : 'Weight'}</th>
-                  <th className="py-2.5 px-3 font-semibold text-end">{isAr ? 'الحالة' : 'Status'}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5 font-mono">
-                {masterSizes.map((row) => (
-                  <tr
-                    key={row.id}
-                    className={`transition-colors ${
-                      row.enabled ? 'text-white hover:bg-white/[0.04]' : 'text-white/30 bg-black/30'
-                    }`}
-                  >
-                    <td className="py-2.5 px-3 font-bold text-start text-sm font-sans text-[#3b82f6]">
-                      {row.size}
-                    </td>
-                    <td className="py-2.5 px-3 tabular-nums">{row.height || '—'}</td>
-                    <td className="py-2.5 px-3 tabular-nums">{row.weight || '—'}</td>
-                    <td className="py-2.5 px-3 text-end font-sans">
-                      <span
-                        className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                          row.enabled
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                            : 'bg-white/10 text-white/40'
-                        }`}
-                      >
-                        {row.enabled ? (isAr ? 'مفعّل' : 'Active') : (isAr ? 'معطّل' : 'Disabled')}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* SIZES EDITABLE CARDS LIST */}
-      <div className="space-y-3.5">
-        {filteredSizes.map((item) => {
-          const isEditing = editingId === item.id;
-          const originalIndex = masterSizes.findIndex((s) => s.id === item.id);
-
-          return (
-            <div
-              key={item.id}
-              className={`rounded-2xl border transition-all p-4 ${
-                isEditing
-                  ? 'border-[#004ad7] bg-[#121620] shadow-xl'
-                  : 'border-white/10 bg-white/[0.025] hover:bg-white/[0.04]'
-              }`}
-            >
-              {!isEditing ? (
-                /* READ-ONLY CARD ROW */
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex items-center gap-2.5 min-w-[150px]">
-                    {/* Reorder Arrows */}
-                    <div className="flex flex-col items-center gap-0.5 shrink-0 bg-black/30 p-1 rounded-xl border border-white/5">
-                      <button
-                        type="button"
-                        onClick={() => handleMoveSize(originalIndex, 'up')}
-                        disabled={originalIndex <= 0}
-                        className="p-0.5 rounded hover:bg-white/15 text-white/40 hover:text-white disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer disabled:cursor-not-allowed transition-colors"
-                        title={isAr ? 'تقديم المقاس للأعلى' : 'Move Up'}
-                      >
-                        <ChevronUp className="h-3.5 w-3.5" />
-                      </button>
-                      <span className="text-[9.5px] font-mono text-[#60a5fa] font-bold leading-none select-none">
-                        #{originalIndex + 1}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleMoveSize(originalIndex, 'down')}
-                        disabled={originalIndex < 0 || originalIndex >= masterSizes.length - 1}
-                        className="p-0.5 rounded hover:bg-white/15 text-white/40 hover:text-white disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer disabled:cursor-not-allowed transition-colors"
-                        title={isAr ? 'تأخير المقاس للأسفل' : 'Move Down'}
-                      >
-                        <ChevronDown className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#004ad7] to-[#3b82f6] text-white font-extrabold text-sm shadow-md">
-                      {item.size}
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                        <span>{isAr ? `مقاس (${item.size})` : `Size (${item.size})`}</span>
-                        <span
-                          className={`rounded-full px-2 py-0.2 text-[9px] font-semibold border ${
-                            item.enabled
-                              ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
-                              : 'bg-white/5 border-white/10 text-white/40'
-                          }`}
-                        >
-                          {item.enabled ? (isAr ? 'متاح بالمتجر' : 'Active in Store') : (isAr ? 'معطّل' : 'Hidden')}
-                        </span>
-                      </h4>
-                      <p className="text-[11px] text-white/55 mt-0.5 line-clamp-1">
-                        {isAr ? item.note_ar || 'قصة مريحة متناسقة' : item.note_en || 'Refined silhouette'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Numbers Grid Summary (Only Height & Weight) */}
-                  <div className="grid grid-cols-2 gap-2 text-xs font-mono max-w-xs">
-                    <div className="rounded-xl border border-white/8 bg-black/30 p-2">
-                      <span className="text-[10px] text-white/45 block font-sans">{isAr ? 'الطول' : 'Height'}</span>
-                      <span className="text-white font-bold text-[11.5px] truncate block">{item.height}</span>
-                    </div>
-
-                    <div className="rounded-xl border border-white/8 bg-black/30 p-2">
-                      <span className="text-[10px] text-white/45 block font-sans">{isAr ? 'الوزن' : 'Weight'}</span>
-                      <span className="text-white font-bold text-[11.5px] truncate block">{item.weight}</span>
-                    </div>
-                  </div>
-
-                  {/* Actions Buttons */}
-                  <div className="flex items-center gap-1.5 self-end md:self-auto shrink-0">
-                    {/* Toggle Active Button */}
-                    <button
-                      type="button"
-                      onClick={() => toggleMasterSize(item.id)}
-                      className={`flex h-8 px-2.5 items-center gap-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-                        item.enabled
-                          ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
-                          : 'border-white/10 bg-black/40 text-white/40 hover:text-white'
-                      }`}
-                      title={isAr ? 'تفعيل أو تعطيل المقاس' : 'Toggle Size'}
-                    >
-                      <span className={`h-1.5 w-1.5 rounded-full ${item.enabled ? 'bg-emerald-400' : 'bg-white/30'}`} />
-                      <span>{item.enabled ? (isAr ? 'متاح' : 'Enabled') : (isAr ? 'معطّل' : 'Disabled')}</span>
-                    </button>
-
-                    {/* Edit Button */}
-                    <button
-                      type="button"
-                      onClick={() => handleStartEdit(item)}
-                      className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/15 bg-white/[0.05] hover:bg-[#004ad7] text-white transition-all cursor-pointer shadow-xs"
-                      title={isAr ? 'تعديل الأرقام والبيانات' : 'Edit Measurements'}
-                    >
-                      <Edit2 className="h-3.5 w-3.5" />
-                    </button>
-
-                    {/* Delete Custom Size Button */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (confirm(isAr ? `هل أنت متأكد من حذف مقاس (${item.size})؟` : `Delete size (${item.size})?`)) {
-                          deleteMasterSize(item.id);
-                          showToast(isAr ? 'تم حذف المقاس' : 'Size removed');
-                        }
-                      }}
-                      className="flex h-8 w-8 items-center justify-center rounded-xl border border-red-500/20 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white transition-all cursor-pointer shadow-xs"
-                      title={isAr ? 'حذف المقاس' : 'Delete Size'}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                /* INLINE EDIT FORM */
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between pb-2 border-b border-white/10">
-                    <span className="text-xs font-bold text-[#3b82f6] flex items-center gap-1.5">
-                      <Edit2 className="h-3.5 w-3.5" />
-                      <span>{isAr ? `تعديل أبعاد ومقاسات (${item.size}):` : `Edit Size Measurements (${item.size}):`}</span>
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={handleCancelEdit}
-                      className="text-white/40 hover:text-white cursor-pointer"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {/* Size Symbol */}
-                    <div>
-                      <label className="text-[11px] font-semibold text-white/70 block mb-1">
-                        {isAr ? 'رمز المقاس (مثال: S, M, 3XL)' : 'Size Code'}
-                      </label>
-                      <input
-                        type="text"
-                        value={editForm.size || ''}
-                        onChange={(e) => setEditForm({ ...editForm, size: e.target.value.toUpperCase() })}
-                        className="h-9 w-full rounded-xl border border-white/15 bg-black/50 px-3 text-xs text-white outline-none focus:border-[#3b82f6]"
-                      />
-                    </div>
-
-                    {/* Height Range */}
-                    <div>
-                      <label className="text-[11px] font-semibold text-white/70 block mb-1">
-                        {isAr ? 'مدى الطول المقترح (مثال: 173 - 178 سم)' : 'Height Range'}
-                      </label>
-                      <input
-                        type="text"
-                        value={editForm.height || ''}
-                        onChange={(e) => setEditForm({ ...editForm, height: e.target.value })}
-                        placeholder="173 - 178 سم"
-                        className="h-9 w-full rounded-xl border border-white/15 bg-black/50 px-3 text-xs text-white outline-none focus:border-[#3b82f6]"
-                      />
-                    </div>
-
-                    {/* Weight Range */}
-                    <div>
-                      <label className="text-[11px] font-semibold text-white/70 block mb-1">
-                        {isAr ? 'مدى الوزن المقترح (مثال: 66 - 75 كغم)' : 'Weight Range'}
-                      </label>
-                      <input
-                        type="text"
-                        value={editForm.weight || ''}
-                        onChange={(e) => setEditForm({ ...editForm, weight: e.target.value })}
-                        placeholder="66 - 75 كغم"
-                        className="h-9 w-full rounded-xl border border-white/15 bg-black/50 px-3 text-xs text-white outline-none focus:border-[#3b82f6]"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Min / Max Weight Calculator Bounds */}
-                  <div className="p-3 rounded-2xl bg-black/30 border border-white/10 space-y-2">
-                    <span className="text-[11px] font-semibold text-[#3b82f6] block">
-                      {isAr ? 'حدود حاسبة القياس التلقائية (الأطوال والأوزان):' : 'Fit Calculator Ranges:'}
-                    </span>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      <div>
-                        <label className="text-[10px] text-white/50 block mb-1">
-                          {isAr ? 'أدنى طول (سم)' : 'Min Height (cm)'}
-                        </label>
-                        <input
-                          type="number"
-                          value={editForm.minHeight ?? 160}
-                          onChange={(e) => setEditForm({ ...editForm, minHeight: parseInt(e.target.value, 10) || 150 })}
-                          className="h-8 w-full rounded-lg border border-white/15 bg-black/50 px-2 text-xs text-white outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-white/50 block mb-1">
-                          {isAr ? 'أعلى طول (سم)' : 'Max Height (cm)'}
-                        </label>
-                        <input
-                          type="number"
-                          value={editForm.maxHeight ?? 185}
-                          onChange={(e) => setEditForm({ ...editForm, maxHeight: parseInt(e.target.value, 10) || 190 })}
-                          className="h-8 w-full rounded-lg border border-white/15 bg-black/50 px-2 text-xs text-white outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-white/50 block mb-1">
-                          {isAr ? 'أدنى وزن (كغم)' : 'Min Weight (kg)'}
-                        </label>
-                        <input
-                          type="number"
-                          value={editForm.minWeight ?? 50}
-                          onChange={(e) => setEditForm({ ...editForm, minWeight: parseInt(e.target.value, 10) || 40 })}
-                          className="h-8 w-full rounded-lg border border-white/15 bg-black/50 px-2 text-xs text-white outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-white/50 block mb-1">
-                          {isAr ? 'أعلى وزن (كغم)' : 'Max Weight (kg)'}
-                        </label>
-                        <input
-                          type="number"
-                          value={editForm.maxWeight ?? 80}
-                          onChange={(e) => setEditForm({ ...editForm, maxWeight: parseInt(e.target.value, 10) || 90 })}
-                          className="h-8 w-full rounded-lg border border-white/15 bg-black/50 px-2 text-xs text-white outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Fit Note */}
-                  <div>
-                    <label className="text-[11px] font-semibold text-white/70 block mb-1">
-                      {isAr ? 'وصف القصة والملاءمة (يظهر للزبون عند اختيار المقاس)' : 'Fit Silhouette Note'}
-                    </label>
-                    <input
-                      type="text"
-                      value={editForm.note_ar || ''}
-                      onChange={(e) => setEditForm({ ...editForm, note_ar: e.target.value })}
-                      placeholder="المقاس الأكثر توازناً، يمنحك مظهراً راقياً ومريحاً"
-                      className="h-9 w-full rounded-xl border border-white/15 bg-black/50 px-3 text-xs text-white outline-none focus:border-[#3b82f6]"
-                    />
-                  </div>
-
-                  {/* Save or Cancel */}
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
-                    <button
-                      type="button"
-                      onClick={handleCancelEdit}
-                      className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-xs text-white/70 hover:text-white cursor-pointer"
-                    >
-                      {isAr ? 'إلغاء' : 'Cancel'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSaveEdit(item.id)}
-                      className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#004ad7] to-[#3b82f6] px-4 py-2 text-xs font-bold text-white shadow-md active:scale-95 cursor-pointer"
-                    >
-                      <Save className="h-3.5 w-3.5" />
-                      <span>{isAr ? 'حفظ التعديلات' : 'Save Changes'}</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* ADD NEW SIZE MODAL */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
-          <div className="relative w-full max-w-xl rounded-3xl border border-white/15 bg-[#121620] p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Plus className="h-4 w-4 text-[#3b82f6]" />
-                <span>{isAr ? 'إضافة مقاس جديد للتشكيلة' : 'Add New Ready-to-Wear Size'}</span>
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsAddModalOpen(false)}
-                className="text-white/40 hover:text-white cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateNewSize} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-white/80 block mb-1">
-                    {isAr ? 'رمز المقاس (مثال: 3XL أو OVERSIZED)' : 'Size Name / Code'}
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newSize.size}
-                    onChange={(e) => setNewSize({ ...newSize, size: e.target.value.toUpperCase() })}
-                    placeholder="3XL"
-                    className="h-10 w-full rounded-xl border border-white/15 bg-black/50 px-3 text-xs text-white outline-none focus:border-[#3b82f6]"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-white/80 block mb-1">
-                    {isAr ? 'مدى الطول المقترح' : 'Height Range'}
-                  </label>
-                  <input
-                    type="text"
-                    value={newSize.height}
-                    onChange={(e) => setNewSize({ ...newSize, height: e.target.value })}
-                    placeholder="195 - 210 سم"
-                    className="h-10 w-full rounded-xl border border-white/15 bg-black/50 px-3 text-xs text-white outline-none focus:border-[#3b82f6]"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-white/80 block mb-1">
-                    {isAr ? 'مدى الوزن المقترح' : 'Weight Range'}
-                  </label>
-                  <input
-                    type="text"
-                    value={newSize.weight}
-                    onChange={(e) => setNewSize({ ...newSize, weight: e.target.value })}
-                    placeholder="110 - 125 كغم"
-                    className="h-10 w-full rounded-xl border border-white/15 bg-black/50 px-3 text-xs text-white outline-none focus:border-[#3b82f6]"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-white/80 block mb-1">
-                  {isAr ? 'وصف القصة (بالعربية)' : 'Fit Description (Arabic)'}
-                </label>
-                <input
-                  type="text"
-                  value={newSize.note_ar}
-                  onChange={(e) => setNewSize({ ...newSize, note_ar: e.target.value })}
-                  placeholder="قصة رحبة جداً للأطوال والأوزان العالية"
-                  className="h-10 w-full rounded-xl border border-white/15 bg-black/50 px-3 text-xs text-white outline-none focus:border-[#3b82f6]"
-                />
-              </div>
-
-              {/* Min / Max Height and Weight Bounds for Calculator */}
-              <div className="p-3 rounded-2xl bg-black/40 border border-white/10 space-y-2">
-                <span className="text-[11px] font-semibold text-[#3b82f6] block">
-                  {isAr ? 'حدود حاسبة القياس الذكية (الطول والوزن):' : 'Smart Fit Calculator Bounds:'}
-                </span>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  <div>
-                    <label className="text-[10px] text-white/50 block mb-1">
-                      {isAr ? 'أدنى طول (سم)' : 'Min Height (cm)'}
-                    </label>
-                    <input
-                      type="number"
-                      value={newSize.minHeight ?? 160}
-                      onChange={(e) => setNewSize({ ...newSize, minHeight: parseInt(e.target.value, 10) || 150 })}
-                      className="h-8 w-full rounded-lg border border-white/15 bg-black/50 px-2 text-xs text-white outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-white/50 block mb-1">
-                      {isAr ? 'أعلى طول (سم)' : 'Max Height (cm)'}
-                    </label>
-                    <input
-                      type="number"
-                      value={newSize.maxHeight ?? 185}
-                      onChange={(e) => setNewSize({ ...newSize, maxHeight: parseInt(e.target.value, 10) || 190 })}
-                      className="h-8 w-full rounded-lg border border-white/15 bg-black/50 px-2 text-xs text-white outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-white/50 block mb-1">
-                      {isAr ? 'أدنى وزن (كغم)' : 'Min Weight (kg)'}
-                    </label>
-                    <input
-                      type="number"
-                      value={newSize.minWeight ?? 50}
-                      onChange={(e) => setNewSize({ ...newSize, minWeight: parseInt(e.target.value, 10) || 40 })}
-                      className="h-8 w-full rounded-lg border border-white/15 bg-black/50 px-2 text-xs text-white outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-white/50 block mb-1">
-                      {isAr ? 'أعلى وزن (كغم)' : 'Max Weight (kg)'}
-                    </label>
-                    <input
-                      type="number"
-                      value={newSize.maxWeight ?? 80}
-                      onChange={(e) => setNewSize({ ...newSize, maxWeight: parseInt(e.target.value, 10) || 90 })}
-                      className="h-8 w-full rounded-lg border border-white/15 bg-black/50 px-2 text-xs text-white outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/10">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-xs text-white/70 hover:text-white cursor-pointer"
-                >
-                  {isAr ? 'إلغاء' : 'Cancel'}
-                </button>
-                <button
-                  type="submit"
-                  className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#004ad7] to-[#3b82f6] px-5 py-2 text-xs font-bold text-white shadow-md active:scale-95 cursor-pointer"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>{isAr ? 'إضافة المقاس وتثبيته' : 'Save & Publish Size'}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+  const bounds = [
+    ['minHeight', 'أدنى طول (سم)', 'Min height (cm)'], ['maxHeight', 'أعلى طول (سم)', 'Max height (cm)'],
+    ['minWeight', 'أدنى وزن (كغم)', 'Min weight (kg)'], ['maxWeight', 'أعلى وزن (كغم)', 'Max weight (kg)'],
+  ] as const;
+  return <div className="sizes-manager min-w-0 space-y-5">
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div><h2 className="text-xl font-bold text-white">{t('المقاسات ونطاقات القياس', 'Sizes & measurement ranges')}</h2><p className="mt-2 text-sm text-slate-400">{t('الأرقام نفسها تُستخدم في الجدول وحاسبة المتجر. التعديلات تطبّق عند الحفظ.', 'The table and calculator use the same numbers. Edits apply when saved.')}</p></div>
+      <Button onClick={() => openEditor()} leftIcon={<Plus className="h-4 w-4" />} className="min-h-11">{t('إضافة مقاس', 'Add size')}</Button>
     </div>
-  );
+    <div className="grid grid-cols-3 gap-2 text-center text-sm">
+      {[[t('كل المقاسات', 'Total sizes'), masterSizes.length], [t('مفعّلة', 'Enabled'), active.length], [t('مخفية', 'Hidden'), masterSizes.filter(row => !row.enabled).length]].map(([label, count]) => <div key={label} className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/50 p-3"><p className="text-xs text-slate-400">{label}</p><p className="mt-2 text-xl font-bold text-white">{count}</p></div>)}
+    </div>
+    <p className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4 text-sm leading-6 text-slate-300">{t('الاقتراح يعتمد على وجود الطول والوزن معاً ضمن نطاق المقاس. عند تداخل النطاقات تُختار المطابقة الأقرب لمركز النطاقين، بدون الاعتماد على ترتيب العرض. هذا دليل تقريبي؛ قياسات الصدر والخصر وقصّة القطعة غير محسوبة.', 'A match requires both height and weight within a size range. Overlaps use the closest normalized range centers, independently of display order. Guidance is approximate; chest, waist and garment cut are not measured.')}</p>
+    {(invalid.length > 0 || overlapping || active.length === 0) && <p role="status" className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">{t(`${invalid.length} صف يحتاج تصحيحاً · ${overlapping ? 'توجد نطاقات متداخلة.' : 'لا توجد نطاقات متداخلة.'} الصفوف غير الصالحة أو المخفية لا تدخل بالحساب.${active.length ? '' : ' لا توجد مقاسات صالحة مفعّلة.'}`, `${invalid.length} rows need correction · ${overlapping ? 'Ranges overlap.' : 'No overlapping ranges.'} Invalid or hidden rows are excluded.${active.length ? '' : ' No valid enabled sizes.'}`)}</p>}
+    {notice && <p role="status" className="text-sm text-emerald-300">{notice}</p>}
+    <div className="flex flex-wrap gap-3 items-end">
+      <div className="min-w-0 flex-1 basis-52"><Input label={t('بحث المقاسات', 'Search sizes')} icon={Search} value={search} onChange={e => setSearch(e.target.value)} className="min-h-11" /></div>
+      <Button variant="secondary" className="min-h-11" aria-pressed={showPreview} onClick={() => setShowPreview(!showPreview)}>{t(showPreview ? 'إخفاء المعاينة' : 'معاينة جدول الزبون', showPreview ? 'Hide preview' : 'Preview customer chart')}</Button>
+      <Button variant="secondary" className="min-h-11" disabled={masterSizes.length < 2} onClick={() => { reorderMasterSizes([...masterSizes].sort((a, b) => a.minWeight - b.minWeight || a.minHeight - b.minHeight || a.size.localeCompare(b.size))); setNotice(t('تم ترتيب العرض حسب أدنى وزن ثم أدنى طول.', 'Display sorted by minimum weight, then minimum height.')); }}>{t('ترتيب حسب القياسات', 'Sort by measurements')}</Button>
+    </div>
+    {showPreview && <div className="overflow-x-auto rounded-xl border border-slate-700" role="region" aria-label={t('معاينة جدول المقاسات', 'Size chart preview')} tabIndex={0}><table className="w-full text-sm text-slate-200"><caption className="p-3 text-start text-slate-400">{t('المقاسات المفعّلة فقط · سم وكغم', 'Enabled sizes only · cm and kg')}</caption><thead><tr>{[t('المقاس', 'Size'), t('الطول', 'Height'), t('الوزن', 'Weight')].map(label => <th scope="col" key={label} className="p-3 text-start">{label}</th>)}</tr></thead><tbody>{active.map(row => <tr key={row.id} className="border-t border-slate-800"><th scope="row" className="p-3 text-start">{row.size}</th><td className="p-3 whitespace-nowrap"><bdi dir="ltr">{sizeRange(row, 'height', isAr)}</bdi></td><td className="p-3 whitespace-nowrap"><bdi dir="ltr">{sizeRange(row, 'weight', isAr)}</bdi></td></tr>)}</tbody></table>{!active.length && <p className="p-4 text-slate-400">{t('لا توجد مقاسات مفعّلة.', 'No enabled sizes.')}</p>}</div>}
+    <section className="rounded-xl border border-slate-700 p-4 space-y-3" aria-label={t('فحص الحاسبة', 'Calculator check')}>
+      <h3 className="font-bold text-white">{t('جرّب الحاسبة بدون حفظ بيانات', 'Check the calculator without saving data')}</h3>
+      <div className="grid grid-cols-2 gap-3"><Input label={t('الطول (سم)', 'Height (cm)')} type="text" inputMode="decimal" maxLength={8} dir="ltr" value={height} onChange={e => setHeight(e.target.value)} className="min-h-11" /><Input label={t('الوزن (كغم)', 'Weight (kg)')} type="text" inputMode="decimal" maxLength={8} dir="ltr" value={weight} onChange={e => setWeight(e.target.value)} className="min-h-11" /></div>
+      <p role="status" className="text-sm leading-6 text-indigo-200">{result ? `${isAr ? result.title_ar : result.title_en} — ${isAr ? result.note_ar : result.note_en}` : t('أدخل طولاً من 120 إلى 220 سم ووزناً من 30 إلى 200 كغم.', 'Enter height 120–220 cm and weight 30–200 kg.')}</p>
+    </section>
+    <div className="space-y-3">{filtered.map(row => { const index = masterSizes.findIndex(item => item.id === row.id); return <article key={row.id} className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/40 p-4 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-bold text-white break-all">{row.size} <span className="ms-2 text-xs font-normal text-slate-400">{t(row.enabled ? 'مفعّل' : 'مخفي', row.enabled ? 'Enabled' : 'Hidden')}</span></h3><div className="flex gap-2"><Button variant="secondary" className="min-h-11 min-w-11" aria-label={t(`تقديم ${row.size}`, `Move ${row.size} up`)} disabled={index === 0} onClick={() => move(index, -1)}><ArrowUp className="h-4 w-4" /></Button><Button variant="secondary" className="min-h-11 min-w-11" aria-label={t(`تأخير ${row.size}`, `Move ${row.size} down`)} disabled={index === masterSizes.length - 1} onClick={() => move(index, 1)}><ArrowDown className="h-4 w-4" /></Button></div></div>
+      <div className="grid grid-cols-2 gap-2 text-sm text-slate-300"><p>{t('الطول', 'Height')}<br /><bdi dir="ltr">{sizeRange(row, 'height', isAr)}</bdi></p><p>{t('الوزن', 'Weight')}<br /><bdi dir="ltr">{sizeRange(row, 'weight', isAr)}</bdi></p></div>
+      {(isAr ? row.note_ar : row.note_en) && <p className="text-sm text-slate-400 break-words">{isAr ? row.note_ar : row.note_en}</p>}
+      <div className="grid grid-cols-3 gap-2"><Button variant="secondary" className="min-h-11 px-2" aria-label={t(`تعديل ${row.size}`, `Edit ${row.size}`)} onClick={() => openEditor(row)} leftIcon={<Pencil className="h-4 w-4" />}>{t('تعديل', 'Edit')}</Button><Button variant="secondary" className="min-h-11 px-2" aria-label={t(row.enabled ? `إخفاء ${row.size}` : `تفعيل ${row.size}`, row.enabled ? `Hide ${row.size}` : `Enable ${row.size}`)} aria-pressed={row.enabled} onClick={() => { toggleMasterSize(row.id); setNotice(t('تم تغيير الظهور في هذه الجلسة.', 'Visibility changed in this session.')); }}>{t(row.enabled ? 'إخفاء' : 'تفعيل', row.enabled ? 'Hide' : 'Enable')}</Button><Button variant="secondary" className="min-h-11 px-2 text-rose-300" aria-label={t(`حذف ${row.size}`, `Delete ${row.size}`)} onClick={() => setConfirmAction(row)} leftIcon={<Trash2 className="h-4 w-4" />}>{t('حذف', 'Delete')}</Button></div>
+    </article>; })}{!filtered.length && <p role="status" className="py-8 text-center text-slate-400">{t('لا توجد مقاسات مطابقة.', 'No matching sizes.')}</p>}</div>
+    <div className="border-t border-slate-800 pt-4 space-y-2"><Button variant="secondary" className="min-h-11" leftIcon={<RotateCcw className="h-4 w-4" />} onClick={() => setConfirmAction('reset')}>{t('استعادة المقاسات الافتراضية', 'Restore default sizes')}</Button><p className="text-xs leading-5 text-slate-500">{t('دليل عام للمتجر؛ إخفاء المقاس هنا لا يغيّر مخزون المنتجات. الحفظ السحابي بالخلفية ولا يُؤكّد من هذه الشاشة.', 'This is a store-wide guide; hiding a size does not change product stock. Background cloud saving is not confirmed by this screen.')}</p></div>
+    <Sheet isOpen={!!draft} onClose={() => setDraft(null)} title={t(draft?.id ? 'تعديل المقاس' : 'إضافة مقاس', draft?.id ? 'Edit size' : 'Add size')} footer={<div className="space-y-3">{error && <p role="alert" className="text-sm text-rose-300">{error}</p>}<div className="flex gap-2"><Button className="min-h-11" onClick={save}>{t('حفظ المقاس', 'Save size')}</Button><Button variant="secondary" className="min-h-11" onClick={() => setDraft(null)}>{t('إلغاء', 'Cancel')}</Button></div></div>}>
+      {draft && <form className="space-y-5" onSubmit={e => { e.preventDefault(); save(); }}>
+        <Input label={t('رمز المقاس', 'Size label')} maxLength={30} value={draft.size} onChange={e => setDraft({ ...draft, size: e.target.value })} className="min-h-11" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{bounds.map(([key, ar, en]) => <Input key={key} label={t(ar, en)} dir="ltr" type="number" min={key.includes('Height') ? 120 : 30} max={key.includes('Height') ? 220 : 200} step="any" value={Number.isFinite(draft[key]) ? draft[key] : ''} onChange={e => setDraft({ ...draft, [key]: e.target.value === '' ? NaN : Number(e.target.value) })} className="min-h-11" />)}</div>
+        <Input label={t('ملاحظة بالعربي (اختياري)', 'Arabic note (optional)')} value={draft.note_ar || ''} onChange={e => setDraft({ ...draft, note_ar: e.target.value })} className="min-h-11" />
+        <Input label={t('ملاحظة بالإنجليزي (اختياري)', 'English note (optional)')} value={draft.note_en || ''} onChange={e => setDraft({ ...draft, note_en: e.target.value })} className="min-h-11" />
+        <p className="text-sm text-slate-400">{t('نص نطاق الطول والوزن يُولّد من الأرقام أعلاه لمنع اختلاف الجدول عن الحاسبة.', 'Displayed ranges are generated from the numbers above so the chart and calculator stay consistent.')}</p>
+        <button type="submit" className="sr-only" tabIndex={-1}>{t('حفظ', 'Save')}</button>
+      </form>}
+    </Sheet>
+    <Sheet isOpen={!!confirmAction} onClose={() => setConfirmAction(null)} title={t('تأكيد تغيير دليل المقاسات', 'Confirm size guide change')} footer={<div className="flex gap-2"><Button variant="danger" className="min-h-11" onClick={() => { if (confirmAction === 'reset') resetMasterSizesToDefault(); else if (confirmAction) deleteMasterSize(confirmAction.id); setConfirmAction(null); setNotice(t('تم تطبيق التغيير في هذه الجلسة.', 'Change applied in this session.')); }}>{t('تأكيد', 'Confirm')}</Button><Button variant="secondary" className="min-h-11" onClick={() => setConfirmAction(null)}>{t('إلغاء', 'Cancel')}</Button></div>}><p className="text-slate-300 leading-7">{confirmAction === 'reset' ? t('هذا يستبدل دليل المقاسات الحالي بالقيم الافتراضية. لا يغيّر مخزون المنتجات.', 'This replaces the current guide with defaults. Product stock stays unchanged.') : t(`حذف المقاس ${confirmAction?.size || ''} من الدليل؟ يمكنك إخفاؤه بدلاً من الحذف.`, `Delete ${confirmAction && confirmAction.size || ''} from the guide? You can hide it instead.`)}</p></Sheet>
+  </div>;
 }

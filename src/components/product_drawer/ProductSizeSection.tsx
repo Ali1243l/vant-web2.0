@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Ruler, Check, AlertCircle, X } from 'lucide-react';
 import type { Product, Language } from '../../types';
-import { calculateRecommendedSize } from '../../data/sizeGuide';
+import { activeSizeRows, calculateRecommendedSize, parseFitMeasurement, sizeRange, type MasterSizeItem } from '../../data/sizeGuide';
 import { trackEvent } from '../../lib/analytics';
 
 interface ProductSizeSectionProps {
@@ -20,7 +20,7 @@ interface ProductSizeSectionProps {
   };
   showSizeGuide: boolean;
   setShowSizeGuide: React.Dispatch<React.SetStateAction<boolean>>;
-  masterSizes: any[];
+  masterSizes: MasterSizeItem[];
   bespokeControl: {
     visible: boolean;
     label_ar: string;
@@ -59,11 +59,9 @@ export const ProductSizeSection: React.FC<ProductSizeSectionProps> = ({
   const [sizeGuideTab, setSizeGuideTab] = useState<'calculator' | 'table'>('calculator');
 
   const dynamicRecommendation = useMemo(() => {
-    if (calcHeight.length !== 3) return null;
-    if (calcWeight.length < 2) return null;
-    const h = parseInt(calcHeight, 10);
-    const w = parseInt(calcWeight, 10);
-    if (isNaN(h) || isNaN(w) || h < 120 || h > 220 || w < 30 || w > 200) return null;
+    const h = parseFitMeasurement(calcHeight);
+    const w = parseFitMeasurement(calcWeight);
+    if (h === null || w === null) return null;
     return calculateRecommendedSize(h, w, masterSizes);
   }, [calcHeight, calcWeight, masterSizes]);
 
@@ -203,8 +201,8 @@ export const ProductSizeSection: React.FC<ProductSizeSectionProps> = ({
               <div className="space-y-3">
                 <span className="text-[11px] md:text-xs font-medium text-[#6b7280] dark:text-[#9ca3af] block">
                   {lang === 'ar'
-                    ? 'أدخل طولك ووزنك لاقتراح المقاس المثالي فوراً:'
-                    : 'Enter your height and weight for an instant fit recommendation:'}
+                    ? 'أدخل طولك ووزنك لاقتراح تقريبي من جدول المتجر:'
+                    : 'Enter height and weight for approximate guidance from the store chart:'}
                 </span>
 
                 <div className="grid grid-cols-2 gap-2.5 md:gap-3.5">
@@ -214,13 +212,13 @@ export const ProductSizeSection: React.FC<ProductSizeSectionProps> = ({
                     </label>
                     <input
                       type="text"
-                      inputMode="numeric"
-                      maxLength={3}
+                      inputMode="decimal"
+                      maxLength={8}
                       placeholder={lang === 'ar' ? 'مثال: 175' : 'e.g. 175'}
+                      aria-label={lang === 'ar' ? 'الطول (سم)' : 'Height (cm)'}
                       value={calcHeight}
                       onChange={(e) => {
-                        const val = e.target.value.replace(/\D/g, '').slice(0, 3);
-                        setCalcHeight(val);
+                        setCalcHeight(e.target.value);
                       }}
                       className="w-full rounded-lg md:rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#16191f] px-2.5 py-1.5 md:py-2.5 md:px-3 text-xs md:text-sm text-[#15171c] dark:text-white outline-none focus:border-[#004ad7]"
                     />
@@ -232,19 +230,20 @@ export const ProductSizeSection: React.FC<ProductSizeSectionProps> = ({
                     </label>
                     <input
                       type="text"
-                      inputMode="numeric"
-                      maxLength={3}
+                      inputMode="decimal"
+                      maxLength={8}
                       placeholder={lang === 'ar' ? 'مثال: 72' : 'e.g. 72'}
+                      aria-label={lang === 'ar' ? 'الوزن (كغم)' : 'Weight (kg)'}
                       value={calcWeight}
                       onChange={(e) => {
-                        const val = e.target.value.replace(/\D/g, '').slice(0, 3);
-                        setCalcWeight(val);
+                        setCalcWeight(e.target.value);
                       }}
                       className="w-full rounded-lg md:rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#16191f] px-2.5 py-1.5 md:py-2.5 md:px-3 text-xs md:text-sm text-[#15171c] dark:text-white outline-none focus:border-[#004ad7]"
                     />
                   </div>
                 </div>
 
+                {calcHeight.trim() && calcWeight.trim() && !dynamicRecommendation && <p role="alert" className="text-xs text-amber-700 dark:text-amber-300">{lang === 'ar' ? 'راجع الأرقام: الطول من 120 إلى 220 سم والوزن من 30 إلى 200 كغم. استخدم أرقاماً فقط مع فاصلة عشرية اختيارية؛ بدون حروف أو وحدات.' : 'Check the numbers: height 120–220 cm, weight 30–200 kg. Use digits with an optional decimal point, without letters or units.'}</p>}
                 {dynamicRecommendation && (
                   <motion.div
                     initial={{ opacity: 0, y: 3 }}
@@ -267,7 +266,7 @@ export const ProductSizeSection: React.FC<ProductSizeSectionProps> = ({
                               : 'bg-[#004ad7] dark:bg-[#3b82f6]'
                           }`}
                         >
-                          {dynamicRecommendation.displaySize}
+                          {(dynamicRecommendation.isBespoke ? (lang === 'ar' ? 'لا توجد مطابقة' : 'No match') : dynamicRecommendation.displaySize)}
                         </span>
                       </div>
 
@@ -279,18 +278,19 @@ export const ProductSizeSection: React.FC<ProductSizeSectionProps> = ({
                             rel="noopener noreferrer"
                             className="rounded-lg md:rounded-xl bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 px-2.5 py-1 md:px-3.5 md:py-1.5 text-[11px] md:text-xs font-semibold text-white shadow-2xs cursor-pointer"
                           >
-                            {lang === 'ar' ? bespokeControl.label_ar : bespokeControl.label_en}
+                            {lang === 'ar' ? 'استفسار عن القياسات' : 'Ask about measurements'}
                           </a>
                         ) : null
                       ) : dynamicRecommendation.size ? (
                         <button
                           type="button"
+                          disabled={isSoldOut || !availableSizes.has(dynamicRecommendation.size!)}
                           onClick={() => onSizeClick(dynamicRecommendation.size!)}
-                          className="rounded-lg md:rounded-xl bg-[#004ad7] dark:bg-[#3b82f6] px-2.5 py-1 md:px-3.5 md:py-1.5 text-[11px] md:text-xs font-semibold text-white shadow-2xs cursor-pointer active:scale-95"
+                          className="rounded-lg md:rounded-xl bg-[#004ad7] dark:bg-[#3b82f6] px-2.5 py-1 md:px-3.5 md:py-1.5 text-[11px] md:text-xs font-semibold text-white shadow-2xs cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           {lang === 'ar'
-                            ? `اختيار مقاس (${dynamicRecommendation.displaySize})`
-                            : `Select (${dynamicRecommendation.displaySize})`}
+                            ? (availableSizes.has(dynamicRecommendation.size!) && !isSoldOut ? `اختيار مقاس (${dynamicRecommendation.displaySize})` : 'المقاس غير متوفر لهذه القطعة')
+                            : (availableSizes.has(dynamicRecommendation.size!) && !isSoldOut ? `Select (${dynamicRecommendation.displaySize})` : 'Unavailable for this item')}
                         </button>
                       ) : null}
                     </div>
@@ -316,27 +316,25 @@ export const ProductSizeSection: React.FC<ProductSizeSectionProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-black/5 dark:divide-white/5 text-xs md:text-sm">
-                      {masterSizes.filter((r) => r.enabled).map((row) => {
+                      {activeSizeRows(masterSizes).map((row) => {
                         const isRowSelected = selectedSize === row.size;
                         return (
                           <tr
                             key={row.id || row.size}
-                            onClick={() => onSizeClick(row.size)}
-                            className={`transition-colors cursor-pointer ${
+                            className={`transition-colors ${
                               isRowSelected
                                 ? 'bg-[#004ad7]/12 dark:bg-[#3b82f6]/20 font-bold text-[#004ad7] dark:text-[#3b82f6]'
                                 : 'text-[#15171c] dark:text-white/90 hover:bg-black/5 dark:hover:bg-white/5'
                             }`}
-                            title={lang === 'ar' ? `انقر لاختيار مقاس (${row.size})` : `Click to select (${row.size})`}
                           >
                             <td className="py-2.5 px-3 md:py-3 md:px-4 font-bold text-start font-sans">
                               <span className="inline-flex items-center gap-2">
                                 <span className={`h-2 w-2 rounded-full transition-transform ${isRowSelected ? 'bg-[#004ad7] dark:bg-[#3b82f6] scale-125' : 'bg-black/20 dark:bg-white/20'}`} />
-                                <span className="px-2 py-0.5 rounded-md bg-black/5 dark:bg-white/10 text-xs md:text-sm font-bold">{row.size}</span>
+                                <button type="button" disabled={isSoldOut || !availableSizes.has(row.size)} onClick={() => onSizeClick(row.size)} className="min-h-11 min-w-11 px-2 rounded-md bg-black/5 dark:bg-white/10 text-xs md:text-sm font-bold disabled:opacity-40">{row.size}</button>
                               </span>
                             </td>
-                            <td className="py-2.5 px-3 md:py-3 md:px-4 tabular-nums font-medium text-zinc-700 dark:text-zinc-200">{row.height || '—'}</td>
-                            <td className="py-2.5 px-3 md:py-3 md:px-4 tabular-nums font-medium text-zinc-700 dark:text-zinc-200">{row.weight || '—'}</td>
+                            <td className="py-2.5 px-3 md:py-3 md:px-4 tabular-nums font-medium text-zinc-700 dark:text-zinc-200"><bdi dir="ltr">{sizeRange(row, 'height', lang === 'ar')}</bdi></td>
+                            <td className="py-2.5 px-3 md:py-3 md:px-4 tabular-nums font-medium text-zinc-700 dark:text-zinc-200"><bdi dir="ltr">{sizeRange(row, 'weight', lang === 'ar')}</bdi></td>
                           </tr>
                         );
                       })}
@@ -344,7 +342,7 @@ export const ProductSizeSection: React.FC<ProductSizeSectionProps> = ({
                   </table>
                 </div>
                 <p className="text-[10.5px] md:text-xs text-[#6b7280] dark:text-[#9ca3af] text-center">
-                  {lang === 'ar' ? 'انقر على أي مقاس لاعتماده فوراً للقطعة' : 'Tap any size row to select it instantly'}
+                  {lang === 'ar' ? 'يمكن اختيار المقاسات المتوفرة للقطعة فقط. الأرقام إرشادية وليست ضماناً للملاءمة.' : 'Only sizes available for this item can be selected. Ranges are guidance, not a fit guarantee.'}
                 </p>
               </div>
             )}

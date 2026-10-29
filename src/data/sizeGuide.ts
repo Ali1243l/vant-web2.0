@@ -1,15 +1,6 @@
 import type { Size } from '../types';
 
-/**
- * Dynamic Sizing Configuration & Rules for Maison VANT
- * Engineered strictly per professional fashion tailoring:
- * - Ready-to-wear sizes: XS, S, M, L, XL, XXL.
- * - Body girth (circumference of chest & waist) is determined by Weight.
- * - Minimum adult height: 120 cm, Maximum: 220 cm (strictly 3 digits).
- * - Minimum adult weight: 30 kg, Maximum: 200 kg (min 2 digits, max 3 digits).
- * - Honest bespoke handling: Weights > 118 kg or BMI >= 40 cannot wear ready-to-wear XS-XXL
- *   and are respectfully routed to Bespoke Made-to-Measure tailoring.
- */
+// Height and weight ranges provide approximate guidance, not garment measurements.
 
 export interface MasterSizeItem {
   id: string;
@@ -227,7 +218,7 @@ export type RecommendationStatus = 'standard' | 'petite_note' | 'tall_note' | 'b
 
 export interface SizeRecommendationResult {
   status: RecommendationStatus;
-  size?: Size;
+  size?: string;
   displaySize: string;
   isBespoke: boolean;
   title_ar: string;
@@ -239,130 +230,58 @@ export interface SizeRecommendationResult {
   confidence: 'exact' | 'close';
 }
 
-/**
- * Robust, highly transparent apparel sizing engine:
- * 1. Strict boundaries: Height 120-220 cm (3 digits), Weight 30-200 kg (2-3 digits).
- * 2. Uncompromising honesty: Disproportionate builds or weights > 118kg (e.g. 150cm / 150kg)
- *    are never given inappropriate off-the-rack sizes. They are truthfully offered bespoke tailoring.
- * 3. Weights 45-118 kg mapped accurately with girth precedence over height.
- */
+export function parseFitMeasurement(value: string): number | null {
+  const normalized = value.trim().replace(/[٠-٩]/g, digit => String(digit.charCodeAt(0) - 1632))
+    .replace(/[۰-۹]/g, digit => String(digit.charCodeAt(0) - 1776)).replace('٫', '.');
+  if (!/^\d{1,3}(?:\.\d{1,2})?$/.test(normalized)) return null;
+  return Number(normalized);
+}
+
+export function sizeRange(row: MasterSizeItem, dimension: 'height' | 'weight', isAr = true): string {
+  return dimension === 'height'
+    ? `${row.minHeight} – ${row.maxHeight} ${isAr ? 'سم' : 'cm'}`
+    : `${row.minWeight} – ${row.maxWeight} ${isAr ? 'كغم' : 'kg'}`;
+}
+
+export function validateMasterSize(row: MasterSizeItem, rows: MasterSizeItem[] = []): 'name' | 'duplicate' | 'range' | null {
+  if (typeof row.size !== 'string' || !row.size.trim()) return 'name';
+  if (rows.some(other => other && typeof other.size === 'string' && other.id !== row.id && other.size.trim().toUpperCase() === row.size.trim().toUpperCase())) return 'duplicate';
+  if (![row.minHeight, row.maxHeight, row.minWeight, row.maxWeight].every(Number.isFinite)
+    || row.minHeight < 120 || row.maxHeight > 220 || row.minHeight > row.maxHeight
+    || row.minWeight < 30 || row.maxWeight > 200 || row.minWeight > row.maxWeight) return 'range';
+  return null;
+}
+
+export function activeSizeRows(rows: MasterSizeItem[]): MasterSizeItem[] {
+  if (!Array.isArray(rows)) return [];
+  return rows.filter(row => row && typeof row.id === 'string' && row.enabled === true && !validateMasterSize(row, rows));
+}
+
 export function calculateRecommendedSize(
   heightCm: number,
   weightKg: number,
-  customMasterSizes?: MasterSizeItem[]
+  customMasterSizes: MasterSizeItem[] = DEFAULT_MASTER_SIZES
 ): SizeRecommendationResult | null {
-  // Strict boundary check:
-  // Height: strictly 3 digits (120 to 220)
-  // Weight: strictly 2-3 digits (30 to 200)
-  if (!heightCm || !weightKg || heightCm < 120 || heightCm > 220 || weightKg < 30 || weightKg > 200) {
-    return null;
-  }
-
-  const heightM = heightCm / 100;
-  const bmi = weightKg / (heightM * heightM);
-
-  const activeSizes = (customMasterSizes && customMasterSizes.length > 0)
-    ? customMasterSizes.filter((s) => s.enabled)
-    : DEFAULT_MASTER_SIZES;
-
-  const maxSupportedWeight = activeSizes.length > 0
-    ? Math.max(...activeSizes.map((s) => s.maxWeight))
-    : 118;
-
-  // 1. HONEST BESPOKE TAILORING ASSESSMENT:
-  // Off-the-rack luxury collections physically cannot accommodate weights exceeding max supported
-  // or extreme disproportion (BMI >= 40, such as 150 cm with 150 kg where BMI is 66.7).
-  if (weightKg > maxSupportedWeight || bmi >= 40 || heightCm > 215) {
-    return {
-      status: 'bespoke_needed',
-      displaySize: 'تفصيل خاص',
-      isBespoke: true,
-      confidence: 'exact',
-      title_ar: 'خارج نطاق المقاسات الجاهزة',
-      title_en: 'Out of Ready-to-Wear Range',
-      reason_ar: 'يتطلب تفصيلاً خاصاً (Bespoke)',
-      reason_en: 'Requires Bespoke Tailoring',
-      note_ar: weightKg > maxSupportedWeight
-        ? `المقاسات الجاهزة المتوفرة مخصصة حتى وزن ${maxSupportedWeight} كغم، ولن توفر الراحة أو الاتساع المطلوب لهذا القياس. ڤانت ترحب بطلب تفصيل قطعة خاصة لك بمقاساتك الدقيقة عبر خدمة التفصيل الخاص.`
-        : 'نظراً لاختلاف تناسق الطول والوزن عن قوالب المقاسات الجاهزة، المقاسات الجاهزة ستكون غير متناسقة في طول الأكمام والكتفين. نوصي بالتفصيل الخاص لضمان قصة مثالية ومريحة.',
-      note_en: weightKg > maxSupportedWeight
-        ? `Current ready-to-wear sizes are tailored up to ${maxSupportedWeight} kg and cannot accommodate this profile comfortably. Maison VANT welcomes bespoke Made-to-Measure orders tailored to your exact measurements.`
-        : 'Due to distinct proportion differences from ready-to-wear patterns, custom bespoke tailoring is recommended for optimal fit and silhouette harmony.',
-    };
-  }
-
-  // 2. Below Standard Adult Baseline:
-  const minSupportedWeight = activeSizes.length > 0
-    ? Math.min(...activeSizes.map((s) => s.minWeight))
-    : 45;
-
-  if (weightKg < minSupportedWeight) {
-    const smallestSize = activeSizes[0]?.size || 'XS';
-    return {
-      status: 'petite_note',
-      size: smallestSize as Size,
-      displaySize: smallestSize,
-      isBespoke: false,
-      confidence: 'close',
-      title_ar: `مقاس (${smallestSize}) — قصة واسعة`,
-      title_en: `Size (${smallestSize}) — Relaxed fit`,
-      reason_ar: `الوزن أقل من ${minSupportedWeight} كغم لقالب البالغين`,
-      reason_en: `Weight is below adult ${minSupportedWeight} kg standard`,
-      note_ar: `مقاس (${smallestSize}) هو أصغر مقاس جاهز للبالغين، وسيكون فضفاضاً وواسعاً نسبياً لأن وزنك تحت ${minSupportedWeight} كغم. يمكنك ارتداؤه بإطلالة فضفاضة عصرية (Oversized) أو طلب تعديل خياطة مخصص.`,
-      note_en: `Size (${smallestSize}) is our smallest adult ready-to-wear size, and will drape loosely on builds under ${minSupportedWeight} kg. It can be styled oversized or custom-altered.`,
-    };
-  }
-
-  // 3. Dynamic search across active master sizes:
-  // First priority: matching both weight and height
-  let matched = activeSizes.find((s) => weightKg >= s.minWeight && weightKg <= s.maxWeight);
-
-  // If no direct weight match, find the closest active size by weight distance
-  if (!matched && activeSizes.length > 0) {
-    let closestDist = Infinity;
-    for (const s of activeSizes) {
-      const mid = (s.minWeight + s.maxWeight) / 2;
-      const dist = Math.abs(weightKg - mid);
-      if (dist < closestDist) {
-        closestDist = dist;
-        matched = s;
-      }
-    }
-  }
-
-  const selectedMaster = matched || activeSizes[Math.min(2, activeSizes.length - 1)];
-  const sizeIndex = activeSizes.findIndex((s) => s.id === selectedMaster.id);
-
-  // 4. Tall & Lean adjustment:
-  const isTall = heightCm > selectedMaster.maxHeight + 5 && sizeIndex < activeSizes.length - 1;
-  const finalMaster = isTall ? activeSizes[sizeIndex + 1] : selectedMaster;
-
-  const displaySize = finalMaster.size;
-  const reason_ar = isTall
-    ? 'موصى به لطول الأكمام والقامة'
-    : bmi >= 28 && bmi < 40
-    ? 'موصى به لراحة محيط الصدر والخصر'
-    : 'تناسق قياسي متوازن ومريح';
-  const reason_en = isTall
-    ? 'Optimized for height & sleeve length'
-    : bmi >= 28 && bmi < 40
-    ? 'Optimized for torso & chest comfort'
-    : 'Balanced standard luxury fit';
-
-  const note_ar = finalMaster.note_ar || `مقاس (${displaySize}) مناسب للطول والوزن المدخلين مع انسدال عصري مريح.`;
-  const note_en = finalMaster.note_en || `Size (${displaySize}) matches your measurements for an effortless silhouette.`;
-
+  if (![heightCm, weightKg].every(Number.isFinite) || heightCm < 120 || heightCm > 220 || weightKg < 30 || weightKg > 200) return null;
+  const matches = activeSizeRows(customMasterSizes).filter(row =>
+    heightCm >= row.minHeight && heightCm <= row.maxHeight && weightKg >= row.minWeight && weightKg <= row.maxWeight);
+  // Resolve overlapping ranges by distance from both normalized centers, independent of display order.
+  const distance = (row: MasterSizeItem) =>
+    Math.abs(heightCm - (row.minHeight + row.maxHeight) / 2) / Math.max(1, row.maxHeight - row.minHeight)
+    + Math.abs(weightKg - (row.minWeight + row.maxWeight) / 2) / Math.max(1, row.maxWeight - row.minWeight);
+  matches.sort((a, b) => distance(a) - distance(b) || a.size.localeCompare(b.size) || a.id.localeCompare(b.id));
+  const match = matches[0];
+  if (!match) return {
+    status: 'bespoke_needed', isBespoke: true, confidence: 'close',
+    displaySize: '—', title_ar: 'لا توجد مطابقة في الدليل', title_en: 'No matching size in this guide',
+    note_ar: 'الطول والوزن خارج نطاق مشترك للمقاسات المفعّلة. قارن قياسات القطعة أو تواصل مع المتجر قبل الاختيار.',
+    note_en: 'No enabled size covers both measurements. Compare actual garment measurements or contact the store before selecting.',
+  };
   return {
-    status: 'standard',
-    size: displaySize as Size,
-    displaySize,
-    isBespoke: false,
-    confidence: 'exact',
-    title_ar: `مقاس (${displaySize})`,
-    title_en: `Size (${displaySize})`,
-    reason_ar,
-    reason_en,
-    note_ar,
-    note_en,
+    status: 'standard', size: match.size, displaySize: match.size, isBespoke: false, confidence: 'exact',
+    title_ar: `مقاس (${match.size})`, title_en: `Size (${match.size})`,
+    reason_ar: 'الطول والوزن ضمن حدود هذا المقاس', reason_en: 'Both measurements fall within this size range',
+    note_ar: 'اقتراح تقريبي من جدول المتجر، وليس ضماناً للملاءمة. راجع قياسات القطعة وقصّتها قبل الشراء.',
+    note_en: 'Approximate guidance from the store chart, not a fit guarantee. Check garment measurements and cut before buying.',
   };
 }

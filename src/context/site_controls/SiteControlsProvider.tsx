@@ -194,7 +194,7 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
       }
 
       // 4.5 Master Sizes & Measurements
-      if (Array.isArray(cloudConfig.sizeGuideRows) && cloudConfig.sizeGuideRows.length > 0) {
+      if (Array.isArray(cloudConfig.sizeGuideRows)) {
         setMasterSizes(cloudConfig.sizeGuideRows);
         try {
           localStorage.setItem(SIZES_STORAGE_KEY, JSON.stringify(cloudConfig.sizeGuideRows));
