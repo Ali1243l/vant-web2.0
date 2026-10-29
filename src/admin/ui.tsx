@@ -70,7 +70,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             {label}
           </label>
         )}
-        <div className="relative flex items-center">
+        <div dir={props.dir} className="relative flex items-center">
           {Icon && (
             <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none text-slate-400">
               <Icon className="w-4 h-4" />
