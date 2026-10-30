@@ -13,7 +13,8 @@ export const AdminSecurityTab: React.FC<AdminSecurityTabProps> = ({ isAr }) => {
 
   const handleSavePassword = () => {
     if (newPassword.trim().length >= 4) {
-      setAdminPin(newPassword.trim());
+      try { setAdminPin(newPassword.trim()); }
+      catch { window.alert(isAr ? 'تعذّر حفظ الرمز. حاول ثانية.' : 'Could not save code. Retry.'); return; }
       setPasswordSuccess(true);
       setTimeout(() => {
         setPasswordSuccess(false);

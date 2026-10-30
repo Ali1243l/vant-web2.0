@@ -15,6 +15,7 @@ export const SettingsView: React.FC = () => {
   const [draft, setDraft] = useState(siteSettings);
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState(false);
+  const [previewTheme, setPreviewTheme] = useState<'dark' | 'light'>('dark');
   const [notice, setNotice] = useState('');
   const dirty = Object.keys(generalSettingsPatch(draft, base)).length > 0;
   useEffect(() => { if (!dirty) { setBase(siteSettings); setDraft(siteSettings); } }, [siteSettings, dirty]);
@@ -67,7 +68,7 @@ export const SettingsView: React.FC = () => {
       <p role="status" className="text-sm text-slate-300">{notice || (dirty ? (isAr ? 'تغييرات غير محفوظة' : 'Unsaved changes') : (isAr ? 'كل التغييرات محفوظة' : 'All changes saved'))}</p>
       <div className="flex flex-wrap gap-2"><Button type="submit" isLoading={saving} disabled={!dirty} leftIcon={<Check className="w-4 h-4" />}>{isAr ? 'حفظ التغييرات' : 'Save changes'}</Button><Button type="button" variant="outline" disabled={!dirty || saving} onClick={() => { setDraft(siteSettings); setBase(siteSettings); setNotice(''); }}>{isAr ? 'إلغاء المسودة' : 'Discard draft'}</Button></div>
     </div>
-    {preview && <SplashLoader isLoading={false} isPreview loadingTextAr={draft.loading_text_ar} loadingTextEn={draft.loading_text_en} motif={draft.splash_motif} onClosePreview={() => setPreview(false)} />}
+    {preview && <SplashLoader isLoading={false} isPreview theme={previewTheme} onToggleTheme={() => setPreviewTheme(value => value === 'dark' ? 'light' : 'dark')} loadingTextAr={draft.loading_text_ar} loadingTextEn={draft.loading_text_en} motif={draft.splash_motif} onClosePreview={() => setPreview(false)} />}
   </form>;
 };
 export default SettingsView;

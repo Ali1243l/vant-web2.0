@@ -81,7 +81,7 @@ export function useSiteSettingsAndAdmin() {
 
   const setAdminPin = (newPin: string) => {
     if (newPin && newPin.length >= 4) {
-      safeStorage.setItem(PIN_STORAGE_KEY, newPin);
+      localStorage.setItem(PIN_STORAGE_KEY, newPin);
     }
   };
 

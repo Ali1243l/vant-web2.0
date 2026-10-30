@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import {
   Users,
   Download,
@@ -16,6 +17,7 @@ import { useAdminBridge } from './useAdminBridge';
 import { campaignAudience } from '../lib/adminAudience';
 import { formatCurrency } from './format';
 import { Button } from './ui';
+import { Sheet } from './Sheet';
 import {
   generateEmailHtml,
   EmailCampaignData,
@@ -254,102 +256,13 @@ export const SubscribersList: React.FC = () => {
                 <Button
                   variant="outline"
                   leftIcon={<Download className="w-4 h-4 text-indigo-400" />}
-                  onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
+                  onClick={() => setIsExportMenuOpen(true)}
+                  aria-haspopup="dialog" aria-expanded={isExportMenuOpen}
                 >
                   {isAr ? 'تصدير البيانات' : 'Export Data'}
                 </Button>
 
-                {isExportMenuOpen && (
-                  <div className="absolute end-0 top-full mt-1.5 w-68 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-1.5 z-30 space-y-1">
-                    <div className="px-2.5 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                      {isAr ? 'اختر صيغة التقرير' : 'Export Format'}
-                    </div>
 
-                    <button
-                      onClick={() => {
-                        setIsExportMenuOpen(false);
-                        exportSubscribersExcel(filteredSubscribers, showToast, isAr);
-                      }}
-                      className="w-full text-start px-2.5 py-2 rounded-lg hover:bg-slate-800 text-xs text-slate-200 flex items-center gap-2.5 transition-colors cursor-pointer"
-                    >
-                      <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-                      <div>
-                        <div className="font-semibold">{isAr ? 'ملف إكسل Excel (.xls)' : 'Excel Spreadsheet (.xls)'}</div>
-                        <div className="text-[10px] text-slate-400">{isAr ? 'جدول منسق بالدينار العراقي' : 'Formatted styled sheet'}</div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setIsExportMenuOpen(false);
-                        exportSubscribersCSV(filteredSubscribers, showToast, isAr);
-                      }}
-                      className="w-full text-start px-2.5 py-2 rounded-lg hover:bg-slate-800 text-xs text-slate-200 flex items-center gap-2.5 transition-colors cursor-pointer"
-                    >
-                      <FileText className="w-4 h-4 text-cyan-400" />
-                      <div>
-                        <div className="font-semibold">{isAr ? 'ملف CSV (.csv)' : 'CSV File (.csv)'}</div>
-                        <div className="text-[10px] text-slate-400">{isAr ? 'ترميز UTF-8 المتوافق عالمياً' : 'Universal UTF-8 CSV'}</div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setIsExportMenuOpen(false);
-                        exportSubscribersJSON(filteredSubscribers, showToast, isAr);
-                      }}
-                      className="w-full text-start px-2.5 py-2 rounded-lg hover:bg-slate-800 text-xs text-slate-200 flex items-center gap-2.5 transition-colors cursor-pointer"
-                    >
-                      <Layers className="w-4 h-4 text-amber-400" />
-                      <div>
-                        <div className="font-semibold">{isAr ? 'ملف برمجيات JSON (.json)' : 'JSON Data (.json)'}</div>
-                        <div className="text-[10px] text-slate-400">{isAr ? 'هيكل برمجي لقواعد البيانات' : 'Developer DB structure'}</div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setIsExportMenuOpen(false);
-                        exportSubscribersMarkdown(filteredSubscribers, totalSpentAll, showToast, isAr);
-                      }}
-                      className="w-full text-start px-2.5 py-2 rounded-lg hover:bg-slate-800 text-xs text-slate-200 flex items-center gap-2.5 transition-colors cursor-pointer"
-                    >
-                      <FileText className="w-4 h-4 text-purple-400" />
-                      <div>
-                        <div className="font-semibold">{isAr ? 'جدول ماركداون Markdown (.md)' : 'Markdown Table (.md)'}</div>
-                        <div className="text-[10px] text-slate-400">{isAr ? 'جاهز للتوثيق و GitHub' : 'Docs / GitHub ready'}</div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setIsExportMenuOpen(false);
-                        copySubscribersClipboard(filteredSubscribers, showToast, isAr);
-                      }}
-                      className="w-full text-start px-2.5 py-2 rounded-lg hover:bg-slate-800 text-xs text-slate-200 flex items-center gap-2.5 transition-colors cursor-pointer"
-                    >
-                      <Copy className="w-4 h-4 text-indigo-400" />
-                      <div>
-                        <div className="font-semibold">{isAr ? 'نسخ للحافظة (TSV)' : 'Copy to Clipboard (TSV)'}</div>
-                        <div className="text-[10px] text-slate-400">{isAr ? 'للصق المباشر في Google Sheets' : 'Paste into Excel / Sheets'}</div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setIsExportMenuOpen(false);
-                        printSubscribersPDF();
-                      }}
-                      className="w-full text-start px-2.5 py-2 rounded-lg hover:bg-slate-800 text-xs text-slate-200 flex items-center gap-2.5 transition-colors cursor-pointer"
-                    >
-                      <Printer className="w-4 h-4 text-rose-400" />
-                      <div>
-                        <div className="font-semibold">{isAr ? 'طباعة الصفحة' : 'Print / Save as PDF'}</div>
-                        <div className="text-[10px] text-slate-400">{isAr ? 'خيارات الطباعة في المتصفح' : 'Print-ready clean layout'}</div>
-                      </div>
-                    </button>
-                  </div>
-                )}
               </div>
 
               {/* Add Subscriber Button */}
@@ -476,6 +389,95 @@ export const SubscribersList: React.FC = () => {
           />
         )}
       </AnimatePresence>
+
+      <Sheet isOpen={isExportMenuOpen} onClose={() => setIsExportMenuOpen(false)} title={isAr ? 'تصدير المشتركين' : 'Export subscribers'} description={isAr ? `يشمل التصدير نتائج البحث والتصفية الحالية: ${filteredSubscribers.length} مشترك.` : `Exports the current search and filters: ${filteredSubscribers.length} subscribers.`} widthClass="max-w-md">
+        <div className="space-y-2 [&_button]:min-h-14 [&_button]:border [&_button]:border-slate-700 [&_button]:rounded-xl [&_button]:text-sm [&_button]:p-4">
+                    <button
+                      onClick={() => {
+                        setIsExportMenuOpen(false);
+                        exportSubscribersExcel(filteredSubscribers, showToast, isAr);
+                      }}
+                      className="w-full text-start px-2.5 py-2 rounded-lg hover:bg-slate-800 text-xs text-slate-200 flex items-center gap-2.5 transition-colors cursor-pointer"
+                    >
+                      <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                      <div>
+                        <div className="font-semibold">{isAr ? 'ملف إكسل Excel (.xls)' : 'Excel Spreadsheet (.xls)'}</div>
+                        <div className="text-[10px] text-slate-400">{isAr ? 'جدول منسق بالدينار العراقي' : 'Formatted styled sheet'}</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsExportMenuOpen(false);
+                        exportSubscribersCSV(filteredSubscribers, showToast, isAr);
+                      }}
+                      className="w-full text-start px-2.5 py-2 rounded-lg hover:bg-slate-800 text-xs text-slate-200 flex items-center gap-2.5 transition-colors cursor-pointer"
+                    >
+                      <FileText className="w-4 h-4 text-cyan-400" />
+                      <div>
+                        <div className="font-semibold">{isAr ? 'ملف CSV (.csv)' : 'CSV File (.csv)'}</div>
+                        <div className="text-[10px] text-slate-400">{isAr ? 'ترميز UTF-8 المتوافق عالمياً' : 'Universal UTF-8 CSV'}</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsExportMenuOpen(false);
+                        exportSubscribersJSON(filteredSubscribers, showToast, isAr);
+                      }}
+                      className="w-full text-start px-2.5 py-2 rounded-lg hover:bg-slate-800 text-xs text-slate-200 flex items-center gap-2.5 transition-colors cursor-pointer"
+                    >
+                      <Layers className="w-4 h-4 text-amber-400" />
+                      <div>
+                        <div className="font-semibold">{isAr ? 'ملف برمجيات JSON (.json)' : 'JSON Data (.json)'}</div>
+                        <div className="text-[10px] text-slate-400">{isAr ? 'هيكل برمجي لقواعد البيانات' : 'Developer DB structure'}</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsExportMenuOpen(false);
+                        exportSubscribersMarkdown(filteredSubscribers, totalSpentAll, showToast, isAr);
+                      }}
+                      className="w-full text-start px-2.5 py-2 rounded-lg hover:bg-slate-800 text-xs text-slate-200 flex items-center gap-2.5 transition-colors cursor-pointer"
+                    >
+                      <FileText className="w-4 h-4 text-purple-400" />
+                      <div>
+                        <div className="font-semibold">{isAr ? 'جدول ماركداون Markdown (.md)' : 'Markdown Table (.md)'}</div>
+                        <div className="text-[10px] text-slate-400">{isAr ? 'جاهز للتوثيق و GitHub' : 'Docs / GitHub ready'}</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsExportMenuOpen(false);
+                        copySubscribersClipboard(filteredSubscribers, showToast, isAr);
+                      }}
+                      className="w-full text-start px-2.5 py-2 rounded-lg hover:bg-slate-800 text-xs text-slate-200 flex items-center gap-2.5 transition-colors cursor-pointer"
+                    >
+                      <Copy className="w-4 h-4 text-indigo-400" />
+                      <div>
+                        <div className="font-semibold">{isAr ? 'نسخ للحافظة (TSV)' : 'Copy to Clipboard (TSV)'}</div>
+                        <div className="text-[10px] text-slate-400">{isAr ? 'للصق المباشر في Google Sheets' : 'Paste into Excel / Sheets'}</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        flushSync(() => setIsExportMenuOpen(false));
+                        printSubscribersPDF();
+                      }}
+                      className="w-full text-start px-2.5 py-2 rounded-lg hover:bg-slate-800 text-xs text-slate-200 flex items-center gap-2.5 transition-colors cursor-pointer"
+                    >
+                      <Printer className="w-4 h-4 text-rose-400" />
+                      <div>
+                        <div className="font-semibold">{isAr ? 'طباعة الصفحة' : 'Print / Save as PDF'}</div>
+                        <div className="text-[10px] text-slate-400">{isAr ? 'خيارات الطباعة في المتصفح' : 'Print-ready clean layout'}</div>
+                      </div>
+                    </button>
+
+        </div>
+      </Sheet>
 
       {/* Modals */}
       <SubscriberModals
