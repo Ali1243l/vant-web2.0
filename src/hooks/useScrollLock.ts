@@ -21,8 +21,8 @@ function isElementScrollable(el: HTMLElement): boolean {
 }
 
 function findScrollableAncestor(target: EventTarget | null): HTMLElement | null {
-  if (!(target instanceof HTMLElement)) return null;
-  let current: HTMLElement | null = target;
+  if (!(target instanceof Element)) return null;
+  let current: HTMLElement | null = target instanceof HTMLElement ? target : target.parentElement;
   while (current && current !== document.body && current !== document.documentElement) {
     if (current.hasAttribute('data-scroll-lock-ignore')) {
       return current;

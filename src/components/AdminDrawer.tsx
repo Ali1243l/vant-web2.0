@@ -1,3 +1,4 @@
+import { useScrollLock } from '../hooks/useScrollLock';
 import React, { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -288,20 +289,7 @@ export default function AdminDrawer({ lang = 'ar' }: Props) {
   // Live Analytics Telemetry State
   const [analyticsStats, setAnalyticsStats] = useState<UserBehaviorStats>(() => getAggregatedAnalytics(products));
 
-  // Lock background page scrollbars completely when Admin Command Center is open
-  useEffect(() => {
-    if (isAdminOpen) {
-      const prevBodyOverflow = document.body.style.overflow;
-      const prevHtmlOverflow = document.documentElement.style.overflow;
-      document.body.style.overflow = 'hidden';
-      document.documentElement.style.overflow = 'hidden';
-
-      return () => {
-        document.body.style.overflow = prevBodyOverflow;
-        document.documentElement.style.overflow = prevHtmlOverflow;
-      };
-    }
-  }, [isAdminOpen]);
+  useScrollLock(isAdminOpen);
 
   useEffect(() => {
     if (!isAdminOpen) return;

@@ -1,3 +1,4 @@
+import { useScrollLock } from '../hooks/useScrollLock';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
@@ -38,12 +39,7 @@ export default function SplashLoader({ isLoading, loadingTextEn = 'Preparing the
   useEffect(() => {
     if (splashCanFinish(isPreview, isLoading, elapsed)) setVisible(false);
   }, [isPreview, isLoading, elapsed]);
-  useEffect(() => {
-    if (!visible) return;
-    const bodyOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = bodyOverflow; };
-  }, [visible]);
+  useScrollLock(visible);
   useEffect(() => {
     if (!isPreview || !visible) return;
     const previous = document.activeElement as HTMLElement | null;

@@ -1,3 +1,4 @@
+import { useScrollLock } from '../hooks/useScrollLock';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowUpRight, LockKeyhole, MessageCircle, Moon, Sun, Wrench, X } from 'lucide-react';
@@ -25,11 +26,10 @@ export default function MaintenanceScreen({ maintenanceMessage = 'We are updatin
   const close = useRef(onClosePreview);
   close.current = onClosePreview;
   const contact = maintenanceContactUrl(getControl('cfg_whatsapp_phone').actionValue, controlActive(getControl('feature_whatsapp')));
+  useScrollLock(true);
   useEffect(() => {
     if (!isPreview) return;
     const previous = document.activeElement as HTMLElement | null;
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     const items = () => Array.from(root.current?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href]') || []);
     items()[0]?.focus();
     const keydown = (event: KeyboardEvent) => {
@@ -41,7 +41,7 @@ export default function MaintenanceScreen({ maintenanceMessage = 'We are updatin
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     };
     window.addEventListener('keydown', keydown);
-    return () => { window.removeEventListener('keydown', keydown); document.body.style.overflow = overflow; if (previous?.isConnected) previous.focus(); };
+    return () => { window.removeEventListener('keydown', keydown); if (previous?.isConnected) previous.focus(); };
   }, [isPreview]);
   const dismissAdmin = () => { setAdminOpen(false); setPin(''); setError(false); };
   const unlock = (event: React.FormEvent) => {

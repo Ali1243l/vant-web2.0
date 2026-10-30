@@ -47,8 +47,8 @@ export default React.memo(function ProductCard({
   const cardPriceControl = getControl('card_price_tag');
   const cardCategoryControl = getControl('card_category_label');
   const cardHoverControl = getControl('card_hover_preview');
-  const [loaded, setLoaded] = useState(false);
-  const [imgError, setImgError] = useState(false);
+  const [imageResult, setImageResult] = useState<{ src: string; failed: boolean } | null>(null);
+  const imageRef = React.useRef<HTMLImageElement>(null);
   const [isHovered, setIsHovered] = useState(false);
 
   // Algorithmic color resolution & SKU derivation
@@ -82,7 +82,12 @@ export default React.memo(function ProductCard({
       : [];
 
   const primaryImage = colorImages[0]?.trim() || null;
-  React.useEffect(() => { setLoaded(false); setImgError(false); }, [primaryImage]);
+  const loaded = imageResult?.src === primaryImage && !imageResult.failed;
+  const imgError = imageResult?.src === primaryImage && imageResult.failed;
+  React.useLayoutEffect(() => {
+    const image = imageRef.current;
+    if (primaryImage && image?.complete) setImageResult({ src: primaryImage, failed: image.naturalWidth === 0 });
+  }, [primaryImage]);
   const secondaryImage = colorImages.length > 1 && colorImages[1]?.trim() ? colorImages[1].trim() : null;
 
   const { width, height } = product;
@@ -186,6 +191,7 @@ export default React.memo(function ProductCard({
             <div className="relative h-full w-full overflow-hidden">
               {/* Primary Image with seamless opacity cross-fade on lazy load finish & smooth hover transition */}
               <img
+                ref={imageRef}
                 src={primaryImage.trim()}
                 style={catalogImageStyle(product.catalog_image)}
                 alt={displayTitle}
@@ -195,11 +201,8 @@ export default React.memo(function ProductCard({
                 loading={index < 2 ? "eager" : "lazy"}
                 decoding="async"
                 referrerPolicy="no-referrer"
-                onLoad={() => {
-                  setLoaded(true);
-
-                }}
-                onError={() => setImgError(true)}
+                onLoad={() => setImageResult({ src: primaryImage, failed: false })}
+                onError={() => setImageResult({ src: primaryImage, failed: true })}
                 className={`h-full w-full object-cover object-center transition-opacity duration-300 ${
                   availability === 'sold_out' ? 'saturate-[85%]' : ''
                 } ${
@@ -233,7 +236,7 @@ export default React.memo(function ProductCard({
               <svg className="w-12 h-12 stroke-[1.2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
-              <span className="mt-3 text-xs font-medium">{isAr ? 'الصورة غير متاحة حالياً' : 'Image unavailable'}</span>{primaryImage && <button type="button" className="min-h-11 px-3 text-xs underline" onClick={() => { setImgError(false); setLoaded(false); }}>{isAr ? 'إعادة تحميل الصورة' : 'Retry image'}</button>}
+              <span className="mt-3 text-xs font-medium">{isAr ? 'الصورة غير متاحة حالياً' : 'Image unavailable'}</span>{primaryImage && <button type="button" className="min-h-11 px-3 text-xs underline" onClick={() => { setImageResult(null); }}>{isAr ? 'إعادة تحميل الصورة' : 'Retry image'}</button>}
             </div>
           )}
 
