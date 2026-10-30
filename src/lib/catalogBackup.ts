@@ -1,3 +1,4 @@
+import { validCatalogImage } from './catalogImage.ts';
 import type { Product } from '../types';
 import type { CurrencyType, SiteControlItem } from '../context/siteControlsTypes';
 
@@ -45,6 +46,7 @@ export function parseCatalogBackup(raw: string, knownControls: Record<string, Si
     for (const product of data.products) {
       if (!object(product) || !((text(product.id) && product.id.trim()) || (typeof product.id === 'number' && Number.isFinite(product.id))) || ids.has(String(product.id))) throw new Error('id');
       ids.add(String(product.id));
+      if (product.catalog_image !== undefined && !validCatalogImage(product.catalog_image)) throw new Error('catalog image');
       if (!text(product.title) || !product.title.trim() || !text(product.category) || !text(product.image_url) || !image(product.image_url) || !money(product.price) || !strings(product.sizes)) throw new Error('product');
       for (const key of ['title_ar', 'category_ar', 'description', 'description_ar', 'material', 'fit_details', 'sku', 'currency', 'aspect_ratio', 'created_at', 'offer_badge_ar', 'offer_badge_en']) if (product[key] !== undefined && !text(product[key])) throw new Error(key);
       for (const key of ['colors', 'tags']) if (product[key] !== undefined && !strings(product[key])) throw new Error(key);

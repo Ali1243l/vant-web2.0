@@ -1,3 +1,4 @@
+import type { CatalogImage } from '../lib/catalogImage';
 import type { BannerEdits, TrendEdits } from '../lib/bannerEditor';
 import type { ControlEdits } from '../lib/siteControlModel';
 import type { Product, ProductAvailability, TrendItem } from "../types";
@@ -262,6 +263,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
 };
 
 export interface ProductEnhancement {
+  catalog_image?: CatalogImage;
   description_ar?: string;
   title_ar?: string;
   category_ar?: string;

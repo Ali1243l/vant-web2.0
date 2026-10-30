@@ -1,3 +1,4 @@
+import { catalogImageStyle, CATALOG_IMAGE_RATIO } from '../lib/catalogImage';
 import { catalogImageProps } from '../lib/responsiveImage';
 import { categoryLabel } from '../lib/categoryLabel';
 import { controlActive } from '../lib/siteControlModel';
@@ -30,32 +31,6 @@ const cardVariants: Variants = {
     },
   },
 };
-
-/**
- * Resolves a 100% stable, deterministic aspect ratio (never changes after initial render).
- * This completely prevents layout shifts, column reflows, and jumping during fast scrolling.
- */
-function getDeterministicAspectRatio(
-  aspectRatio?: string,
-  width?: number | null,
-  height?: number | null
-): { aspectRatio: string } {
-  // 1. Explicit aspect_ratio from database
-  if (aspectRatio && aspectRatio.trim()) {
-    return { aspectRatio: aspectRatio.replace(':', '/').trim() };
-  }
-
-  // 2. Explicit dimensions from database if within luxury lookbook bounds
-  if (width && height && width > 0 && height > 0) {
-    const val = width / height;
-    if (val >= 0.7 && val <= 1.05) {
-      return { aspectRatio: `${width} / ${height}` };
-    }
-  }
-
-  // 4. Default clean editorial portrait proportion for luxury fashion lookbook (3:4)
-  return { aspectRatio: '3 / 4' };
-}
 
 export default React.memo(function ProductCard({
   product,
@@ -111,9 +86,6 @@ export default React.memo(function ProductCard({
   const secondaryImage = colorImages.length > 1 && colorImages[1]?.trim() ? colorImages[1].trim() : null;
 
   const { width, height } = product;
-  const dynamicRatioStyle = useMemo(() => {
-    return getDeterministicAspectRatio(product.aspect_ratio, width, height);
-  }, [product.aspect_ratio, width, height]);
   const displayTitle = lang === 'ar' && product.title_ar ? product.title_ar : product.title;
   const isAr = lang === 'ar';
 
@@ -196,8 +168,8 @@ export default React.memo(function ProductCard({
         {/* Main Image Container with Precision Fixed Aspect Ratio */}
         <div
           data-store-card-image
-          className="relative overflow-hidden rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] transition-all duration-300 group-hover:shadow-[0_12px_32px_rgba(0,0,0,0.12)] dark:group-hover:shadow-[0_14px_36px_rgba(0,0,0,0.45)] group-hover:-translate-y-1 w-full"
-          style={dynamicRatioStyle}
+          className="catalog-image-frame relative shrink-0 overflow-hidden rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] transition-all duration-300 group-hover:shadow-[0_12px_32px_rgba(0,0,0,0.12)] dark:group-hover:shadow-[0_14px_36px_rgba(0,0,0,0.45)] group-hover:-translate-y-1 w-full"
+          style={{ aspectRatio: CATALOG_IMAGE_RATIO }}
         >
           {/* Shimmer skeleton behind loading image with cross-fade fadeout */}
           {!imgError && (
@@ -215,6 +187,7 @@ export default React.memo(function ProductCard({
               {/* Primary Image with seamless opacity cross-fade on lazy load finish & smooth hover transition */}
               <img
                 src={primaryImage.trim()}
+                style={catalogImageStyle(product.catalog_image)}
                 alt={displayTitle}
                 width={width ?? undefined}
                 height={height ?? undefined}
@@ -232,8 +205,8 @@ export default React.memo(function ProductCard({
                 } ${
                   loaded
                     ? isHovered && secondaryImage
-                      ? 'opacity-0 scale-105'
-                      : 'opacity-100 scale-100 group-hover:scale-105 transition-transform duration-300 ease-out'
+                      ? 'opacity-0 scale-100'
+                      : 'opacity-100 scale-100 group-hover:scale-100 transition-transform duration-300 ease-out'
                     : 'opacity-0'
                 }`}
               />
@@ -242,13 +215,14 @@ export default React.memo(function ProductCard({
               {cardHoverControl.visible && Boolean(secondaryImage?.trim()) ? (
                 <img
                   src={secondaryImage!.trim()}
+                  style={catalogImageStyle(product.catalog_image)}
                   {...catalogImageProps(secondaryImage!.trim(), imageSizes)}
                   alt={`${displayTitle} - 2`}
                   loading="lazy"
                   decoding="async"
                   referrerPolicy="no-referrer"
                   className={`absolute inset-0 h-full w-full object-cover object-center transition-all duration-500 ease-out ${
-                    isHovered ? 'opacity-100 scale-105' : 'opacity-0 scale-100 pointer-events-none'
+                    isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-100 pointer-events-none'
                   }`}
                 />
               ) : null}
@@ -287,7 +261,7 @@ export default React.memo(function ProductCard({
             <button
               type="button"
               disabled={!controlActive(cardWishlistControl)} onClick={handleHeartClick}
-              className={`absolute top-2.5 sm:top-3 ltr:right-2.5 rtl:left-2.5 ltr:sm:right-3 rtl:sm:left-3 z-20 flex h-11 w-11 items-center justify-center rounded-full transition-all duration-200 cursor-pointer backdrop-blur-md active:scale-90 hover:scale-105 group/heart ${
+              className={`absolute top-2.5 sm:top-3 ltr:right-2.5 rtl:left-2.5 ltr:sm:right-3 rtl:sm:left-3 z-20 flex h-11 w-11 items-center justify-center rounded-full transition-all duration-200 cursor-pointer backdrop-blur-md active:scale-90 hover:scale-100 group/heart ${
                 isWishlisted
                   ? 'bg-[#004ad7] dark:bg-[#3b82f6] text-white shadow-md shadow-[#004ad7]/25 border border-[#004ad7]/40 dark:border-[#3b82f6]/50'
                   : 'bg-white/90 dark:bg-[#12141a]/90 text-neutral-600 dark:text-neutral-300 hover:text-[#004ad7] dark:hover:text-[#3b82f6] hover:bg-white dark:hover:bg-[#181a22] border border-black/8 dark:border-white/12 shadow-2xs'
@@ -298,7 +272,7 @@ export default React.memo(function ProductCard({
               <Heart
                 className={`h-4 w-4 sm:h-[16px] sm:w-[16px] md:h-4.5 md:w-4.5 lg:h-5 lg:w-5 transition-all duration-200 ${
                   isWishlisted
-                    ? 'fill-white stroke-white stroke-[2.2] scale-105'
+                    ? 'fill-white stroke-white stroke-[2.2] scale-100'
                     : 'stroke-[2] group-hover/heart:scale-110 group-hover/heart:stroke-[#004ad7] dark:group-hover/heart:stroke-[#3b82f6]'
                 }`}
               />

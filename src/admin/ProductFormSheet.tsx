@@ -1,3 +1,5 @@
+import { ProductCatalogImageSection } from './productForm/ProductCatalogImageSection';
+import { normalizeCatalogImage } from '../lib/catalogImage';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sheet } from './Sheet';
@@ -76,6 +78,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
     descriptionEn: "",
     materialDetails: "",
     availabilityStatus: "in_stock",
+    catalog_image: normalizeCatalogImage(undefined),
     hasVariants: false,
     variants: [],
   });
@@ -128,6 +131,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
         descriptionEn: source.descriptionEn || '',
         materialDetails: source.materialDetails || '',
         availabilityStatus: source.availabilityStatus || 'in_stock',
+        catalog_image: normalizeCatalogImage(source.catalog_image),
         hasVariants: hasVars,
         variants: variantsList,
       });
@@ -156,6 +160,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
         descriptionEn: '',
         materialDetails: '',
         availabilityStatus: 'in_stock',
+        catalog_image: normalizeCatalogImage(undefined),
         hasVariants: false,
         variants: [],
       });
@@ -785,6 +790,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
         stock: stockNum,
         stockKnown: hasVariantsEnabled || !!formData.stock.trim(),
         status,
+        catalog_image: normalizeCatalogImage(formData.catalog_image),
         imageUrl: primaryImage,
         images: combinedAllImages.length > 0 ? combinedAllImages : [primaryImage],
         sizes: formData.sizes,
@@ -884,10 +890,11 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
       }
     >
       <form ref={formRef} onSubmit={handleSubmit} className="product-editor space-y-5 text-start pb-6">
-        <nav aria-label={isAr ? 'أقسام تعديل المنتج' : 'Product editor sections'} className="sticky top-0 z-20 grid grid-cols-3 gap-1 rounded-xl border border-slate-700 bg-slate-900/95 p-2">
+        <nav aria-label={isAr ? 'أقسام تعديل المنتج' : 'Product editor sections'} className="sticky top-0 z-20 grid grid-cols-2 sm:grid-cols-4 gap-1 rounded-xl border border-slate-700 bg-slate-900/95 p-2">
           {[
             { id: 'basic', ar: 'البيانات والأسعار', en: 'Details & prices' },
             { id: 'media', ar: 'الصور والألوان', en: 'Images & colors' },
+            { id: 'catalog-image', ar: 'شكل البطاقة', en: 'Card image' },
             { id: 'details', ar: 'الوصف والتفاصيل', en: 'Description' },
           ].map(section => <button key={section.id} type="button" className="min-h-11 min-w-0 rounded-lg px-1 text-xs text-indigo-200 hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-indigo-400" onClick={() => formRef.current?.querySelector(`[data-form-section="${section.id}"]`)?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })}>{isAr ? section.ar : section.en}</button>)}
         </nav>
@@ -947,6 +954,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
             setShowCustomInput={setShowCustomInput}
           />
         )}
+        <div data-form-section="catalog-image" className="scroll-mt-28"><ProductCatalogImageSection isAr={isAr} value={formData.catalog_image} images={Array.from(new Set((formData.hasVariants ? formData.variants.flatMap(variant => variant.images) : formData.images).filter(Boolean)))} onChange={value => setFormData(previous => ({ ...previous, catalog_image: value }))} /></div>
         <details className="rounded-xl border border-slate-700 p-3">
           <summary className="min-h-11 cursor-pointer py-3 text-sm text-indigo-200">{isAr ? 'اقتراح الألوان من مجموعة صور (اختياري)' : 'Suggest colors from image batches (optional)'}</summary>
           <div className="mt-3"><ProductMagicColorDropzone isAr={isAr} isAnalyzingColors={isAnalyzingColors} analyzingStatus={analyzingStatus} isDraggingMagic={isDraggingMagic} magicNotice={magicNotice} onDropFiles={handleBulkMagicUpload} onClearNotice={() => setMagicNotice(null)} setIsDraggingMagic={setIsDraggingMagic} /></div>

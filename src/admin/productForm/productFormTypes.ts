@@ -1,6 +1,8 @@
+import type { CatalogImage } from '../../lib/catalogImage';
 import type { Product, ProductVariant } from '../useAdminBridge';
 
 export interface ProductFormData {
+  catalog_image?: CatalogImage;
   name: string;
   nameEn: string;
   sku: string;

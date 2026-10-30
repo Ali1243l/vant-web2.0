@@ -1,3 +1,4 @@
+import type { CatalogImage } from '../lib/catalogImage';
 import { subscriberDetails, subscriberOrderTotals } from '../lib/adminAudience';
 import { useState, useEffect, createContext, useContext, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabase';
@@ -84,6 +85,7 @@ export interface ProductVariant {
 }
 
 export interface Product {
+  catalog_image?: CatalogImage;
   id: string;
   name: string;
   nameEn: string;
@@ -385,6 +387,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       stock: recordedProductStock(sp) ?? 0,
       stockKnown: recordedProductStock(sp) !== null,
       status,
+      catalog_image: sp.catalog_image,
       imageUrl: sp.image_url,
       images: sp.images && sp.images.length > 0 ? sp.images : [sp.image_url],
       sizes: sp.sizes || [],
@@ -511,6 +514,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       sizes: enriched.sizes && enriched.sizes.length > 0 ? enriched.sizes : ['S', 'M', 'L', 'XL'],
       colors: variantColors.length > 0 ? variantColors : undefined,
       variants: enriched.hasVariants ? enriched.variants : [],
+      catalog_image: enriched.catalog_image,
       image_url: enriched.imageUrl || allImages[0],
       images: allImages,
       description: enriched.descriptionEn,
@@ -543,6 +547,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       patch.category = updated.category;
       patch.category_ar = updated.category;
     }
+    if (updated.catalog_image !== undefined) patch.catalog_image = updated.catalog_image;
     if (updated.imageUrl) patch.image_url = updated.imageUrl;
     if (updated.images) patch.images = updated.images;
     if (updated.sizes) patch.sizes = updated.sizes;

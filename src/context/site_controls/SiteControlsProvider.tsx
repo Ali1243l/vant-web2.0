@@ -18,6 +18,7 @@ import {
   SIZES_STORAGE_KEY,
   ENHANCEMENTS_STORAGE_KEY,
   getStoredEnhancements,
+  mergeProductEnhancements,
 } from './constants';
 
 import { useCatalogProducts } from './useCatalogProducts';
@@ -231,7 +232,7 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
       if (cloudConfig.enhancements && Object.keys(cloudConfig.enhancements).length > 0) {
         try {
           const current = getStoredEnhancements();
-          const mergedEnhancements = { ...current, ...cloudConfig.enhancements };
+          const mergedEnhancements = mergeProductEnhancements(current, cloudConfig.enhancements);
           localStorage.setItem(ENHANCEMENTS_STORAGE_KEY, JSON.stringify(mergedEnhancements));
         } catch {}
         loadProductsFromSupabase(true);

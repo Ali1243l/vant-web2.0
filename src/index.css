@@ -278,3 +278,6 @@ html[data-storefront-scrolling] { overflow-anchor: none; scroll-behavior: auto; 
 .vant-product-disclosure { border: 1px solid rgb(0 0 0 / .08); border-radius: 16px; padding: 4px 14px 14px; }
 .dark .vant-product-disclosure { border-color: rgb(255 255 255 / .12); }
 @media (prefers-reduced-motion: reduce) { [data-store-card], [data-store-card] * { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+.catalog-image-frame { background: var(--store-surface, #f4f4f3); }
+.dark .catalog-image-frame { background: var(--store-surface, #181a1d); }

@@ -9,6 +9,10 @@ export const SESSION_AUTH_KEY = 'vant_admin_auth_session';
 export const SETTINGS_STORAGE_KEY = 'vant_site_settings_v1';
 export const SIZES_STORAGE_KEY = 'vant_master_sizes_v2';
 
+export function mergeProductEnhancements(current: Record<string, ProductEnhancement>, incoming: Record<string, ProductEnhancement>) {
+  return { ...current, ...Object.fromEntries(Object.entries(incoming).map(([id, value]) => [id, { ...current[id], ...value }])) };
+}
+
 export function getStoredEnhancements(): Record<string, ProductEnhancement> {
   try {
     const raw = localStorage.getItem(ENHANCEMENTS_STORAGE_KEY);
