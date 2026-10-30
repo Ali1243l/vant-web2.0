@@ -141,7 +141,7 @@ export default function AdminNewsletterBoxStudio({ isAr = true }: Props) {
   const handleSave = async () => {
     try {
       setIsSaving(true);
-      await updateSiteSettings({
+      const saved = await updateSiteSettings({
         newsletter_badge_ar: badgeAr,
         newsletter_badge_en: badgeEn,
         newsletter_title_ar: titleAr,
@@ -165,6 +165,7 @@ export default function AdminNewsletterBoxStudio({ isAr = true }: Props) {
         welcome_discount_percent: welcomeDiscount,
         welcome_coupon_code: welcomeCoupon,
       });
+      if (!saved) { window.alert(isAr ? "تعذّر الحفظ. حاول مرة ثانية." : "Save failed. Please retry."); return; }
 
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 4000);
@@ -197,7 +198,7 @@ export default function AdminNewsletterBoxStudio({ isAr = true }: Props) {
     setWelcomeDiscount(15);
     setWelcomeCoupon('VANT-WELCOME-15');
 
-    await updateSiteSettings({
+    const saved = await updateSiteSettings({
       newsletter_badge_ar: 'الوصول الحصري للأرشيف',
       newsletter_badge_en: 'Private Archive Access',
       newsletter_title_ar: 'ابقَ على اطّلاع على أحدث القطع',
@@ -221,6 +222,7 @@ export default function AdminNewsletterBoxStudio({ isAr = true }: Props) {
       welcome_discount_percent: 15,
       welcome_coupon_code: 'VANT-WELCOME-15',
     });
+      if (!saved) { window.alert(isAr ? "تعذّر الحفظ. حاول مرة ثانية." : "Save failed. Please retry."); return; }
 
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3000);

@@ -21,9 +21,9 @@ export const templatePresets: Record<EmailCampaignData['templateType'], Template
     color: 'text-indigo-400',
     badgeBg: 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400',
     defaults: {
-      subject: '🎉 مرحباً بك في دار ڤانت! كود خصم 20% ترحيبي بانتظارك',
+      subject: '🎉 مرحباً بك في فانت! كود خصم 20% ترحيبي بانتظارك',
       preheader: 'استخدم الكود WELCOME20 واستمتع بأرقى تشكيلات الكشمير والبدلات مع خدمة كونسيرج خاصة.',
-      headline: 'أهلاً بك في دار ڤانت للأزياء الرفيعة',
+      headline: 'أهلاً بك في فانت للأزياء الرفيعة',
       bodyText:
         'يسعدنا جداً انضمامك إلى مجتمعنا الحصري. لتجربة تسوق لا تُنسى، نقدم لك هدية ترحيبية خاصة صالحة على جميع تشكيلات الكشمير، البدلات، والأحذية الإيطالية.',
       discountCode: 'WELCOME20',
@@ -45,7 +45,7 @@ export const templatePresets: Record<EmailCampaignData['templateType'], Template
       preheader: 'فرصة لا تعوض - إصدارات محدودة مع شحن كونسيرج فوري لكافة المحافظات.',
       headline: 'عرض الأتيليه الحصري: قطع مختارة ومعدودة',
       bodyText:
-        'خصومات استثنائية على القطع الأكثر طلباً في دار ڤانت. العرض متاح لعدد محدود من عملاء النخبة أو حتى نفاد الأقمشة المخصصة.',
+        'خصومات استثنائية على القطع الأكثر طلباً في فانت. العرض متاح لعدد محدود من عملاء النخبة أو حتى نفاد الأقمشة المخصصة.',
       discountCode: 'FLASH35',
       discountPercent: 'خصم يصل إلى 35%',
       expireDate: 'ينتهي خلال 24 ساعة فقط',
@@ -103,7 +103,7 @@ export const templatePresets: Record<EmailCampaignData['templateType'], Template
     defaults: {
       subject: '📰 جريدة الأتيليه: فلسفة الأزياء الهادئة ودليل اختيار الصوف النقي',
       preheader: 'دليلك لأسرار الأناقة الهادئة Quiet Luxury والعناية بالكشمير المنغولي.',
-      headline: 'جريدة الأتيليه من دار ڤانت (VANT)',
+      headline: 'جريدة الأتيليه من فانت (VANT)',
       bodyText:
         'في هذا العدد نشارككم أسرار العناية بالصوف الطبيعي، وكيفية تنسيق المعاطف مزدوجة الوجه مع الأحذية الكلاسيكية لطلة متكاملة وواثقة.',
       discountCode: 'GAZETTE',

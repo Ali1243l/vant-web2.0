@@ -1,158 +1,73 @@
-import React, { useState, useEffect } from 'react';
-import { Check } from 'lucide-react';
-import { useAdminBridge, SiteSettings } from './useAdminBridge';
-import { Button } from './ui';
-
-import { SettingsHeader } from './settings/SettingsHeader';
-import { MaintenanceModeCard } from './settings/MaintenanceModeCard';
-import { SplashStudioCard } from './settings/SplashStudioCard';
-import { StoreSecurityCard } from './settings/StoreSecurityCard';
-import { SplashPreviewModal } from './settings/SplashPreviewModal';
+import React, { useEffect, useState } from 'react';
+import { Check, Eye, Settings } from 'lucide-react';
+import { useAdminBridge } from './useAdminBridge';
+import { useSiteControls } from '../context/SiteControlsContext';
+import { supabase } from '../lib/supabase';
+import { generalSettingsPatch, validGeneralSettings } from '../lib/generalSettings';
+import SplashLoader, { AVAILABLE_SPLASH_MOTIFS } from '../components/SplashLoader';
+import { Button, Card, Input, Switch } from './ui';
 
 export const SettingsView: React.FC = () => {
-  const { lang, siteSettings, updateSiteSettings, setCurrentStore, setActiveView } = useAdminBridge();
+  const { lang, setActiveView, setHasUnsavedChanges } = useAdminBridge();
+  const { siteSettings, updateSiteSettings } = useSiteControls();
   const isAr = lang === 'ar';
-
-  // Local form state cloned from siteSettings
-  const [formData, setFormData] = useState<SiteSettings>(siteSettings);
-
-  // UI state
-  const [isSaving, setIsSaving] = useState(false);
-  const [toastMessage, setToastMessage] = useState<{ text: string; sub?: string } | null>(null);
-  const [isTestSplashOpen, setIsTestSplashOpen] = useState(false);
-
-  // Sync when siteSettings change externally
+  const [base, setBase] = useState(siteSettings);
+  const [draft, setDraft] = useState(siteSettings);
+  const [saving, setSaving] = useState(false);
+  const [preview, setPreview] = useState(false);
+  const [notice, setNotice] = useState('');
+  const dirty = Object.keys(generalSettingsPatch(draft, base)).length > 0;
+  useEffect(() => { if (!dirty) { setBase(siteSettings); setDraft(siteSettings); } }, [siteSettings, dirty]);
+  useEffect(() => { setHasUnsavedChanges(dirty); return () => setHasUnsavedChanges(false); }, [dirty, setHasUnsavedChanges]);
   useEffect(() => {
-    setFormData(siteSettings);
-  }, [siteSettings]);
-
-  // Handle setting updates
-  const handleChange = <K extends keyof SiteSettings>(key: K, value: SiteSettings[K]) => {
-    setFormData((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
-  };
-
-  const showToast = (text: string, sub?: string) => {
-    setToastMessage({ text, sub });
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 3500);
-  };
-
-  // Immediate toggle for critical flags (like Maintenance Mode) with auto-sync
-  const handleImmediateToggle = async (key: keyof SiteSettings, value: any) => {
-    handleChange(key, value);
-    const result = await updateSiteSettings({ [key]: value });
-    showToast(
-      isAr ? 'تم تحديث الإعدادات فورياً' : 'Setting updated instantly',
-      result.syncedWithCloud
-        ? isAr ? 'متزامن مع سحابة Supabase' : 'Synced with Supabase Cloud'
-        : isAr ? 'تم الحفظ محلياً' : 'Saved locally'
-    );
-  };
-
-  // Save all settings
-  const handleSaveAll = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setIsSaving(true);
-
+    if (!dirty) return;
+    const guard = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', guard);
+    return () => window.removeEventListener('beforeunload', guard);
+  }, [dirty]);
+  const edit = (patch: Partial<typeof draft>) => { setDraft(current => ({ ...current, ...patch })); setNotice(''); };
+  const save = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (saving || !dirty) return;
+    if (!validGeneralSettings(draft)) { setNotice(isAr ? 'راجع النصوص المطلوبة وحدود عدد الأحرف.' : 'Check required texts and character limits.'); return; }
+    setSaving(true);
     try {
-      setCurrentStore(formData.storeName);
-
-      // Credentials are changed only from the Security tab.
-      const { pin: _pin, ...payload } = formData;
-
-      const res = await updateSiteSettings(payload);
-
-      showToast(
-        isAr ? 'تم حفظ كافة إعدادات المتجر بنجاح' : 'All store settings saved successfully',
-        res.syncedWithCloud
-          ? isAr ? 'تمت المزامنة الحية مع Supabase' : 'Synced live with Supabase cloud'
-          : isAr ? 'تم الحفظ في التخزين المحلي الآمن' : 'Saved to local storage'
-      );
-    } catch (err) {
-      console.error(err);
-      showToast(isAr ? 'حدث خطأ أثناء الحفظ' : 'Error saving settings');
-    } finally {
-      setIsSaving(false);
-    }
+      if (!await updateSiteSettings(generalSettingsPatch(draft, base))) throw new Error('save');
+      setBase(draft);
+      setNotice(supabase ? (isAr ? 'تم حفظ الإعدادات في قاعدة البيانات.' : 'Settings saved to database.') : (isAr ? 'تم الحفظ على هذا المتصفح فقط.' : 'Saved in this browser only.'));
+    } catch { setNotice(isAr ? 'تعذّر الحفظ. مسودتك باقية؛ حاول مرة ثانية.' : 'Save failed. Your draft remains; retry.'); }
+    finally { setSaving(false); }
   };
-
-
-  return (
-    <div className="space-y-8 max-w-5xl pb-16">
-      <SettingsHeader
-        isAr={isAr}
-        isSaving={isSaving}
-        onSaveAll={() => handleSaveAll()}
-        toastMessage={toastMessage}
-        onClearToast={() => setToastMessage(null)}
-      />
-
-      <form onSubmit={handleSaveAll} className="space-y-8">
-        {/* SECTION 1: GLOBAL MAINTENANCE MODE */}
-        <MaintenanceModeCard
-          isAr={isAr}
-          formData={formData}
-          handleChange={handleChange}
-          handleImmediateToggle={handleImmediateToggle}
-        />
-
-        {/* SECTION 2: SPLASH SCREEN CUSTOMIZER & TEST LAUNCHER */}
-        <SplashStudioCard
-          isAr={isAr}
-          formData={formData}
-          handleChange={handleChange}
-          onOpenTestSplash={() => setIsTestSplashOpen(true)}
-        />
-
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 p-5">
-          <p className="text-sm text-slate-300">{isAr ? 'إعدادات الصورة والتدرّج والنصوص موجودة في صفحة البانر والترحيب.' : 'Image, fade and caption settings live in Banner & welcome.'}</p>
-          <Button type="button" onClick={() => setActiveView('banners')}>{isAr ? 'تخصيص البانر' : 'Customize banner'}</Button>
+  return <form onSubmit={save} className="min-w-0 max-w-5xl space-y-5 pb-6">
+    <Card className="space-y-3">
+      <div className="flex items-center gap-3"><Settings className="text-indigo-400 shrink-0" /><h2 className="text-xl font-bold text-white">{isAr ? 'إعدادات المتجر' : 'Store settings'}</h2></div>
+      <p className="text-sm text-slate-400">{isAr ? 'عدّل، عاين، ثم احفظ. الصيانة لا تُطبّق قبل الحفظ.' : 'Edit, preview, then save. Maintenance applies only after saving.'}</p>
+      <p className="text-xs text-slate-300">{isAr ? 'الحالة المنشورة: ' : 'Published status: '}{siteSettings.maintenance_mode ? (isAr ? 'قيد الصيانة' : 'Maintenance') : (isAr ? 'المتجر مفتوح' : 'Store open')}</p>
+    </Card>
+    <fieldset disabled={saving} className="min-w-0 space-y-5">
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-4"><h3 className="font-bold text-white">{isAr ? 'صيانة المتجر' : 'Store maintenance'}</h3><Switch checked={draft.maintenance_mode} onChange={value => edit({ maintenance_mode: value })} label={isAr ? 'تفعيل الصيانة بعد الحفظ' : 'Enable maintenance on save'} /></div>
+        <p className="text-xs text-slate-400">{isAr ? 'عند التطبيق يرى الزائر رسالة الصيانة وتبقى الإدارة متاحة.' : 'When applied, visitors see the maintenance notice; admin access remains available.'}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input label={isAr ? 'رسالة الصيانة بالعربية' : 'Maintenance notice · Arabic'} dir="rtl" maxLength={600} required={draft.maintenance_mode} value={draft.maintenance_message_ar || ''} onChange={e => edit({ maintenance_message_ar: e.target.value })} />
+          <Input label={isAr ? 'رسالة الصيانة بالإنجليزية' : 'Maintenance notice · English'} dir="ltr" maxLength={600} required={draft.maintenance_mode} value={draft.maintenance_message} onChange={e => edit({ maintenance_message: e.target.value })} />
         </div>
-
-        {/* SECTION 4: STORE IDENTITY & SECURITY */}
-        <StoreSecurityCard
-          isAr={isAr}
-          formData={formData}
-          handleChange={handleChange}
-          showSecurity={false}
-          tempPin=""
-          setTempPin={() => {}}
-          showPin={false}
-          setShowPin={() => {}}
-        />
-
-        {/* Bottom Save Bar */}
-        <div className="flex items-center justify-between pt-4 border-t border-slate-800">
-          <p className="text-xs text-slate-400">
-            {isAr
-              ? 'تتم المزامنة التلقائية مع Supabase عند توفر المفاتيح، مع حفظ احتياطي محلي دائم.'
-              : 'Auto-syncs with Supabase if configured, with resilient local storage backup.'}
-          </p>
-          <Button
-            type="submit"
-            variant="primary"
-            isLoading={isSaving}
-            className="px-8 shadow-lg shadow-indigo-950/40"
-            leftIcon={<Check className="w-4 h-4" />}
-          >
-            {isAr ? 'حفظ كافة التغييرات' : 'Save Changes'}
-          </Button>
+      </Card>
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="font-bold text-white">{isAr ? 'شاشة التحميل' : 'Loading screen'}</h3><Button type="button" variant="outline" leftIcon={<Eye className="w-4 h-4" />} onClick={() => setPreview(true)}>{isAr ? 'معاينة المسودة' : 'Preview draft'}</Button></div>
+        <label className="block text-sm text-slate-300">{isAr ? 'الرسم المتحرك' : 'Animation'}<select className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-900 p-3" value={draft.splash_motif} onChange={e => edit({ splash_motif: e.target.value as typeof draft.splash_motif })}>{AVAILABLE_SPLASH_MOTIFS.map(motif => <option key={motif.id} value={motif.id}>{isAr ? motif.titleAr : motif.titleEn}</option>)}</select></label>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input label={isAr ? 'نص التحميل بالعربية' : 'Loading text · Arabic'} dir="rtl" required maxLength={120} value={draft.loading_text_ar} onChange={e => edit({ loading_text_ar: e.target.value })} />
+          <Input label={isAr ? 'نص التحميل بالإنجليزية' : 'Loading text · English'} dir="ltr" required maxLength={120} value={draft.loading_text_en} onChange={e => edit({ loading_text_en: e.target.value })} />
         </div>
-      </form>
-
-      {/* FULL-SCREEN CINEMATIC TEST SPLASH SCREEN OVERLAY */}
-      <SplashPreviewModal
-        isOpen={isTestSplashOpen}
-        onClose={() => setIsTestSplashOpen(false)}
-        isAr={isAr}
-        formData={formData}
-      />
+      </Card>
+      <Card className="space-y-3"><h3 className="font-bold text-white">{isAr ? 'تخصيص أقسام المتجر' : 'Customize store sections'}</h3><p className="text-xs text-slate-400">{isAr ? 'اسم المتجر في عناصر المتجر. التواصل والنسخ الاحتياطي والأمان من التبويبات بالأعلى.' : 'Store name is in Store elements. Contact, backups and security are in the tabs above.'}</p><div className="flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={() => setActiveView('controls')}>{isAr ? 'عناصر المتجر والهوية' : 'Store elements & identity'}</Button><Button type="button" variant="outline" onClick={() => setActiveView('banners')}>{isAr ? 'البانر والترحيب' : 'Banner & welcome'}</Button></div></Card>
+    </fieldset>
+    <div className="sticky bottom-0 z-10 space-y-3 rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-xl">
+      <p role="status" className="text-sm text-slate-300">{notice || (dirty ? (isAr ? 'تغييرات غير محفوظة' : 'Unsaved changes') : (isAr ? 'كل التغييرات محفوظة' : 'All changes saved'))}</p>
+      <div className="flex flex-wrap gap-2"><Button type="submit" isLoading={saving} disabled={!dirty} leftIcon={<Check className="w-4 h-4" />}>{isAr ? 'حفظ التغييرات' : 'Save changes'}</Button><Button type="button" variant="outline" disabled={!dirty || saving} onClick={() => { setDraft(siteSettings); setBase(siteSettings); setNotice(''); }}>{isAr ? 'إلغاء المسودة' : 'Discard draft'}</Button></div>
     </div>
-  );
+    {preview && <SplashLoader isLoading={false} isPreview loadingTextAr={draft.loading_text_ar} loadingTextEn={draft.loading_text_en} motif={draft.splash_motif} onClosePreview={() => setPreview(false)} />}
+  </form>;
 };
-
 export default SettingsView;

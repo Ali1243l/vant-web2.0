@@ -39,25 +39,17 @@ export const CampaignHistoryTab: React.FC<Props> = ({
         <Card>
           <div className="text-xs text-slate-400 mb-1">{isAr ? 'متوسط نسبة الفتح' : 'Avg. Open Rate'}</div>
           <div className="text-2xl font-bold text-indigo-400">
-            {(
-              sentHistory.reduce((acc, c) => acc + c.openRate, 0) /
-              (sentHistory.length || 1)
-            ).toFixed(1)}
-            %
+            —
           </div>
-          <p className="text-[11px] text-slate-500 mt-1">{isAr ? 'أعلى من المعدل العام' : 'Exceeds regional avg.'}</p>
+          <p className="text-[11px] text-slate-500 mt-1">{isAr ? 'غير متاح بدون ربط تتبّع فعلي' : 'Unavailable without verified tracking'}</p>
         </Card>
 
         <Card>
           <div className="text-xs text-slate-400 mb-1">{isAr ? 'متوسط النقر والتفاعل' : 'Avg. Click Rate'}</div>
           <div className="text-2xl font-bold text-emerald-400">
-            {(
-              sentHistory.reduce((acc, c) => acc + c.clickRate, 0) /
-              (sentHistory.length || 1)
-            ).toFixed(1)}
-            %
+            —
           </div>
-          <p className="text-[11px] text-slate-500 mt-1">{isAr ? 'تفاعل المشترين مع أزرار الشراء' : 'Direct clicks to catalog'}</p>
+          <p className="text-[11px] text-slate-500 mt-1">{isAr ? 'غير متاح بدون ربط تتبّع فعلي' : 'Unavailable without verified tracking'}</p>
         </Card>
 
         <Card>
@@ -123,7 +115,7 @@ export const CampaignHistoryTab: React.FC<Props> = ({
 
                     {/* Open Rate */}
                     <td className="py-3 px-4 font-bold text-emerald-400 whitespace-nowrap">
-                      {item.openRate}%
+                      —
                     </td>
 
                     {/* Status */}
@@ -178,7 +170,7 @@ export const CampaignHistoryTab: React.FC<Props> = ({
                 <tr>
                   <td colSpan={7} className="text-center py-12 text-slate-500 text-sm">
                     {isAr
-                      ? 'لا توجد حملات مرسلة سابقاً في السجل. قم بإرسال أول حملة من تبويب الاستوديو!'
+                      ? 'لا توجد حملات مرسلة. الإرسال الآلي متوقف؛ يمكنك تصميم القوالب ومعاينتها.'
                       : 'No sent campaigns in history. Dispatch your first campaign from the Studio tab!'}
                   </td>
                 </tr>

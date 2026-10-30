@@ -1,3 +1,4 @@
+import { spreadsheetCell, escapeHtml } from '../../lib/adminAudience';
 import type { Subscriber } from '../useAdminBridge';
 
 export function exportSubscribersCSV(
@@ -17,17 +18,7 @@ export function exportSubscribersCSV(
     'Tags',
   ];
 
-  const rows = filteredSubscribers.map((s) => [
-    s.id,
-    `"${s.name.replace(/"/g, '""')}"`,
-    `"${s.email}"`,
-    `"${s.phone}"`,
-    s.status,
-    s.totalOrders,
-    s.totalSpent,
-    `"${s.joinedDate}"`,
-    `"${s.tags.join('; ')}"`,
-  ]);
+  const rows = filteredSubscribers.map(s => [s.id, s.name, s.email, s.phone, s.status, s.totalOrders, s.totalSpent, s.joinedDate, s.tags.join('; ')].map(value => `"${spreadsheetCell(value).replace(/"/g, '""')}"`));
 
   const csvContent =
     '\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\r\n');
@@ -64,7 +55,7 @@ export function exportSubscribersExcel(
       </style>
     </head>
     <body>
-      <h2 style="color: #1e1b4b;">سجل ودليل المشتركين والعملاء - متجر الرافدين الفاخر</h2>
+      <h2 style="color: #1e1b4b;">سجل ودليل المشتركين والعملاء - فانت</h2>
       <p>تاريخ التقرير: ${new Date().toLocaleDateString('ar-IQ')} | إجمالي العملاء: ${filteredSubscribers.length}</p>
       <table border="1">
         <thead>
@@ -86,14 +77,14 @@ export function exportSubscribersExcel(
               (s, i) => `
             <tr>
               <td>${i + 1}</td>
-              <td><strong>${s.name}</strong></td>
-              <td>${s.email}</td>
-              <td>${s.phone}</td>
+              <td><strong>${escapeHtml(spreadsheetCell(s.name))}</strong></td>
+              <td>${escapeHtml(spreadsheetCell(s.email))}</td>
+              <td>${escapeHtml(spreadsheetCell(s.phone))}</td>
               <td>${s.status === 'active' ? 'نشط' : 'ملغي الاشتراك'}</td>
               <td>${s.totalOrders}</td>
               <td class="money">${s.totalSpent.toLocaleString('en-US')} IQD</td>
-              <td>${s.joinedDate}</td>
-              <td><span class="tag">${s.tags.join(', ')}</span></td>
+              <td>${escapeHtml(spreadsheetCell(s.joinedDate))}</td>
+              <td><span class="tag">${escapeHtml(spreadsheetCell(s.tags.join(', ')))}</span></td>
             </tr>`
             )
             .join('')}
@@ -148,12 +139,12 @@ export function exportSubscribersMarkdown(
     '| :---: | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :--- |';
   const rows = filteredSubscribers.map(
     (s, i) =>
-      `| ${i + 1} | **${s.name}** | \`${s.email}\` | ${s.phone} | ${
+      `| ${i + 1} | **${escapeHtml(spreadsheetCell(s.name))}** | \`${escapeHtml(spreadsheetCell(s.email))}\` | ${escapeHtml(spreadsheetCell(s.phone))} | ${
         s.status === 'active' ? '✅ نشط' : '❌ ملغي'
-      } | ${s.totalOrders} | ${s.totalSpent.toLocaleString('en-US')} IQD | ${s.joinedDate} | ${s.tags.join(', ')} |`
+      } | ${s.totalOrders} | ${s.totalSpent.toLocaleString('en-US')} IQD | ${escapeHtml(spreadsheetCell(s.joinedDate))} | ${escapeHtml(spreadsheetCell(s.tags.join(', ')))} |`
   );
 
-  const mdContent = `# 📋 دليل المشتركين والعملاء - متجر الرافدين الفاخر\n\n- **تاريخ الاستخراج:** ${new Date().toLocaleDateString(
+  const mdContent = `# 📋 دليل المشتركين والعملاء - فانت\n\n- **تاريخ الاستخراج:** ${new Date().toLocaleDateString(
     'en-US'
   )}\n- **إجمالي المشتركين:** ${filteredSubscribers.length}\n- **إجمالي القيمة المالية:** ${totalSpentAll.toLocaleString(
     'en-US'
@@ -171,19 +162,11 @@ export function exportSubscribersMarkdown(
   showToast(isAr ? 'تم استخراج جدول Markdown (.md) بنجاح!' : 'Markdown table exported successfully!');
 }
 
-export function copySubscribersClipboard(
-  filteredSubscribers: Subscriber[],
-  showToast: (msg: string) => void,
-  isAr: boolean
-) {
-  const headers = ['الاسم\tالبريد الإلكتروني\tالهاتف\tالحالة\tالطلبات\tالمشتريات (IQD)\tتاريخ الانضمام\tالوسوم'];
-  const rows = filteredSubscribers.map(
-    (s) =>
-      `${s.name}\t${s.email}\t${s.phone}\t${s.status === 'active' ? 'نشط' : 'ملغي الاشتراك'}\t${s.totalOrders}\t${s.totalSpent}\t${s.joinedDate}\t${s.tags.join(', ')}`
-  );
-  const fullText = [headers, ...rows].join('\n');
-  navigator.clipboard?.writeText(fullText);
-  showToast(isAr ? 'تم نسخ بيانات الجدول للحافظة (TSV جاهز للّصق في Sheets)!' : 'Copied TSV to clipboard!');
+export async function copySubscribersClipboard(filteredSubscribers: Subscriber[], showToast: (msg: string) => void, isAr: boolean) {
+  const headers = ['Name', 'Email', 'Phone', 'Status', 'Orders', 'SpentIQD', 'Joined', 'Tags'];
+  const rows = filteredSubscribers.map(s => [s.name, s.email, s.phone, s.status, s.totalOrders, s.totalSpent, s.joinedDate, s.tags.join(', ')].map(value => spreadsheetCell(value).replace(/[\t\r\n]/g, ' ')).join('\t'));
+  try { await navigator.clipboard.writeText([headers.join('\t'), ...rows].join('\n')); showToast(isAr ? 'تم نسخ الجدول.' : 'Table copied.'); }
+  catch { showToast(isAr ? 'تعذّر النسخ؛ استخدم تصدير CSV.' : 'Copy failed; export CSV instead.'); }
 }
 
 export function printSubscribersPDF() {

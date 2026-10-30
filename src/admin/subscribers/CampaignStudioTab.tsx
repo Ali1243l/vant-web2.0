@@ -120,7 +120,7 @@ export const CampaignStudioTab: React.FC<Props> = ({
       </Card>
 
       {/* Side-by-Side Studio Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="min-w-0 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* LEFT COLUMN: Campaign Builder Form */}
         <div className="lg:col-span-5 space-y-5">
           <Card className="p-5 space-y-4">
@@ -313,7 +313,7 @@ export const CampaignStudioTab: React.FC<Props> = ({
                 >
                   <div className="font-bold">{isAr ? 'المشتركون النشطون' : 'Active Subscribers'}</div>
                   <div className="text-[10px] text-slate-400">
-                    {subscribers.filter((s) => s.status === 'active').length} {isAr ? 'مشترك' : 'users'}
+                    {getAudienceSubscribers('active').length} {isAr ? 'مشترك' : 'users'}
                   </div>
                 </button>
 
@@ -336,7 +336,7 @@ export const CampaignStudioTab: React.FC<Props> = ({
           </Card>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Button
               variant="outline"
               leftIcon={<Copy className="w-4 h-4 text-indigo-400" />}
@@ -419,7 +419,7 @@ export const CampaignStudioTab: React.FC<Props> = ({
           </div>
 
           {/* Viewport Frame */}
-          <div className="p-4 sm:p-6 bg-slate-950 border border-slate-800/80 rounded-2xl min-h-[580px] flex items-center justify-center overflow-x-auto shadow-inner">
+          <div className="min-w-0 p-3 sm:p-6 bg-slate-950 border border-slate-800/80 rounded-2xl min-h-[580px] flex items-center justify-center overflow-x-auto shadow-inner">
             {showHtmlCode ? (
               <div className="w-full max-h-[640px] overflow-y-auto font-mono text-[11px] bg-slate-900 p-4 rounded-xl text-slate-300 border border-slate-800 whitespace-pre">
                 {generateEmailHtml(campaignData)}

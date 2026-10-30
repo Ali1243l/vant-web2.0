@@ -1,9 +1,10 @@
+import { subscriberDetails, subscriberOrderTotals } from '../lib/adminAudience';
 import { useState, useEffect, createContext, useContext, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { normalizeOffers, validateOffer } from './offers/offerModel';
 import { useSiteControls } from '../context/SiteControlsContext';
 import type { Product as StoreProduct, ProductAvailability } from '../types';
-import { getStoredSubscribers, addSubscriber as addStoredSubscriber, removeSubscriber as removeStoredSubscriber, syncSubscribersFromCloud, saveSubscribers } from '../lib/newsletter';
+import { getStoredSubscribers, syncSubscribersFromCloud } from '../lib/newsletter';
 import { saveOrdersToSupabase, fetchOrdersFromSupabase, saveOffersToSupabase, fetchOffersFromSupabase } from '../lib/storage';
 import { updateSystemErrorStatus } from '../lib/analytics';
 import { normalizeOrders } from '../lib/orderModel';
@@ -267,8 +268,8 @@ interface AdminContextType {
   deleteOffer: (id: string) => Promise<'cloud' | 'local'>;
   
   subscribers: Subscriber[];
-  addSubscriber: (sub: Omit<Subscriber, 'id' | 'joinedDate' | 'totalOrders' | 'totalSpent'>) => void;
-  deleteSubscriber: (id: string) => void;
+  addSubscriber: (sub: Omit<Subscriber, 'id' | 'joinedDate' | 'totalOrders' | 'totalSpent'>) => Promise<void>;
+  deleteSubscriber: (id: string) => Promise<void>;
 
   // Order Management System (OMS) & Concierge
   orders: Order[];
@@ -637,9 +638,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (raw && raw.length > 0) {
       return raw.map((s) => ({
         id: s.id,
-        name: s.email.split('@')[0],
+        name: subscriberDetails(s.notes).name || s.email.split('@')[0],
         email: s.email,
-        phone: s.notes || '',
+        phone: subscriberDetails(s.notes).phone,
         status: s.status,
         totalOrders: 0,
         totalSpent: 0,
@@ -657,9 +658,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setSubscribers(
           cloudList.map((s) => ({
             id: s.id,
-            name: s.email.split('@')[0],
+            name: subscriberDetails(s.notes).name || s.email.split('@')[0],
             email: s.email,
-            phone: s.notes || '',
+            phone: subscriberDetails(s.notes).phone,
             status: s.status,
             totalOrders: 0,
             totalSpent: 0,
@@ -671,25 +672,43 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }).catch(() => {});
   }, []);
 
-  const addSubscriber = useCallback((newSub: Omit<Subscriber, 'id' | 'joinedDate' | 'totalOrders' | 'totalSpent'>) => {
-    const sub: Subscriber = {
-      ...newSub,
-      id: 'sub-' + Date.now(),
-      joinedDate: new Date().toISOString().split('T')[0],
-      totalOrders: 0,
-      totalSpent: 0,
-    };
-    addStoredSubscriber(newSub.email);
-    setSubscribers((prev) => [sub, ...prev]);
-  }, []);
-
-  const deleteSubscriber = useCallback((id: string) => {
-    const target = subscribers.find((s) => s.id === id);
-    if (target) {
-      removeStoredSubscriber(target.email);
-    }
-    setSubscribers((prev) => prev.filter((s) => s.id !== id));
+  const subscriberWriteBusy = useRef(false);
+  const addSubscriber = useCallback(async (newSub: Omit<Subscriber, 'id' | 'joinedDate' | 'totalOrders' | 'totalSpent'>) => {
+    if (subscriberWriteBusy.current) throw new Error('busy');
+    const email = newSub.email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !newSub.name.trim() || newSub.name.length > 120 || newSub.phone.length > 25 || newSub.tags.some(tag => tag.length > 60)) throw new Error('invalid');
+    if (subscribers.some(row => row.email.toLowerCase() === email)) throw new Error('duplicate');
+    subscriberWriteBusy.current = true;
+    try {
+      const stored = { id: String(crypto.randomUUID()), email, subscribed_at: new Date().toISOString(), status: newSub.status, source: 'admin', notes: JSON.stringify({ kind: 'vant-contact', name: newSub.name.trim(), phone: newSub.phone.trim() }), tags: newSub.tags };
+      if (supabase) {
+        const { data, error } = await supabase.from('newsletter_subscribers').insert({ email, created_at: stored.subscribed_at, status: stored.status, source: stored.source, notes: stored.notes, tags: stored.tags }).select('id').single();
+        if (error || !data) throw new Error('subscriber-save');
+        stored.id = String(data.id);
+      }
+      const next = [stored, ...getStoredSubscribers()];
+      try { localStorage.setItem('vant_subscribers_list_v2', JSON.stringify(next)); } catch (error) { if (!supabase) throw error; }
+      setSubscribers(prev => [{ ...newSub, email, id: stored.id, joinedDate: stored.subscribed_at.split('T')[0], totalOrders: 0, totalSpent: 0 }, ...prev]);
+    } finally { subscriberWriteBusy.current = false; }
   }, [subscribers]);
+
+  const deleteSubscriber = useCallback(async (id: string) => {
+    if (subscriberWriteBusy.current) throw new Error('busy');
+    const target = subscribers.find(row => row.id === id);
+    if (!target) throw new Error('missing');
+    subscriberWriteBusy.current = true;
+    try {
+      if (supabase) {
+        const { data, error } = await supabase.from('newsletter_subscribers').delete().eq('email', target.email).select('id');
+        if (error || !data?.length) throw new Error('subscriber-delete');
+      }
+      const next = getStoredSubscribers().filter(row => row.email !== target.email);
+      try { localStorage.setItem('vant_subscribers_list_v2', JSON.stringify(next)); } catch (error) { if (!supabase) throw error; }
+      setSubscribers(prev => prev.filter(row => row.id !== id));
+    } finally { subscriberWriteBusy.current = false; }
+  }, [subscribers]);
+
+  const subscribersWithTotals = useMemo(() => subscribers.map(row => ({ ...row, ...subscriberOrderTotals(row.email, orders) })), [subscribers, orders]);
 
   // Load orders from Supabase on mount
   useEffect(() => {
@@ -877,8 +896,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       siteControls.updateControl('cfg_bespoke_phone', { actionValue: partial.whatsappConciergeNumber });
     }
 
-    await siteControls.updateSiteSettings(scPatch);
-    return { success: true, syncedWithCloud: true };
+    const success = await siteControls.updateSiteSettings(scPatch);
+    if (!success) throw new Error("Settings save failed");
+    return { success, syncedWithCloud: Boolean(supabase) };
   }, [siteControls]);
 
   // Sync document direction
@@ -925,7 +945,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         addOffer,
         updateOffer,
         deleteOffer,
-        subscribers,
+        subscribers: subscribersWithTotals,
         addSubscriber,
         deleteSubscriber,
         orders,

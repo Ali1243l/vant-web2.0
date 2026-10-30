@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import { useAdminBridge } from './useAdminBridge';
+import { campaignAudience } from '../lib/adminAudience';
 import { formatCurrency } from './format';
 import { Button } from './ui';
 import {
@@ -62,6 +63,7 @@ export const SubscribersList: React.FC = () => {
     const welcomePreset = templatePresets.welcome;
     return {
       ...defaultCampaignData,
+      ctaUrl: window.location.origin,
       templateType: 'welcome',
       subject: welcomePreset.defaults.subject || defaultCampaignData.subject,
       preheader: welcomePreset.defaults.preheader || defaultCampaignData.preheader,
@@ -82,9 +84,9 @@ export const SubscribersList: React.FC = () => {
   // Dispatch & Simulation State
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
   const [isTestEmailModalOpen, setIsTestEmailModalOpen] = useState(false);
-  const [testEmailAddress, setTestEmailAddress] = useState('fs3211927@gmail.com');
-  const [isSendingSimulation, setIsSendingSimulation] = useState(false);
-  const [simulationProgress, setSimulationProgress] = useState(0);
+  const [testEmailAddress, setTestEmailAddress] = useState('');
+  const isSendingSimulation = false;
+  const simulationProgress = 0;
   const [sentHistory, setSentHistory] = useState<SentCampaignRecord[]>(initialSentHistory);
   const [previewingHistoryItem, setPreviewingHistoryItem] = useState<SentCampaignRecord | null>(null);
 
@@ -108,11 +110,7 @@ export const SubscribersList: React.FC = () => {
   const totalSpentAll = subscribers.reduce((acc, sub) => acc + sub.totalSpent, 0);
 
   // Audience calculator
-  const getAudienceSubscribers = (type: 'active' | 'all' | 'vip') => {
-    if (type === 'active') return subscribers.filter((s) => s.status === 'active');
-    if (type === 'vip') return subscribers.filter((s) => s.totalSpent > 150000 || s.tags.includes('VIP'));
-    return subscribers;
-  };
+  const getAudienceSubscribers = (type: 'active' | 'all' | 'vip') => campaignAudience(subscribers, type);
 
   const currentAudienceList = getAudienceSubscribers(selectedAudience);
 
@@ -139,14 +137,15 @@ export const SubscribersList: React.FC = () => {
   };
 
   // Create new subscriber
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formEmail || !formName) return;
-
-    addSubscriber({
-      name: formName,
-      email: formEmail,
-      phone: formPhone || '+964 770 000 0000',
+    if (!formEmail.trim() || !formName.trim()) return;
+    if (subscribers.some(row => row.email.toLowerCase() === formEmail.trim().toLowerCase())) { showToast(isAr ? 'البريد مسجّل مسبقاً.' : 'Email already registered.'); return; }
+    try {
+    await addSubscriber({
+      name: formName.trim(),
+      email: formEmail.trim().toLowerCase(),
+      phone: formPhone.trim(),
       status: 'active',
       tags: formTag ? [formTag] : ['عميل جديد'],
     });
@@ -157,14 +156,14 @@ export const SubscribersList: React.FC = () => {
     setFormTag('');
     setIsAddModalOpen(false);
 
-    showToast(isAr ? 'تمت إضافة العميل الجديد بنجاح!' : 'New subscriber added!');
+    showToast(isAr ? 'تم حفظ المشترك.' : 'Subscriber saved.');
+    } catch { showToast(isAr ? 'تعذّر حفظ المشترك. راجع الاتصال وحاول ثانية.' : 'Could not save subscriber; retry.'); }
   };
 
   // HTML Export / Copy
-  const handleCopyHtmlCode = () => {
+  const handleCopyHtmlCode = async () => {
     const html = generateEmailHtml(campaignData);
-    navigator.clipboard?.writeText(html);
-    showToast(isAr ? 'تم نسخ كود HTML للرسالة بنجاح!' : 'HTML Code copied to clipboard!');
+    try { await navigator.clipboard.writeText(html); showToast(isAr ? 'تم نسخ HTML.' : 'HTML copied.'); } catch { showToast(isAr ? 'تعذّر النسخ؛ استخدم تحميل HTML.' : 'Copy failed; download HTML instead.'); }
   };
 
   const handleDownloadHtmlFile = () => {
@@ -182,17 +181,11 @@ export const SubscribersList: React.FC = () => {
   };
 
   // Dispatch Actions
-  const handleSendTestEmail = () => {
-    setIsTestEmailModalOpen(false);
-    showToast(
-      isAr
-        ? `تم إرسال معاينة تجريبية ناجحة إلى ${testEmailAddress}!`
-        : `Test preview dispatched to ${testEmailAddress}!`
-    );
-  };
+  const handleSendTestEmail = () => showToast(isAr ? 'الإرسال متوقف؛ استعمل معاينة القالب أو تحميل HTML.' : 'Sending is disabled; preview or download HTML.');
 
   const handleBroadcastViaMailto = () => {
-    const recipientEmails = currentAudienceList.map((s) => s.email).join(',');
+    if (!currentAudienceList.length) { showToast(isAr ? 'لا يوجد مشتركون نشطون ضمن الجمهور.' : 'No active subscribers in audience.'); return; }
+    const recipientEmails = currentAudienceList.map((s) => encodeURIComponent(s.email.trim())).join(',');
     const subjectEncoded = encodeURIComponent(campaignData.subject);
     const bodyEncoded = encodeURIComponent(
       `${campaignData.headline}\n\n${campaignData.bodyText}\n\n${
@@ -201,49 +194,14 @@ export const SubscribersList: React.FC = () => {
     );
 
     const mailtoUrl = `mailto:?bcc=${recipientEmails}&subject=${subjectEncoded}&body=${bodyEncoded}`;
-    window.open(mailtoUrl, '_blank');
+    if (mailtoUrl.length > 1800) { showToast(isAr ? 'المسودة أكبر من حد تطبيق البريد؛ صدّر الجمهور والقالب.' : 'Draft exceeds mail-client limit; export audience and HTML.'); return; }
+    window.location.href = mailtoUrl;
     setIsDispatchModalOpen(false);
 
     showToast(isAr ? 'تم فتح تطبيق البريد مع إدراج إيميلات العملاء في BCC!' : 'Opened mail client with BCC recipients!');
   };
 
-  const handleBroadcastViaSimulator = (channel: 'resend' | 'simulation') => {
-    setIsSendingSimulation(true);
-    setSimulationProgress(10);
-
-    const interval = setInterval(() => {
-      setSimulationProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsSendingSimulation(false);
-          setIsDispatchModalOpen(false);
-
-          const newRecord: SentCampaignRecord = {
-            id: `CAMP-${Math.floor(1000 + Math.random() * 9000)}`,
-            name: campaignData.headline || 'حملة ترويجية',
-            subject: campaignData.subject,
-            templateType: campaignData.templateType,
-            sentDate: new Date().toLocaleDateString('ar-IQ'),
-            recipientsCount: currentAudienceList.length,
-            openRate: Math.floor(45 + Math.random() * 35),
-            clickRate: Math.floor(18 + Math.random() * 20),
-            status: 'delivered',
-            channel: channel,
-            campaignData: { ...campaignData },
-          };
-
-          setSentHistory((prevHistory) => [newRecord, ...prevHistory]);
-          showToast(
-            isAr
-              ? `تم بث الحملة بنجاح إلى ${currentAudienceList.length} مشترك!`
-              : `Successfully broadcasted to ${currentAudienceList.length} subscribers!`
-          );
-          return 100;
-        }
-        return prev + 25;
-      });
-    }, 400);
-  };
+  const handleBroadcastViaSimulator = (_channel: 'resend' | 'simulation') => showToast(isAr ? 'الإرسال الآلي غير مفعّل. لا تُسجّل مسودة البريد كرسالة مُرسلة.' : 'Automated sending is disabled. Mail drafts are not recorded as sent.');
 
   // History controls
   const handleLoadCampaignFromHistory = (item: SentCampaignRecord) => {
@@ -258,11 +216,11 @@ export const SubscribersList: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="subscribers-manager min-w-0 space-y-5">
       {/* Toast Notification Banner */}
       <AnimatePresence>
         {toastMessage && (
-          <div className="fixed bottom-6 end-6 z-50 bg-indigo-600 text-white px-4 py-2.5 rounded-xl shadow-2xl border border-indigo-400 text-xs font-semibold flex items-center gap-2">
+          <div role="status" className="fixed bottom-6 inset-x-4 sm:start-auto sm:end-6 z-50 bg-indigo-600 text-white px-4 py-2.5 rounded-xl shadow-2xl border border-indigo-400 text-xs font-semibold flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
             <span>{toastMessage}</span>
           </div>
@@ -270,11 +228,11 @@ export const SubscribersList: React.FC = () => {
       </AnimatePresence>
 
       {/* Header & Tabs Navigation */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+      <div className="flex flex-col gap-5 rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-              {isAr ? 'إدارة المشتركين وحملات البريد' : 'Subscribers & Email Studio'}
+              {isAr ? 'المشتركون والحملات' : 'Subscribers & campaigns'}
             </h2>
             <span className="text-xs bg-indigo-500/10 text-indigo-400 px-2.5 py-0.5 rounded-full border border-indigo-500/30 font-semibold">
               {subscribers.length} {isAr ? 'عميل' : 'subscribers'}
@@ -282,13 +240,13 @@ export const SubscribersList: React.FC = () => {
           </div>
           <p className="text-xs text-slate-400 mt-1">
             {isAr
-              ? 'إدارة قاعدة بيانات العملاء، تصميم واستعراض الرسائل التسويقية وإطلاق الحملات.'
-              : 'Manage subscriber directory, compose rich email campaigns, and track dispatch analytics.'}
+              ? 'دليل المشتركين وتصميم الرسائل. الإرسال الآلي متوقف؛ المعاينة والتصدير متاحان.'
+              : 'Manage subscribers and design messages. Automated sending is disabled; preview and export are available.'}
           </p>
         </div>
 
         {/* Header Action Buttons & Tabs Switcher */}
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+        <div className="flex items-center gap-3 flex-wrap justify-between [&_button]:min-h-11 [&_button]:h-auto [&_button]:py-2">
           {activeTab === 'directory' && (
             <div className="flex items-center gap-2">
               {/* Export Dropdown */}
@@ -386,8 +344,8 @@ export const SubscribersList: React.FC = () => {
                     >
                       <Printer className="w-4 h-4 text-rose-400" />
                       <div>
-                        <div className="font-semibold">{isAr ? 'طباعة / تقرير PDF' : 'Print / Save as PDF'}</div>
-                        <div className="text-[10px] text-slate-400">{isAr ? 'تنسيق طباعة مخصص' : 'Print-ready clean layout'}</div>
+                        <div className="font-semibold">{isAr ? 'طباعة الصفحة' : 'Print / Save as PDF'}</div>
+                        <div className="text-[10px] text-slate-400">{isAr ? 'خيارات الطباعة في المتصفح' : 'Print-ready clean layout'}</div>
                       </div>
                     </button>
                   </div>
@@ -410,7 +368,7 @@ export const SubscribersList: React.FC = () => {
               <Button
                 variant="outline"
                 leftIcon={<Send className="w-4 h-4 text-amber-400" />}
-                onClick={() => setIsTestEmailModalOpen(true)}
+                disabled title={isAr ? 'الإرسال الآلي متوقف' : 'Automated sending disabled'}
               >
                 {isAr ? 'بريد تجريبي' : 'Test Email'}
               </Button>
@@ -420,47 +378,47 @@ export const SubscribersList: React.FC = () => {
                 leftIcon={<Send className="w-4 h-4" />}
                 onClick={() => setIsDispatchModalOpen(true)}
               >
-                {isAr ? 'إطلاق الحملة' : 'Dispatch Campaign'}
+                {isAr ? 'مسودة البريد' : 'Mail draft'}
               </Button>
             </div>
           )}
 
           {/* Navigation Tabs Switcher */}
-          <div className="flex items-center gap-1.5 p-1 bg-slate-900/90 border border-slate-800 rounded-xl">
+          <div className="grid w-full grid-cols-3 gap-1 p-1 bg-slate-900/90 border border-slate-800 rounded-xl">
             <button
               onClick={() => setActiveTab('directory')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 justify-center flex-col sm:flex-row ${
                 activeTab === 'directory'
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
               <Users className="w-3.5 h-3.5" />
-              <span>{isAr ? 'دليل العملاء' : 'Directory'}</span>
+              <span>{isAr ? 'المشتركون' : 'Directory'}</span>
             </button>
 
             <button
               onClick={() => setActiveTab('studio')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 justify-center flex-col sm:flex-row ${
                 activeTab === 'studio'
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>{isAr ? 'استوديو الحملات' : 'Email Studio'}</span>
+              <span>{isAr ? 'الرسائل' : 'Studio'}</span>
             </button>
 
             <button
               onClick={() => setActiveTab('history')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 justify-center flex-col sm:flex-row ${
                 activeTab === 'history'
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>{isAr ? 'أرشيف الإرسال' : 'Sent History'}</span>
+              <span>{isAr ? 'السجل' : 'History'}</span>
             </button>
           </div>
         </div>
@@ -477,7 +435,11 @@ export const SubscribersList: React.FC = () => {
             setSearch={setSearch}
             filterStatus={filterStatus}
             setFilterStatus={setFilterStatus}
-            deleteSubscriber={deleteSubscriber}
+            deleteSubscriber={async id => {
+              if (!window.confirm(isAr ? 'حذف هذا المشترك نهائياً؟' : 'Permanently delete this subscriber?')) return;
+              try { await deleteSubscriber(id); showToast(isAr ? 'تم الحذف.' : 'Deleted.'); }
+              catch { showToast(isAr ? 'تعذّر الحذف؛ حاول ثانية.' : 'Delete failed; retry.'); }
+            }}
             isAr={isAr}
             formatCurrency={formatCurrency}
           />

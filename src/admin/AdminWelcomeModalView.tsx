@@ -43,9 +43,9 @@ export const AdminWelcomeModalView: React.FC = () => {
     if (issue) { setError(issue === 'code' ? t('الكود يجب أن يحتوي 3–40 حرفاً إنجليزياً أو رقماً مع - أو _ فقط.', 'Code must be 3–40 English letters/digits, - or _.') : issue === 'discount' ? t('أدخل نسبة أكبر من صفر وأقل من 100.', 'Enter a percentage above zero and below 100.') : t('أكمل العنوان والرسالة باللغتين، حتى 1000 حرف للحقل.', 'Complete title and message in both languages, up to 1000 characters per field.')); return; }
     setBusy(true); setError('');
     try {
-      await updateSiteSettings(next);
+      if (!await updateSiteSettings(next)) throw new Error("save");
       setChanged(false);
-      setNotice(t('تم تطبيق إعدادات النافذة في هذه الجلسة. المزامنة السحابية بالخلفية، ولا يتم تأكيدها من هذه الشاشة.', 'Popup settings applied in this session. Background cloud synchronization is not confirmed by this screen.'));
+      setNotice(t('تم حفظ إعدادات النافذة.', 'Popup settings saved.'));
     } catch { setError(t('تعذر حفظ الإعدادات. المسودة باقية للمراجعة.', 'Could not save settings. Your draft remains available.')); }
     finally { setBusy(false); }
   };

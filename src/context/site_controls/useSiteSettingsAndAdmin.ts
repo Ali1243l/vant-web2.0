@@ -150,8 +150,6 @@ export function useSiteSettingsAndAdmin() {
   const updateSiteSettings = useCallback(
     async (updates: Partial<SiteSettings>): Promise<boolean> => {
       const next = { ...siteSettings, ...updates };
-      setSiteSettings(next);
-      safeStorage.setItemJSON(SETTINGS_STORAGE_KEY, next);
 
       if (supabase) {
         try {
@@ -174,25 +172,31 @@ export function useSiteSettingsAndAdmin() {
             updated_at: new Date().toISOString(),
           };
 
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('site_settings')
             .upsert(payload, { onConflict: 'id' })
             .select()
             .maybeSingle();
 
-          if (data?.id) {
-            setSiteSettings((prev) => ({ ...prev, id: data.id }));
-          }
+          if (error || !data) throw new Error(error?.message || "No settings acknowledgment");
+          const tableKeys = new Set(Object.keys(payload));
+          const needsConfig = Object.keys(updates).some(key => !tableKeys.has(key));
+          if (needsConfig && !await saveSiteConfigToSupabase({ site_settings: next })) throw new Error('Extended settings save failed');
+          setSiteSettings({ ...next, id: data.id });
+          safeStorage.setItemJSON(SETTINGS_STORAGE_KEY, { ...next, id: data.id });
 
-          saveSiteConfigToSupabase({
-            site_settings: next,
-          });
+          if (!needsConfig) void saveSiteConfigToSupabase({ site_settings: next }).catch(() => {});
           return true;
         } catch (err) {
           console.warn('Failed to persist site_settings to Supabase:', err);
+          return false;
         }
       }
-      return true;
+      try {
+        localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(next));
+        setSiteSettings(next);
+        return true;
+      } catch { return false; }
     },
     [siteSettings]
   );

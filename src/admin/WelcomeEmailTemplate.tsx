@@ -1,3 +1,4 @@
+import { escapeHtml, httpUrl } from '../lib/adminAudience';
 import React from 'react';
 
 export interface EmailCampaignData {
@@ -35,33 +36,22 @@ export const defaultCampaignData: EmailCampaignData = {
   discountPercent: '20% خصم فوري ترحيبي',
   heroImage: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800&auto=format&fit=crop&q=80',
   ctaText: 'تسوق التشكيلة الملكية الآن',
-  ctaUrl: 'https://store.example.com/shop',
+  ctaUrl: '',
   audience: 'active',
   storeName: 'فانت للأزياء الرفيعة (VANT)',
-  senderEmail: 'concierge@maison-vant.iq',
+  senderEmail: '',
   expireDate: 'خلال 7 أيام من التسجيل',
-  items: [
-    {
-      name: 'معطف كشمير منغولي مزدوج الوجه 650gsm',
-      price: '285,000 IQD',
-      originalPrice: '320,000 IQD',
-      image: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=600&q=80',
-      badge: 'الأكثر تميزاً',
-    },
-    {
-      name: 'بدلة رسمية بهيكل هندسي منحوت صوف ميرينو سوبر 160s',
-      price: '450,000 IQD',
-      originalPrice: '480,000 IQD',
-      image: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=600&q=80',
-      badge: 'إصدار ملكي',
-    },
-  ],
+  items: [],
 };
 
 /**
  * Generate standard HTML string compatible with email clients (Resend, SendGrid, etc.)
  */
-export function generateEmailHtml(data: EmailCampaignData): string {
+export function generateEmailHtml(input: EmailCampaignData): string {
+  const data = Object.fromEntries(Object.entries(input).map(([key, value]) => [key, typeof value === 'string' ? escapeHtml(value) : value])) as unknown as EmailCampaignData;
+  data.ctaUrl = escapeHtml(httpUrl(input.ctaUrl));
+  data.heroImage = escapeHtml(httpUrl(input.heroImage));
+  data.items = input.items?.map(item => ({ ...item, name: escapeHtml(item.name), price: escapeHtml(item.price), originalPrice: escapeHtml(item.originalPrice), badge: escapeHtml(item.badge), image: escapeHtml(httpUrl(item.image)) }));
   const isFlash = data.templateType === 'flash_sale';
   const isLaunch = data.templateType === 'launch';
   const isClearance = data.templateType === 'clearance';
@@ -263,7 +253,7 @@ export const WelcomeEmailTemplate: React.FC<WelcomeEmailTemplateProps> = ({
             {data.storeName || 'متجر الرافدين الفاخر'}
           </div>
           <div className="text-[11px] text-slate-400 mt-0.5">
-            {data.senderEmail || 'vip@iraq-store.com'}
+            {data.senderEmail || 'معاينة مسودة · لم يتم الإرسال'}
           </div>
         </div>
 
@@ -337,7 +327,7 @@ export const WelcomeEmailTemplate: React.FC<WelcomeEmailTemplateProps> = ({
           {/* CTA Button */}
           <div className="text-center pt-2">
             <a
-              href={data.ctaUrl || '#'}
+              href={httpUrl(data.ctaUrl) || '#'}
               target="_blank"
               rel="noreferrer"
               className={`inline-flex items-center justify-center px-8 py-3.5 text-sm font-bold text-white rounded-xl shadow-lg transition-transform active:scale-95 ${themeBtn}`}

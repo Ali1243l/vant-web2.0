@@ -125,8 +125,9 @@ export const SubscriberModals: React.FC<SubscriberModalsProps> = ({
             onChange={(e) => setFormTag(e.target.value)}
           />
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
-            <Button variant="ghost" onClick={() => setIsAddModalOpen(false)}>
+          <label className="flex items-start gap-3 text-sm text-slate-300"><input type="checkbox" required className="mt-1 h-4 w-4 shrink-0" />{isAr ? 'المشترك وافق على استقبال الرسائل التسويقية.' : 'This subscriber agreed to receive marketing messages.'}</label>
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-slate-800">
+            <Button type="button" variant="ghost" onClick={() => setIsAddModalOpen(false)}>
               {isAr ? 'إلغاء' : 'Cancel'}
             </Button>
             <Button variant="primary" type="submit">
@@ -177,7 +178,7 @@ export const SubscriberModals: React.FC<SubscriberModalsProps> = ({
       <Modal
         isOpen={isDispatchModalOpen}
         onClose={() => setIsDispatchModalOpen(false)}
-        title={isAr ? 'تأكيد إرسال وإطلاق الحملة' : 'Confirm Campaign Dispatch'}
+        title={isAr ? 'خيارات مسودة البريد' : 'Mail draft options'}
         description={
           isAr
             ? 'يرجى مراجعة تفاصيل الحملة وشريحة المستلمين قبل بدء البث المباشر.'
@@ -234,7 +235,7 @@ export const SubscriberModals: React.FC<SubscriberModalsProps> = ({
               {/* Channel 1: Resend / Automated API */}
               <button
                 type="button"
-                onClick={() => handleBroadcastViaSimulator('resend')}
+                disabled title={isAr ? 'غير مفعّل حالياً' : 'Currently disabled'}
                 className="w-full p-3.5 rounded-xl border border-indigo-500/40 bg-indigo-950/20 hover:bg-indigo-950/40 text-start flex items-center justify-between gap-3 transition-colors cursor-pointer group"
               >
                 <div className="flex items-center gap-3">
@@ -243,17 +244,17 @@ export const SubscriberModals: React.FC<SubscriberModalsProps> = ({
                   </div>
                   <div>
                     <div className="text-xs font-bold text-white group-hover:text-indigo-300 transition-colors">
-                      {isAr ? 'إرسال مباشر وسريع عبر Resend API' : 'Broadcast via Resend API'}
+                      {isAr ? 'الإرسال الآلي متوقف' : 'Automated sending disabled'}
                     </div>
                     <div className="text-[11px] text-slate-400">
                       {isAr
-                        ? 'إرسال فوري مع تسجيل تقارير التسليم ونسب الفتح التقديرية'
-                        : 'Direct API dispatch with delivery tracking'}
+                        ? 'لا توجد رسائل مرسلة أو تقارير تسليم في وضع المعاينة'
+                        : 'No delivery reports are available in preview mode'}
                     </div>
                   </div>
                 </div>
                 <span className="text-[10px] font-bold bg-indigo-500/20 text-indigo-400 px-2 py-1 rounded-full border border-indigo-500/30">
-                  {isAr ? 'موصى به' : 'Recommended'}
+                  {isAr ? 'غير مفعّل' : 'Disabled'}
                 </span>
               </button>
 
@@ -273,8 +274,8 @@ export const SubscriberModals: React.FC<SubscriberModalsProps> = ({
                     </div>
                     <div className="text-[11px] text-slate-400">
                       {isAr
-                        ? 'يفتح Gmail / Outlook مع وضع عناوين المشتركين في النسخة المخفية BCC'
-                        : 'Opens native client with all emails in BCC'}
+                        ? 'يفتح مسودة BCC للمشتركين النشطين؛ الإرسال يدوي ولا يُسجّل كتسليم مؤكد'
+                        : 'Opens a draft for active subscribers; manual sending is not confirmed delivery'}
                     </div>
                   </div>
                 </div>
@@ -316,11 +317,11 @@ export const SubscriberModals: React.FC<SubscriberModalsProps> = ({
               </div>
               <div>
                 <span className="text-slate-400">{isAr ? 'نسبة الفتح:' : 'Open Rate:'} </span>
-                <span className="font-bold text-indigo-400">{previewingHistoryItem.openRate}%</span>
+                <span className="font-bold text-indigo-400">—</span>
               </div>
               <div>
                 <span className="text-slate-400">{isAr ? 'نسبة النقر:' : 'Click Rate:'} </span>
-                <span className="font-bold text-emerald-400">{previewingHistoryItem.clickRate}%</span>
+                <span className="font-bold text-emerald-400">—</span>
               </div>
             </div>
 

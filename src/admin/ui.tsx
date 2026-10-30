@@ -184,7 +184,6 @@ export const Switch: React.FC<SwitchProps> = ({ checked, onChange, label, descri
           disabled={disabled}
         />
         <div
-          onClick={() => !disabled && onChange(!checked)}
           className={`w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer transition-colors border border-slate-700/60 ${
             checked ? 'bg-indigo-600 border-indigo-500' : ''
           }`}

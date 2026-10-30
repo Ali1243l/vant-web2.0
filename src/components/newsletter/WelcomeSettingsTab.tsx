@@ -50,7 +50,7 @@ export const WelcomeSettingsTab: React.FC<WelcomeSettingsTabProps> = ({
     e.preventDefault();
     setIsSavingWelcome(true);
     try {
-      await updateSiteSettings({
+      const saved = await updateSiteSettings({
         welcome_title_ar: welcomeTitleAr.trim(),
         welcome_title_en: welcomeTitleEn.trim(),
         welcome_message_ar: welcomeMessageAr.trim(),
@@ -61,9 +61,10 @@ export const WelcomeSettingsTab: React.FC<WelcomeSettingsTabProps> = ({
         welcome_auto_dispatch: welcomeAutoDispatch,
         custom_store_url: customStoreUrl.trim() || 'https://vant-web.vercel.app/',
       });
+      if (!saved) { window.alert(isAr ? "تعذّر الحفظ. حاول مرة ثانية." : "Save failed. Please retry."); return; }
       setFeedbackMsg({
         type: 'success',
-        text: isAr ? 'تم حفظ وتحديث إعدادات الرسالة الترحيبية ورابط المتجر في السحابة بنجاح!' : 'Welcome settings and store URL saved to cloud!',
+        text: isAr ? 'تم حفظ وتحديث إعدادات الرسالة الترحيبية ورابط المتجر بنجاح!' : 'Welcome settings and store URL saved!',
       });
       setTimeout(() => setFeedbackMsg(null), 3500);
     } finally {

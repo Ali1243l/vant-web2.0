@@ -176,7 +176,7 @@ export async function saveSubscribers(subscribers: NewsletterSubscriber[]): Prom
  * Fetch subscribers from Supabase database table and cloud storage, merged seamlessly with local cache
  */
 export async function syncSubscribersFromCloud(): Promise<NewsletterSubscriber[]> {
-  if (!supabase) return [];
+  if (!supabase) return getStoredSubscribers();
 
   // 1. Direct query to Supabase Database table 'newsletter_subscribers'
   try {
@@ -185,8 +185,7 @@ export async function syncSubscribersFromCloud(): Promise<NewsletterSubscriber[]
       .select('*')
       .order('created_at', { ascending: false });
 
-    console.log("Supabase Subscribers Fetch Result:", dbData);
-    console.log("Supabase Subscribers Fetch Error:", dbErr);
+
 
     if (!dbErr && Array.isArray(dbData)) {
       const dbList: NewsletterSubscriber[] = dbData
@@ -235,7 +234,7 @@ export async function syncSubscribersFromCloud(): Promise<NewsletterSubscriber[]
     console.warn('Could not sync subscribers from cloud storage:', err);
   }
 
-  return [];
+  return getStoredSubscribers();
 }
 
 /**

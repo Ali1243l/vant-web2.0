@@ -251,14 +251,15 @@ export default function AdminOffersManager({ isAr, onNavigateToStoreOffers }: Pr
     e.preventDefault();
     setIsSavingBanner(true);
     try {
-      await updateSiteSettings({
+      const saved = await updateSiteSettings({
         offers_banner_title_ar: bannerTitleAr.trim(),
         offers_banner_title_en: bannerTitleEn.trim(),
         offers_promo_code: promoCode.trim().toUpperCase(),
       });
+      if (!saved) { window.alert(isAr ? "تعذّر الحفظ. حاول مرة ثانية." : "Save failed. Please retry."); return; }
       setFeedbackMsg({
         type: 'success',
-        text: isAr ? '✓ تم حفظ وتحديث إعدادات وبنر العروض سحابياً بنجاح!' : '✓ Offers banner settings saved to cloud!',
+        text: isAr ? '✓ تم حفظ وتحديث إعدادات وبنر العروض بنجاح!' : '✓ Offers banner settings saved!',
       });
       setTimeout(() => setFeedbackMsg(null), 3500);
     } finally {
