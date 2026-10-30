@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Check, Eye, Settings, Wrench } from 'lucide-react';
+import { Check, Eye, Settings, Wrench, Shirt, CheckCircle2 } from 'lucide-react';
 import { useAdminBridge } from './useAdminBridge';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { supabase } from '../lib/supabase';
 import { generalSettingsPatch, validGeneralSettings } from '../lib/generalSettings';
+import StudioMotifGraphic from '../components/splash/StudioMotifGraphic';
 import MaintenanceScreen from '../components/MaintenanceScreen';
 import SplashLoader, { AVAILABLE_SPLASH_MOTIFS } from '../components/SplashLoader';
 import { Button, Card, Input, Switch } from './ui';
@@ -64,7 +65,14 @@ export const SettingsView: React.FC = () => {
       </Card>
       <Card className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="font-bold text-white">{isAr ? 'شاشة التحميل' : 'Loading screen'}</h3><Button type="button" variant="outline" leftIcon={<Eye className="w-4 h-4" />} onClick={() => setPreview(true)}>{isAr ? 'معاينة المسودة' : 'Preview draft'}</Button></div>
-        <label className="block text-sm text-slate-300">{isAr ? 'الرسم المتحرك' : 'Animation'}<select className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-900 p-3" value={draft.splash_motif} onChange={e => edit({ splash_motif: e.target.value as typeof draft.splash_motif })}>{AVAILABLE_SPLASH_MOTIFS.map(motif => <option key={motif.id} value={motif.id}>{isAr ? motif.titleAr : motif.titleEn}</option>)}</select></label>
+        <fieldset className="min-w-0"><legend className="mb-2 text-sm font-semibold text-slate-200">{isAr ? 'اختر نموذج التحميل' : 'Choose a loading motif'}</legend><p className="mb-4 text-xs leading-6 text-slate-400">{isAr ? 'اختيار النموذج يغيّر المسودة فقط. عاين ثم احفظ للنشر.' : 'Selecting a motif changes the draft only. Preview, then save to publish.'}</p><div className="grid min-w-0 gap-3 sm:grid-cols-2">
+          {AVAILABLE_SPLASH_MOTIFS.map(option => <label key={option.id} className={`relative flex min-w-0 cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors focus-within:ring-2 focus-within:ring-indigo-400 ${draft.splash_motif === option.id ? 'border-indigo-500 bg-indigo-500/10' : 'border-slate-700 bg-slate-950/30 hover:border-slate-500'}`}>
+            <input type="radio" name="splash-motif" value={option.id} checked={draft.splash_motif === option.id} onChange={() => edit({ splash_motif: option.id })} className="sr-only" />
+            <span aria-hidden="true" className="grid h-16 w-16 shrink-0 place-items-center rounded-xl border border-slate-700 bg-slate-950 p-2">{option.id === 'tshirt_print' ? <Shirt className="h-8 w-8 text-blue-300" strokeWidth={1.3} /> : <StudioMotifGraphic motif={option.id} isDark paused />}</span>
+            <span className="min-w-0 flex-1"><span className="block text-xs font-semibold leading-6 text-white">{isAr ? option.titleAr : option.titleEn}</span><span className="block text-[11px] leading-5 text-slate-400">{isAr ? option.subtitleAr : option.subtitleEn}</span>{option.id === siteSettings.splash_motif && <span className="mt-1 inline-block rounded-md bg-slate-800 px-2 py-0.5 text-[10px] text-slate-300">{isAr ? 'المنشور حالياً' : 'Currently published'}</span>}</span>
+            <span aria-hidden="true" className="w-4 shrink-0 text-indigo-300">{draft.splash_motif === option.id && <CheckCircle2 size={16} />}</span>
+          </label>)}
+        </div></fieldset>
         <div className="grid gap-4 sm:grid-cols-2">
           <Input label={isAr ? 'نص التحميل بالعربية' : 'Loading text · Arabic'} dir="rtl" required maxLength={120} value={draft.loading_text_ar} onChange={e => edit({ loading_text_ar: e.target.value })} />
           <Input label={isAr ? 'نص التحميل بالإنجليزية' : 'Loading text · English'} dir="ltr" required maxLength={120} value={draft.loading_text_en} onChange={e => edit({ loading_text_en: e.target.value })} />
