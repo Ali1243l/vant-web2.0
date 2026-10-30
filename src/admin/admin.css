@@ -93,3 +93,8 @@ input[type="range"] {
     width: 100% !important;
   }
 }
+
+.admin-workspace main h1 { font-size: clamp(1.3rem, 2.2vw, 1.8rem); line-height: 1.5; text-wrap: balance; }
+.admin-workspace main :is(h2,h3) { text-wrap: balance; }
+.admin-workspace :is(input,select,textarea):focus-visible { outline: 2px solid #818cf8; outline-offset: 2px; }
+.admin-workspace main :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),select) { min-height: 44px; }

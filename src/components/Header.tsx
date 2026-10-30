@@ -1,3 +1,4 @@
+import { readCart } from '../lib/cart';
 import { controlActive } from '../lib/siteControlModel';
 import { useEffect, useLayoutEffect, useState, useRef, type ReactNode } from 'react';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent, useReducedMotion } from 'framer-motion';
@@ -68,8 +69,7 @@ export default function Header({
   const [kineticLang, setKineticLang] = useState<'en' | 'ar'>(lang);
   const [cartCount, setCartCount] = useState<number>(() => {
     try {
-      const stored = localStorage.getItem('vant_cart_count');
-      return stored ? parseInt(stored, 10) : 0;
+      return readCart().reduce((sum, item) => sum + item.quantity, 0);
     } catch {
       return 0;
     }
@@ -83,8 +83,7 @@ export default function Header({
         setCartCount(customEv.detail.count);
       } else {
         try {
-          const stored = localStorage.getItem('vant_cart_count');
-          setCartCount(stored ? parseInt(stored, 10) : 0);
+          setCartCount(readCart().reduce((sum, item) => sum + item.quantity, 0));
         } catch {}
       }
     };

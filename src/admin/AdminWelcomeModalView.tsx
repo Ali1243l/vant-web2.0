@@ -1,3 +1,4 @@
+import { offerState } from './offers/offerModel';
 import React, { useEffect, useState } from 'react';
 import { Gift } from 'lucide-react';
 import { useAdminBridge } from './useAdminBridge';
@@ -17,7 +18,7 @@ const welcomeFields = (settings: SiteSettings) => ({
   welcome_modal_enabled: settings.welcome_modal_enabled ?? true,
 });
 export const AdminWelcomeModalView: React.FC = () => {
-  const { lang, setHasUnsavedChanges } = useAdminBridge();
+  const { lang, offers, setHasUnsavedChanges } = useAdminBridge();
   const { siteSettings, updateSiteSettings } = useSiteControls();
   const isAr = lang === 'ar';
   const t = (ar: string, en: string) => isAr ? ar : en;
@@ -54,6 +55,7 @@ export const AdminWelcomeModalView: React.FC = () => {
   return <div className="welcome-editor min-w-0 space-y-5">
     <header><h2 className="text-xl font-bold text-white">{t('نافذة الترحيب', 'Welcome popup')}</h2><p className="mt-2 text-sm leading-6 text-slate-400">{t('تظهر بعد نجاح الاشتراك في النشرة، وليست نافذة تلقائية لكل زيارة. هذه الصفحة تعدّل محتواها وظهورها فقط.', 'Appears after a successful newsletter signup, not automatically on every visit. This page controls popup content and visibility only.')}</p></header>
     <div className="grid min-w-0 gap-5 lg:grid-cols-2 lg:items-start">
+      {draft.welcome_modal_enabled && !offers.some(offer => offer.code === draft.welcome_coupon_code.trim().toUpperCase() && offerState(offer) === 'active' && offer.discountType === 'percentage' && offer.discountValue === draft.welcome_discount_percent) && <p role="status" className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm leading-relaxed text-amber-200">{t('راجع كود الترحيب: يلزم وجود كود نشط بنفس الاسم والنسبة بقائمة العروض حتى تقبله السلة. كتابة الكود هنا لا تنشئ عرضاً، وقد يختلف الاستحقاق حسب الحد الأدنى وحدود الاستخدام.', 'Check the welcome code: the cart requires an active offer with the same code and percentage. Editing this text does not create an offer; minimum spend and usage limits still apply.')}</p>}
       <form onSubmit={e => e.preventDefault()}><fieldset disabled={busy} className="min-w-0 space-y-5 rounded-xl border border-slate-800 bg-slate-900/60 p-4 sm:p-5">
         <label className="flex min-h-11 items-center justify-between gap-3 text-sm text-slate-200"><span>{t('إظهار نافذة الترحيب بعد الاشتراك', 'Show popup after signup')}</span><input type="checkbox" checked={draft.welcome_modal_enabled} onChange={e => edit({ welcome_modal_enabled: e.target.checked })} className="h-5 w-5 accent-blue-600" /></label>
         <div role="group" aria-label={t('لغة المحتوى', 'Content language')} className="flex gap-2">{(['ar', 'en'] as const).map(value => <Button type="button" key={value} className="min-h-11" variant={language === value ? 'primary' : 'secondary'} aria-pressed={language === value} onClick={() => setLanguage(value)}>{value === 'ar' ? 'العربية' : 'English'}</Button>)}</div>

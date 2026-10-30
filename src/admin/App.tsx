@@ -43,7 +43,7 @@ function MainLayout({ onClose }: AdminAppProps) {
     ? [{ id: 'banners', ar: 'البانر وبطاقات الموسم', en: 'Banner & seasonal cards' }, { id: 'welcome_modal', ar: 'نافذة الترحيب', en: 'Welcome popup' }]
     : [];
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none">
+    <div className="admin-workspace min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none">
       {/* Lock Screen Component */}
       <LockScreen />
 

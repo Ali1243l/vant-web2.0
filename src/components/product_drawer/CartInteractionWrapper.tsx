@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Minus, ShoppingCart, Trash2 } from 'lucide-react';
 import { useSiteControls } from '../../context/SiteControlsContext';
 import type { Language } from '../../types';
-import { cartItemId, changeCartQuantity, readCart } from '../../lib/cart';
+import { cartItemId, changeCartQuantity, readCart, writeCart } from '../../lib/cart';
 
 interface FlyingThumbnail {
   id: string;
@@ -137,6 +137,7 @@ export const CartInteractionWrapper: React.FC<CartInteractionWrapperProps> = ({
     [isAnimationEnabled, productImage, cartTargetSelector]
   );
 
+  const [cartError, setCartError] = useState('');
   const updateGlobalCartCount = (delta: number) => {
     try {
       const currentItems = readCart();
@@ -148,11 +149,11 @@ export const CartInteractionWrapper: React.FC<CartInteractionWrapperProps> = ({
         price: productPrice, quantity: 0, size, color,
       }, delta);
 
-      localStorage.setItem('vant_cart_items', JSON.stringify(items));
-      const nextCount = items.reduce((sum: number, curr: any) => sum + curr.quantity, 0);
-      localStorage.setItem('vant_cart_count', nextCount.toString());
+      const nextCount = writeCart(items);
       window.dispatchEvent(new CustomEvent('vant-cart-update', { detail: { count: nextCount, items } }));
-    } catch {}
+      setCartError('');
+      return true;
+    } catch { setCartError(lang === 'ar' ? 'تعذّر حفظ السلة. حاول مجدداً.' : 'Could not save cart. Please retry.'); return false; }
   };
 
   const removeFlyingItem = useCallback((id: string) => {
@@ -165,9 +166,10 @@ export const CartInteractionWrapper: React.FC<CartInteractionWrapperProps> = ({
     e.stopPropagation();
     e.preventDefault();
     if (disabled || !controlActive(addToCartBtnControl)) return;
+    if (quantity >= 99) return;
     const nextQty = quantity + 1;
+    if (!updateGlobalCartCount(1)) return;
     setQuantity(nextQty);
-    updateGlobalCartCount(1);
     if (quantity === 0) {
       if (onAddToCart) onAddToCart();
     }
@@ -180,8 +182,8 @@ export const CartInteractionWrapper: React.FC<CartInteractionWrapperProps> = ({
     e.preventDefault();
     if (disabled || !controlActive(addToCartBtnControl) || quantity <= 0) return;
     const nextQty = quantity - 1;
+    if (!updateGlobalCartCount(-1)) return;
     setQuantity(nextQty);
-    updateGlobalCartCount(-1);
     if (onQuantityChange) onQuantityChange(nextQty);
   };
 
@@ -191,6 +193,7 @@ export const CartInteractionWrapper: React.FC<CartInteractionWrapperProps> = ({
 
   return (
     <div ref={containerRef} className={`relative w-full ${className}`}>
+      {cartError && <p role="alert" className="text-xs text-red-500 mb-2">{cartError}</p>}
       {/* 60fps Flying Image Drop Animation Overlay */}
       <AnimatePresence>
         {flyingItems.map((item) => (

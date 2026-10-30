@@ -528,6 +528,7 @@ function MainApp() {
 
       {/* Main Content Area: Responsive Fluid Sizing for 16:9 Widescreen & 9:16 Mobile */}
       <main className="mx-auto w-full max-w-[1920px] flex-1 px-3 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 pt-2 sm:pt-3 md:pt-4 pb-2 sm:pb-3 lg:pb-4 overflow-x-clip">
+        {error && <div role="alert" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm"><p>{lang === 'ar' ? 'تعذّر تحديث التشكيلة. المعروض قد يكون آخر نسخة محفوظة؛ تأكد من التوفر مع المتجر.' : 'The collection could not refresh. Cached pieces may be shown; confirm availability with the store.'}</p><button type="button" disabled={loading} onClick={() => void refresh()} className="min-h-11 rounded-xl border border-current px-4">{lang === 'ar' ? 'إعادة المحاولة' : 'Retry'}</button></div>}
         {(bannerSelection || isOffersOnly) && hasMore && visible.length === 0 && <button type="button" disabled={loadingMore} onClick={() => void loadMore()} className="mb-4 min-h-11 rounded-xl border border-current px-4 text-sm disabled:opacity-50">{lang === 'ar' ? (loadingMore ? 'جاري تحميل باقي الاختيارات…' : 'تحميل المزيد من الاختيارات أو إعادة المحاولة') : (loadingMore ? 'Loading selections…' : 'Load more selections or retry')}</button>}
         {bannerSelection && <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-500/30 bg-blue-500/10 p-4 text-sm"><span>{lang === 'ar' ? 'اختيارات البانر' : 'Banner selection'} · {visible.length}{hasMore ? '+' : ''}</span><button type="button" onClick={() => { setBannerSelection(null); setIsOffersOnly(false); setSearchQuery(''); setAvailabilityFilter('all'); }} className="min-h-11 underline">{lang === 'ar' ? 'عرض التشكيلة الكاملة' : 'View full collection'}</button></div>}
         {/* Offers Active Filter Banner (Refined Minimalist Luxury Aesthetic) */}
@@ -600,12 +601,10 @@ function MainApp() {
         {visible.length === 0 && !loading && !isWishlistOnly ? (
           <div className="py-20 text-center">
             <h3 className="text-base sm:text-lg font-semibold text-[#15171c] dark:text-white">
-              {lang === 'ar' ? 'لم يتم العثور على قطع تطابق بحثك' : 'No matching pieces found'}
+              {products.length === 0 ? (error ? (lang === 'ar' ? 'تعذّر تحميل التشكيلة' : 'Collection unavailable') : (lang === 'ar' ? 'التشكيلة قيد التحديث' : 'The collection is being updated')) : (lang === 'ar' ? 'لم يتم العثور على قطع تطابق بحثك' : 'No matching pieces found')}
             </h3>
             <p className="mt-1.5 text-xs sm:text-[13px] text-[#6b7280] dark:text-[#9ca3af]">
-              {lang === 'ar'
-                ? 'جرب البحث بكلمات أخرى أو اختر تصنيفاً أو حالة توفر مختلفة.'
-                : 'Try searching with different terms or reset your filters.'}
+              {products.length === 0 ? (lang === 'ar' ? (error ? 'حاول تحديث التشكيلة من الزر أعلاه.' : 'لا توجد قطع منشورة حالياً. تفقّدنا قريباً.') : (error ? 'Use the retry button above to reload.' : 'No pieces are published yet. Please check back soon.')) : (lang === 'ar' ? 'جرب البحث بكلمات أخرى أو اختر تصنيفاً أو حالة توفر مختلفة.' : 'Try searching with different terms or reset your filters.')}
             </p>
             <div className="mt-4 flex items-center justify-center gap-2">
               {searchQuery && (

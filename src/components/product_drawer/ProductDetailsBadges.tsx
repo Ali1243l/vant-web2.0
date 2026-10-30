@@ -38,22 +38,22 @@ export const ProductDetailsBadges: React.FC<ProductDetailsBadgesProps> = ({
     <div className="flex flex-col gap-3.5">
       {/* 1. Editorial Description */}
       {displayDescription && (
-        <div className="space-y-1.5">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-black/40 dark:text-white/40 block">
-            {isAr ? 'عن القطعة' : 'About the Piece'}
-          </span>
+        <details className="vant-product-disclosure" open>
+          <summary className="min-h-11 flex items-center justify-between text-sm font-bold cursor-pointer">
+            {isAr ? 'تفاصيل القطعة' : 'Product details'}<span aria-hidden="true">⌄</span>
+          </summary>
           <p
             dir="auto"
             className="text-xs sm:text-[13px] leading-relaxed text-[#15171c]/75 dark:text-white/75"
           >
             {displayDescription}
           </p>
-        </div>
+        </details>
       )}
 
       {/* 2. Cohesive Micro Highlights Grid (Delivery & Craftsmanship) */}
       {(deliveryBadgeControl.visible || craftBadgeControl.visible) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
+        <details className="vant-product-disclosure"><summary className="min-h-11 flex items-center justify-between cursor-pointer text-sm font-bold">{isAr ? 'التوصيل ومعلومات إضافية' : 'Delivery & additional information'}<span aria-hidden="true">⌄</span></summary><div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
           {deliveryBadgeControl.visible && (
             <div className="flex items-start gap-2.5 rounded-xl sm:rounded-2xl border border-black/6 dark:border-white/8 bg-black/[0.02] dark:bg-white/[0.03] p-3 transition-colors">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#004ad7]/10 dark:bg-[#3b82f6]/15 text-[#004ad7] dark:text-[#3b82f6] shrink-0 mt-0.5">
@@ -64,7 +64,7 @@ export const ProductDetailsBadges: React.FC<ProductDetailsBadgesProps> = ({
                   {isAr ? deliveryBadgeControl.label_ar : deliveryBadgeControl.label_en}
                 </span>
                 <span className="text-[10.5px] text-[#6b7280] dark:text-[#9ca3af] leading-normal block mt-0.5">
-                  {isAr ? 'توصيل سريع مع حق المعاينة عند الاستلام' : 'Prompt delivery with inspection upon arrival'}
+                  {isAr ? 'تواصل معنا لتأكيد موعد التوصيل وتفاصيل المعاينة' : 'Contact us to confirm delivery timing and inspection details'}
                 </span>
               </div>
             </div>
@@ -80,12 +80,12 @@ export const ProductDetailsBadges: React.FC<ProductDetailsBadgesProps> = ({
                   {isAr ? craftBadgeControl.label_ar : craftBadgeControl.label_en}
                 </span>
                 <span className="text-[10.5px] text-[#6b7280] dark:text-[#9ca3af] leading-normal block mt-0.5">
-                  {isAr ? 'حرفية يدوية مع ضمان الجودة الفاخرة' : 'Handcrafted precision & authentic quality'}
+                  {isAr ? 'راجع وصف القطعة والخامات قبل اختيارك' : 'Review the description and materials before choosing'}
                 </span>
               </div>
             </div>
           )}
-        </div>
+        </div></details>
       )}
 
       {/* 3. Utility Actions (Copy Title & Share) - Understated Row */}

@@ -1,13 +1,14 @@
+import CartCheckout from './CartCheckout';
 import { controlActive } from '../lib/siteControlModel';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, X, Plus, Minus, Trash2, MessageCircle, ArrowRight, ArrowLeft } from 'lucide-react';
+import { ShoppingCart, X, Plus, Minus, Trash2, ArrowRight, ArrowLeft } from 'lucide-react';
 import type { Language } from '../types';
 import { DEFAULT_WHATSAPP_PHONE } from '../lib/constants';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { useScrollLock } from '../hooks/useScrollLock';
 import { useModalFocus } from '../hooks/useModalFocus';
-import { readCart, resolveWhatsAppPhone } from '../lib/cart';
+import { readCart, writeCart, resolveWhatsAppPhone } from '../lib/cart';
 
 export interface CartItem {
   id: string;
@@ -31,6 +32,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
   const checkoutControl = getControl('btn_cart_whatsapp');
   const whatsappPhone = resolveWhatsAppPhone(whatsappPhoneControl?.actionValue, DEFAULT_WHATSAPP_PHONE);
 
+  const [cartError, setCartError] = useState('');
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     try {
       return readCart();
@@ -70,55 +72,27 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
       })
       .filter(Boolean) as CartItem[];
 
-    setCartItems(updated);
     saveAndNotify(updated);
   };
 
   const removeItem = (id: string) => {
     const updated = cartItems.filter((item) => item.id !== id);
-    setCartItems(updated);
     saveAndNotify(updated);
   };
 
   const clearCart = () => {
-    setCartItems([]);
     saveAndNotify([]);
   };
 
   const saveAndNotify = (items: CartItem[]) => {
     try {
-      localStorage.setItem('vant_cart_items', JSON.stringify(items));
-      const totalCount = items.reduce((acc, curr) => acc + curr.quantity, 0);
-      localStorage.setItem('vant_cart_count', totalCount.toString());
+      const totalCount = writeCart(items);
+      setCartItems(items);
+      setCartError('');
       window.dispatchEvent(new CustomEvent('vant-cart-update', { detail: { count: totalCount, items } }));
-    } catch {}
+    } catch { setCartError(isAr ? 'تعذّر حفظ التغيير. السلة السابقة باقية؛ حاول مجدداً.' : 'Could not save this change. Your previous cart is unchanged; retry.'); }
   };
-
-  const totalPrice = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const totalCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-
-  const generateWhatsAppUrl = () => {
-    if (cartItems.length === 0) return '#';
-    const cleanPhone = whatsappPhone.replace(/\D/g, '');
-    let text = isAr
-      ? `مرحباً، أود طلب المشتريات التالية من التشكيلة:\n\n`
-      : `Hello, I would like to order the following items from the collection:\n\n`;
-
-    cartItems.forEach((item, idx) => {
-      const priceStr = formatPrice ? formatPrice(item.price * item.quantity) : `${(item.price * item.quantity).toLocaleString()} د.ع`;
-      text += `${idx + 1}. *${item.title}*\n`;
-      if (item.size) text += `   - ${isAr ? 'المقاس' : 'Size'}: ${item.size}\n`;
-      if (item.color) text += `   - ${isAr ? 'اللون' : 'Color'}: ${item.color}\n`;
-      text += `   - ${isAr ? 'الكمية' : 'Quantity'}: ${item.quantity}\n`;
-      text += `   - ${isAr ? 'السعر' : 'Subtotal'}: ${priceStr}\n\n`;
-    });
-
-    const totalStr = formatPrice ? formatPrice(totalPrice) : `${totalPrice.toLocaleString()} د.ع`;
-    text += isAr ? `*المجموع الكلي: ${totalStr}*\n` : `*Total Amount: ${totalStr}*\n`;
-    text += isAr ? `يرجى تزويدي بتفاصيل التوصيل والدفع.` : `Please confirm delivery and payment options.`;
-
-    return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
-  };
 
   return (
     <AnimatePresence>
@@ -174,7 +148,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
             </div>
 
             {/* Item List */}
-            <div data-scroll-lock-scrollable className="flex-1 overflow-y-auto overscroll-contain px-5 py-4 space-y-4">
+            <div data-scroll-lock-scrollable className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 space-y-4">
+              {cartError && <p role="alert" className="text-sm text-red-600 dark:text-red-300">{cartError}</p>}
               {cartItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center py-12">
                   <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800/80 text-zinc-400 mb-4">
@@ -206,7 +181,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
                   return (
                     <div
                       key={item.id}
-                      className="flex items-center gap-3.5 p-3 rounded-2xl border border-black/8 dark:border-white/10 bg-zinc-50/60 dark:bg-[#181b26] transition-all hover:border-[#004ad7]/30"
+                      className="flex flex-wrap items-center gap-3 p-3 rounded-2xl border border-black/8 dark:border-white/10 bg-zinc-50/60 dark:bg-[#181b26] transition-all hover:border-[#004ad7]/30"
                     >
                       <img
                         src={item.image}
@@ -234,7 +209,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
                         <button
                           type="button"
                           onClick={() => removeItem(item.id)}
-                          className="text-zinc-400 hover:text-red-500 p-1 transition-colors cursor-pointer"
+                          className="min-h-11 min-w-11 inline-flex items-center justify-center text-zinc-400 hover:text-red-500 p-1 transition-colors cursor-pointer"
                           title={isAr ? 'حذف من السلة' : 'Remove item'}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -245,7 +220,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
                             type="button"
                             onClick={() => updateQuantity(item.id, -1)}
                             aria-label={isAr ? 'تقليل الكمية' : 'Decrease quantity'}
-                            className="flex h-6 w-6 items-center justify-center rounded-lg text-zinc-600 dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
+                            className="flex h-11 w-11 items-center justify-center rounded-lg text-zinc-600 dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
                           >
                             <Minus className="h-3 w-3" />
                           </button>
@@ -254,9 +229,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
                           </span>
                           <button
                             type="button"
+                            disabled={item.quantity >= 99}
                             onClick={() => updateQuantity(item.id, 1)}
                             aria-label={isAr ? 'زيادة الكمية' : 'Increase quantity'}
-                            className="flex h-6 w-6 items-center justify-center rounded-lg text-zinc-600 dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
+                            className="flex h-11 w-11 items-center justify-center rounded-lg text-zinc-600 dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
                           >
                             <Plus className="h-3 w-3" />
                           </button>
@@ -266,44 +242,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
                   );
                 })
               )}
+              {cartItems.length > 0 && <div className="space-y-3 pt-4 border-t border-black/10 dark:border-white/10">{checkoutControl.visible && <CartCheckout items={cartItems} lang={lang} phone={whatsappPhone} enabled={controlActive(checkoutControl)} label={isAr ? checkoutControl.label_ar : checkoutControl.label_en} format={formatPrice} />}<button type="button" onClick={clearCart} className="min-h-11 px-3 text-xs text-zinc-500 underline">{isAr ? 'تفريغ السلة' : 'Clear cart'}</button></div>}
             </div>
 
-            {/* Drawer Footer */}
-            {cartItems.length > 0 && (
-              <div className="border-t border-black/8 dark:border-white/10 px-5 py-4 bg-zinc-50/80 dark:bg-[#161922] space-y-3">
-                <div className="flex items-center justify-between text-xs sm:text-sm">
-                  <span className="font-semibold text-zinc-600 dark:text-zinc-400">
-                    {isAr ? 'المجموع الإجمالي:' : 'Total Amount:'}
-                  </span>
-                  <span className="text-base font-extrabold text-[#004ad7] dark:text-[#60a5fa] font-mono">
-                    {formatPrice ? formatPrice(totalPrice) : `${totalPrice.toLocaleString()} د.ع`}
-                  </span>
-                </div>
+            {cartItems.length > 0 && <div className="shrink-0 border-t border-black/8 dark:border-white/10 px-5 py-3 bg-zinc-50/80 dark:bg-[#161922]" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}><p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">{isAr ? 'راجع الكود والمبلغ أدناه قبل فتح واتساب.' : 'Review the code and amount below before opening WhatsApp.'}</p></div>}
 
-                {checkoutControl.visible && <a
-                  aria-disabled={!controlActive(checkoutControl)} tabIndex={controlActive(checkoutControl) ? 0 : -1} href={controlActive(checkoutControl) ? generateWhatsAppUrl() : undefined}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex h-12 w-full items-center justify-center gap-2.5 rounded-2xl bg-[#004ad7] hover:bg-[#003db3] dark:bg-[#3b82f6] dark:hover:bg-[#2563eb] text-white text-sm font-bold shadow-lg shadow-[#004ad7]/25 transition-all active:scale-[0.98] cursor-pointer"
-                >
-                  <MessageCircle className="h-5 w-5 fill-white/20 stroke-white stroke-[2]" />
-                  <span>{isAr ? checkoutControl.label_ar : checkoutControl.label_en}</span>
-                </a>}
-
-                <div className="flex items-center justify-between pt-1">
-                  <button
-                    type="button"
-                    onClick={clearCart}
-                    className="text-xs text-zinc-400 hover:text-red-500 font-medium transition-colors cursor-pointer"
-                  >
-                    {isAr ? 'تفريغ السلة بالكامل' : 'Clear all items'}
-                  </button>
-                  <span className="text-[10.5px] text-zinc-400">
-                    {isAr ? 'الدفع عند الاستلام داخل العراق' : 'Cash on Delivery in Iraq'}
-                  </span>
-                </div>
-              </div>
-            )}
           </motion.div>
         </>
       )}

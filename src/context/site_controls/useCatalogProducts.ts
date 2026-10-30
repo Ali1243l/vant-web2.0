@@ -1,3 +1,4 @@
+import { fetchCatalogPage } from '../../lib/catalogFetch';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Product, ProductAvailability } from '../../types';
 import { supabase } from '../../lib/supabase';
@@ -11,6 +12,7 @@ import {
 import { FALLBACK_CATALOG_PRODUCTS } from './fallbackProducts';
 
 export function useCatalogProducts() {
+  const localPreview = import.meta.env.DEV && !supabase;
   const [products, setProducts] = useState<Product[]>(() => {
     try {
       if (typeof window !== 'undefined') {
@@ -21,13 +23,13 @@ export function useCatalogProducts() {
         }
       }
     } catch {}
-    return FALLBACK_CATALOG_PRODUCTS;
+    return localPreview ? FALLBACK_CATALOG_PRODUCTS : [];
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [hasMore, setHasMore] = useState<boolean>(false);
   const [totalProductsCount, setTotalProductsCount] = useState<number>(() => {
-    return products.length || FALLBACK_CATALOG_PRODUCTS.length;
+    return products.length;
   });
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [error, setError] = useState<string | null>(null);
@@ -99,47 +101,11 @@ export function useCatalogProducts() {
       }
       setError(null);
 
-      let fetchedData: any[] | null = null;
-      let fetchedCount: number | null = null;
+      const result = await fetchCatalogPage(fetch, supabase, PAGE_SIZE);
+      const fetchedData = result?.data;
+      const fetchedCount = result?.count;
 
-      // 1. Try fetching via same-origin backend proxy to avoid CORS / ad-blocker restrictions
-      try {
-        const proxyRes = await fetch('/api/products');
-        if (proxyRes.ok) {
-          const json = await proxyRes.json();
-          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-            fetchedData = json.data;
-            fetchedCount = json.count || json.data.length;
-          }
-        }
-      } catch {
-        // Fall through to direct Supabase SDK if proxy is unavailable
-      }
-
-      // 2. If proxy had no data and direct supabase client is present, query it
-      if (!fetchedData && supabase) {
-        try {
-          const { data, count, error: sbError } = await supabase
-            .from('products')
-            .select('*, product_media(*)', { count: 'exact' })
-            .order('created_at', { ascending: false })
-            .range(0, PAGE_SIZE - 1);
-
-          if (!sbError && data && data.length > 0) {
-            fetchedData = data;
-            fetchedCount = count;
-          } else if (sbError && !sbError.message.includes('Failed to fetch')) {
-            console.warn('Supabase catalog response info:', sbError.message);
-          }
-        } catch (clientErr: any) {
-          // Graceful handling of browser client network/sandbox restrictions
-          if (!clientErr?.message?.includes('Failed to fetch')) {
-            console.warn('Direct Supabase fetch fallback to local cache:', clientErr?.message);
-          }
-        }
-      }
-
-      if (fetchedData && fetchedData.length > 0) {
+      if (fetchedData && (fetchedData.length > 0 || !localPreview)) {
         const mapped = mapSupabaseProducts(fetchedData);
         setProducts(mapped);
         setTotalProductsCount(fetchedCount || mapped.length);
@@ -149,18 +115,20 @@ export function useCatalogProducts() {
         setLastSyncTime(new Date());
         hasLoadedOnceRef.current = true;
       } else {
-        // Ensure fallback products are active if database is empty
+        if (!localPreview) setError('catalog_unavailable');
+        // Preserve cached content on failure; demo data belongs to local mode only.
         setHasMore(false);
         setIsLiveDatabase(false);
-        setProducts((prev) => (prev.length > 0 ? prev : FALLBACK_CATALOG_PRODUCTS));
-        setTotalProductsCount((prev) => (prev > 0 ? prev : FALLBACK_CATALOG_PRODUCTS.length));
+        setProducts((prev) => (prev.length > 0 ? prev : localPreview ? FALLBACK_CATALOG_PRODUCTS : []));
+        setTotalProductsCount((prev) => (prev > 0 ? prev : localPreview ? FALLBACK_CATALOG_PRODUCTS.length : 0));
         hasLoadedOnceRef.current = true;
       }
     } catch {
-      // Always guarantee products remain available from fallback cache
+      if (!localPreview) setError('catalog_unavailable');
+      // Keep a cached catalog available when the network fails.
       setHasMore(false);
       setIsLiveDatabase(false);
-      setProducts((prev) => (prev.length > 0 ? prev : FALLBACK_CATALOG_PRODUCTS));
+      setProducts((prev) => (prev.length > 0 ? prev : localPreview ? FALLBACK_CATALOG_PRODUCTS : []));
     } finally {
       setLoading(false);
     }

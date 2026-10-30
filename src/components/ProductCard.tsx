@@ -1,3 +1,4 @@
+import { catalogImageProps } from '../lib/responsiveImage';
 import { categoryLabel } from '../lib/categoryLabel';
 import { controlActive } from '../lib/siteControlModel';
 import React, { useState, useMemo } from 'react';
@@ -10,6 +11,7 @@ import { resolveProductColorVariants } from '../lib/productVariants';
 interface Props {
   product: Product;
   index: number;
+  imageSizes?: string;
   lang: Language;
   isWishlisted?: boolean;
   onToggleWishlist?: (id: string | number) => void;
@@ -36,8 +38,7 @@ const cardVariants: Variants = {
 function getDeterministicAspectRatio(
   aspectRatio?: string,
   width?: number | null,
-  height?: number | null,
-  naturalRatio?: string | null
+  height?: number | null
 ): { aspectRatio: string } {
   // 1. Explicit aspect_ratio from database
   if (aspectRatio && aspectRatio.trim()) {
@@ -52,17 +53,6 @@ function getDeterministicAspectRatio(
     }
   }
 
-  // 3. Natural ratio from uploaded file clamped to lookbook standards (never collapse into flat strips)
-  if (naturalRatio) {
-    const parts = naturalRatio.split('/').map((s) => parseFloat(s.trim()));
-    if (parts.length === 2 && parts[0] > 0 && parts[1] > 0) {
-      const val = parts[0] / parts[1];
-      if (val >= 0.7 && val <= 1.05) {
-        return { aspectRatio: naturalRatio };
-      }
-    }
-  }
-
   // 4. Default clean editorial portrait proportion for luxury fashion lookbook (3:4)
   return { aspectRatio: '3 / 4' };
 }
@@ -70,6 +60,7 @@ function getDeterministicAspectRatio(
 export default React.memo(function ProductCard({
   product,
   index,
+  imageSizes,
   lang,
   isWishlisted = false,
   onToggleWishlist,
@@ -84,7 +75,6 @@ export default React.memo(function ProductCard({
   const [loaded, setLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [naturalRatio, setNaturalRatio] = useState<string | null>(null);
 
   // Algorithmic color resolution & SKU derivation
   const variantInfo = useMemo(
@@ -117,12 +107,13 @@ export default React.memo(function ProductCard({
       : [];
 
   const primaryImage = colorImages[0]?.trim() || null;
+  React.useEffect(() => { setLoaded(false); setImgError(false); }, [primaryImage]);
   const secondaryImage = colorImages.length > 1 && colorImages[1]?.trim() ? colorImages[1].trim() : null;
 
   const { width, height } = product;
   const dynamicRatioStyle = useMemo(() => {
-    return getDeterministicAspectRatio(product.aspect_ratio, width, height, naturalRatio);
-  }, [product.aspect_ratio, width, height, naturalRatio]);
+    return getDeterministicAspectRatio(product.aspect_ratio, width, height);
+  }, [product.aspect_ratio, width, height]);
   const displayTitle = lang === 'ar' && product.title_ar ? product.title_ar : product.title;
   const isAr = lang === 'ar';
 
@@ -227,15 +218,13 @@ export default React.memo(function ProductCard({
                 alt={displayTitle}
                 width={width ?? undefined}
                 height={height ?? undefined}
-                loading="lazy"
+                {...catalogImageProps(primaryImage.trim(), imageSizes)}
+                loading={index < 2 ? "eager" : "lazy"}
                 decoding="async"
                 referrerPolicy="no-referrer"
-                onLoad={(e) => {
+                onLoad={() => {
                   setLoaded(true);
-                  const target = e.currentTarget;
-                  if (target.naturalWidth && target.naturalHeight) {
-                    setNaturalRatio(`${target.naturalWidth} / ${target.naturalHeight}`);
-                  }
+
                 }}
                 onError={() => setImgError(true)}
                 className={`h-full w-full object-cover object-center transition-opacity duration-300 ${
@@ -253,6 +242,7 @@ export default React.memo(function ProductCard({
               {cardHoverControl.visible && Boolean(secondaryImage?.trim()) ? (
                 <img
                   src={secondaryImage!.trim()}
+                  {...catalogImageProps(secondaryImage!.trim(), imageSizes)}
                   alt={`${displayTitle} - 2`}
                   loading="lazy"
                   decoding="async"
@@ -269,7 +259,7 @@ export default React.memo(function ProductCard({
               <svg className="w-12 h-12 stroke-[1.2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
-              <span className="mt-3 text-xs tracking-widest uppercase font-medium">VANT · ڤانت</span>
+              <span className="mt-3 text-xs font-medium">{isAr ? 'الصورة غير متاحة حالياً' : 'Image unavailable'}</span>{primaryImage && <button type="button" className="min-h-11 px-3 text-xs underline" onClick={() => { setImgError(false); setLoaded(false); }}>{isAr ? 'إعادة تحميل الصورة' : 'Retry image'}</button>}
             </div>
           )}
 
@@ -339,6 +329,8 @@ export default React.memo(function ProductCard({
               <button type="button" onClick={openProduct} className="min-h-11 line-clamp-2 text-start cursor-pointer rounded focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-500" aria-label={`${isAr ? 'عرض تفاصيل' : 'View details for'} ${displayTitle}`}>{displayTitle}</button>
             </h3>
           </div>
+
+          {variantInfo.hasMultipleColors && <div className="flex flex-wrap items-center gap-2" aria-label={`${isAr ? 'الألوان المتاحة' : 'Available colors'}: ${variantInfo.variants.map(color => isAr ? color.colorNameAr : color.colorNameEn).join(', ')}`}><span className="flex items-center gap-1" aria-hidden="true">{variantInfo.variants.slice(0, 4).map(color => <span key={color.id} className="h-3.5 w-3.5 rounded-full border border-black/20 dark:border-white/30" style={{ backgroundColor: color.hex }} />)}</span><span className="text-[11px] text-zinc-500 dark:text-zinc-400">{variantInfo.variants.length} {isAr ? 'ألوان' : 'colors'}</span></div>}
 
           {/* 3. Price - Bold, distinct signature blue */}
           {cardPriceControl.visible && (

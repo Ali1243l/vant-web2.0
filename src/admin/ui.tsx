@@ -16,7 +16,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className = '', variant = 'primary', size = 'md', isLoading = false, leftIcon, rightIcon, children, disabled, ...props }, ref) => {
-    const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-200 select-none disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 cursor-pointer rounded-lg';
+    const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-200 select-none disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 cursor-pointer rounded-xl';
 
     const variants = {
       primary: 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm shadow-indigo-950 border border-indigo-500/30',
@@ -28,10 +28,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     };
 
     const sizes = {
-      sm: 'text-xs px-2.5 py-1.5 gap-1.5 h-8',
-      md: 'text-sm px-3.5 py-2 gap-2 h-9.5',
+      sm: 'text-xs px-2.5 py-1.5 gap-1.5 min-h-11',
+      md: 'text-sm px-3.5 py-2 gap-2 min-h-11',
       lg: 'text-base px-5 py-2.5 gap-2.5 h-11',
-      icon: 'h-9 w-9 p-0 aspect-square',
+      icon: 'h-11 w-11 p-0 aspect-square',
     };
 
     return (
