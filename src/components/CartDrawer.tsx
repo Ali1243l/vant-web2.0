@@ -1,11 +1,12 @@
 import { controlActive } from '../lib/siteControlModel';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, X, Plus, Minus, Trash2, MessageCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import type { Language } from '../types';
 import { DEFAULT_WHATSAPP_PHONE } from '../lib/constants';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { useScrollLock } from '../hooks/useScrollLock';
+import { useModalFocus } from '../hooks/useModalFocus';
 import { readCart, resolveWhatsAppPhone } from '../lib/cart';
 
 export interface CartItem {
@@ -53,14 +54,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
 
   useScrollLock(isOpen);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isOpen, onClose]);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useModalFocus(isOpen, panelRef, onClose);
 
   const isAr = lang === 'ar';
 
@@ -140,6 +135,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
 
           {/* Drawer Panel */}
           <motion.div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={isAr ? 'سلة التسوق' : 'Shopping Cart'}
+            tabIndex={-1}
             data-store-panel
             initial={{ x: isAr ? '-100%' : '100%' }}
             animate={{ x: 0 }}
@@ -166,7 +166,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-black/5 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 hover:bg-black/10 dark:hover:bg-white/20 transition-all cursor-pointer"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-black/5 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 hover:bg-black/10 dark:hover:bg-white/20 transition-all cursor-pointer"
                 aria-label="Close cart"
               >
                 <X className="h-5 w-5" />

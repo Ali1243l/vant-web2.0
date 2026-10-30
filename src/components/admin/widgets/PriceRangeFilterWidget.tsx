@@ -95,7 +95,8 @@ export function PriceRangeFilterWidget({
             <button
               type="button"
               onClick={onReset}
-              className="p-1 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-colors cursor-pointer"
+              className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-colors cursor-pointer"
+              aria-label={isAr ? 'إعادة ضبط' : 'Reset'}
               title={isAr ? 'إعادة ضبط' : 'Reset'}
             >
               <RotateCcw className="h-3 w-3" />

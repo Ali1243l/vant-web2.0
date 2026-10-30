@@ -115,7 +115,7 @@ export const OverviewTab: React.FC<Props> = ({
                   type="button"
                   onClick={() => setChartMetric('sales')}
                   aria-pressed={chartMetric === 'sales'}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${
+                  className={`min-h-11 flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${
                     chartMetric === 'sales'
                       ? 'bg-indigo-600 text-white shadow-sm font-semibold'
                       : 'text-slate-400 hover:text-indigo-300 hover:bg-slate-800/50'
@@ -128,7 +128,7 @@ export const OverviewTab: React.FC<Props> = ({
                   type="button"
                   onClick={() => setChartMetric('orders')}
                   aria-pressed={chartMetric === 'orders'}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${
+                  className={`min-h-11 flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${
                     chartMetric === 'orders'
                       ? 'bg-emerald-600 text-white shadow-sm font-semibold'
                       : 'text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50'
@@ -155,7 +155,7 @@ export const OverviewTab: React.FC<Props> = ({
             {/* Interactive Bar Chart */}
             {chartMetric === 'both' && <p className="text-[11px] text-slate-400">{isAr ? 'ارتفاع الأعمدة نسبي لكل مقياس على حدة؛ افتح العمود لقراءة الأرقام.' : 'Bar heights are relative within each metric; open a bar for exact values.'}</p>}
             {chartData.every(point => point.sales === 0 && point.orders === 0) && <p role="status" className="py-6 text-center text-sm text-slate-400">{isAr ? 'لا توجد طلبات مسجلة في هذه الفترة.' : 'No orders recorded in this period.'}</p>}
-            <div className="h-64 flex items-end gap-2 sm:gap-4 pt-6 pb-2 px-2">
+            <div className="h-64 flex items-end gap-2 sm:gap-4 pt-6 pb-2 px-2 overflow-x-auto">
               {chartData.map((bar, index) => {
                 const salesPercent = (bar.sales / maxSales) * 100;
                 const ordersPercent = (bar.orders / maxOrders) * 100;
@@ -171,7 +171,7 @@ export const OverviewTab: React.FC<Props> = ({
                   <button
                     type="button"
                     key={index}
-                    className="relative min-w-0 flex-1 flex flex-col items-center gap-2 h-full justify-end group cursor-pointer focus-visible:outline-2 focus-visible:outline-indigo-400"
+                    className="relative min-w-11 shrink-0 flex-1 flex flex-col items-center gap-2 h-full justify-end group cursor-pointer focus-visible:outline-2 focus-visible:outline-indigo-400"
                     onMouseEnter={() => setHoveredDataIndex(index)}
                     onMouseLeave={() => setHoveredDataIndex(null)}
                     onFocus={() => setHoveredDataIndex(index)}

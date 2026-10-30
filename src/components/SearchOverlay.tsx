@@ -4,6 +4,8 @@ import { Search, X, History, Trash2, Sparkles } from 'lucide-react';
 import type { Language } from '../types';
 import { useScrollLock } from '../hooks/useScrollLock';
 
+import { useModalFocus } from '../hooks/useModalFocus';
+
 const SEARCH_HISTORY_KEY = 'vant_recent_searches';
 
 interface SearchOverlayProps {
@@ -22,6 +24,8 @@ export default function SearchOverlay({
   lang,
 }: SearchOverlayProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useModalFocus(isOpen, panelRef, () => searchQuery ? onSearchChange('') : onClose(), inputRef);
 
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     if (typeof window === 'undefined') return [];
@@ -72,25 +76,9 @@ export default function SearchOverlay({
         const saved = localStorage.getItem(SEARCH_HISTORY_KEY);
         if (saved) setRecentSearches(JSON.parse(saved));
       } catch {}
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 50);
+
     }
   }, [isOpen]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        if (searchQuery) {
-          onSearchChange('');
-        } else {
-          onClose();
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, searchQuery, onSearchChange, onClose]);
 
   const handleClear = () => {
     onSearchChange('');
@@ -126,7 +114,7 @@ export default function SearchOverlay({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[1000] flex flex-col items-center pt-4 px-4 sm:px-6">
+        <div ref={panelRef} role="dialog" aria-modal="true" aria-label={lang === 'ar' ? 'البحث في المجموعة' : 'Search collection'} tabIndex={-1} className="fixed inset-0 z-[1000] flex flex-col items-center pt-4 px-4 sm:px-6">
           {/* Dark blur backdrop */}
           <motion.div
             initial={{ opacity: 0 }}

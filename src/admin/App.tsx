@@ -1,26 +1,26 @@
 import { Sheet } from './Sheet';
 import { Button } from './ui';
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import './admin.css';
 import { AdminProvider, useAdminBridge } from './useAdminBridge';
 import { AdminHeader } from './AdminHeader';
 import { AdminDrawer } from './AdminDrawer';
 import { Nav } from './Nav';
 import { LockScreen } from './LockScreen';
-import { AdminAnalyticsDashboard } from './AdminAnalyticsDashboard';
-import { ProductsManager } from './ProductsManager';
-import { AdminOffersManager } from './AdminOffersManager';
-import { SubscribersList } from './SubscribersList';
-import { OrdersManager } from './OrdersManager';
-import { ProductFormSheet } from './ProductFormSheet';
-import { SettingsView } from './SettingsView';
-import { AdminSizesView } from './AdminSizesView';
-import { AdminSocialView } from './AdminSocialView';
-import { AdminControlsView } from './AdminControlsView';
-import { AdminBackupView } from './AdminBackupView';
-import { AdminSecurityView } from './AdminSecurityView';
-import { AdminBannersView } from './AdminBannersView';
-import { AdminWelcomeModalView } from './AdminWelcomeModalView';
+const AdminAnalyticsDashboard = lazy(() => import('./AdminAnalyticsDashboard').then(module => ({ default: module.AdminAnalyticsDashboard })));
+const ProductsManager = lazy(() => import('./ProductsManager').then(module => ({ default: module.ProductsManager })));
+const AdminOffersManager = lazy(() => import('./AdminOffersManager').then(module => ({ default: module.AdminOffersManager })));
+const SubscribersList = lazy(() => import('./SubscribersList').then(module => ({ default: module.SubscribersList })));
+const OrdersManager = lazy(() => import('./OrdersManager').then(module => ({ default: module.OrdersManager })));
+const ProductFormSheet = lazy(() => import('./ProductFormSheet').then(module => ({ default: module.ProductFormSheet })));
+const SettingsView = lazy(() => import('./SettingsView').then(module => ({ default: module.SettingsView })));
+const AdminSizesView = lazy(() => import('./AdminSizesView').then(module => ({ default: module.AdminSizesView })));
+const AdminSocialView = lazy(() => import('./AdminSocialView').then(module => ({ default: module.AdminSocialView })));
+const AdminControlsView = lazy(() => import('./AdminControlsView').then(module => ({ default: module.AdminControlsView })));
+const AdminBackupView = lazy(() => import('./AdminBackupView').then(module => ({ default: module.AdminBackupView })));
+const AdminSecurityView = lazy(() => import('./AdminSecurityView').then(module => ({ default: module.AdminSecurityView })));
+const AdminBannersView = lazy(() => import('./AdminBannersView').then(module => ({ default: module.AdminBannersView })));
+const AdminWelcomeModalView = lazy(() => import('./AdminWelcomeModalView').then(module => ({ default: module.AdminWelcomeModalView })));
 import { WidgetsStudioView } from '../components/admin/widgets/WidgetsStudioView';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -51,10 +51,10 @@ function MainLayout({ onClose }: AdminAppProps) {
       <AdminDrawer onClose={onClose} />
 
       {/* Global Product Form Sheet */}
-      <ProductFormSheet
+      {isGlobalProductSheetOpen && <Suspense fallback={<p role="status">{isAr ? 'جاري فتح المحرر…' : 'Opening editor…'}</p>}><ProductFormSheet
         isOpen={isGlobalProductSheetOpen}
         onClose={() => setIsGlobalProductSheetOpen(false)}
-      />
+      /></Suspense>}
 
       <Sheet isOpen={pendingView !== null} onClose={cancelViewChange} title={isAr ? 'مسودة غير محفوظة' : 'Unsaved draft'} footer={<div className="flex flex-wrap gap-2"><Button type="button" className="min-h-11" onClick={cancelViewChange}>{isAr ? 'البقاء والتعديل' : 'Keep editing'}</Button><Button type="button" variant="secondary" className="min-h-11" onClick={confirmViewChange}>{isAr ? 'المتابعة بدون حفظ' : 'Leave without saving'}</Button></div>}><p className="text-sm leading-7 text-slate-300">{isAr ? 'عندك تعديلات غير محفوظة. ابقَ بالصفحة لحفظها أو إلغائها؛ المتابعة تلغي المسودة فقط.' : 'You have unsaved changes. Stay to save or discard them; leaving discards only this draft.'}</p></Sheet>
 
@@ -99,6 +99,7 @@ function MainLayout({ onClose }: AdminAppProps) {
               {tabs.length > 0 && <nav aria-label={isAr ? 'أقسام الصفحة' : 'Page sections'} className={`${bannerViews.includes(activeView) ? 'grid grid-cols-2' : 'grid grid-cols-2 sm:grid-cols-4'} gap-2 border-b border-slate-800 pb-3`}>
                 {tabs.map((tab) => <button key={tab.id} type="button" aria-current={activeView === tab.id ? 'page' : undefined} onClick={() => setActiveView(tab.id as any)} className={`min-h-11 min-w-0 shrink-0 rounded-xl px-3 py-2 text-sm transition-colors ${activeView === tab.id ? 'bg-[#004ad7] text-white' : 'bg-slate-900 text-slate-400 hover:text-white'}`}>{isAr ? tab.ar : tab.en}</button>)}
               </nav>}
+              <Suspense fallback={<p role="status" className="p-6 text-slate-300">{isAr ? 'جاري تحميل القسم…' : 'Loading section…'}</p>}>
               {activeView === 'dashboard' && <AdminAnalyticsDashboard />}
               {activeView === 'orders' && <OrdersManager />}
               {activeView === 'products' && <ProductsManager />}
@@ -113,6 +114,7 @@ function MainLayout({ onClose }: AdminAppProps) {
               {activeView === 'settings' && <SettingsView />}
               {activeView === 'security' && <AdminSecurityView />}
               {activeView === 'widgets' && <WidgetsStudioView lang={isAr ? 'ar' : 'en'} />}
+              </Suspense>
             </div>
           </main>
         </div>

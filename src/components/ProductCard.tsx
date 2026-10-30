@@ -1,3 +1,4 @@
+import { categoryLabel } from '../lib/categoryLabel';
 import { controlActive } from '../lib/siteControlModel';
 import React, { useState, useMemo } from 'react';
 import { motion, type Variants } from 'framer-motion';
@@ -125,8 +126,7 @@ export default React.memo(function ProductCard({
   const displayTitle = lang === 'ar' && product.title_ar ? product.title_ar : product.title;
   const isAr = lang === 'ar';
 
-  const handleCardClick = (event: React.MouseEvent) => {
-    if ((event.target as Element).closest('button')) return;
+  const openProduct = () => {
     // Preserve catalog data so the drawer can resolve every color without losing its settings.
     const enrichedProduct: Product = {
       ...product,
@@ -169,7 +169,7 @@ export default React.memo(function ProductCard({
   let statusBadge = null;
   if (availability === 'sold_out') {
     statusBadge = {
-      text: isAr ? 'العرض منتهي' : 'Sold Out',
+      text: isAr ? 'نفد المخزون' : 'Sold Out',
       classes: 'bg-black/75 dark:bg-black/85 text-white/80 border-white/10',
       dot: 'bg-neutral-400',
     };
@@ -197,7 +197,7 @@ export default React.memo(function ProductCard({
       data-preload-product-id={product.id}
       className="group cursor-pointer relative select-none touch-manipulation transform-gpu flex flex-col h-full"
       style={{ contain: 'paint layout', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
-      onClick={handleCardClick}
+      onClick={(event) => { if (!(event.target as Element).closest('button')) openProduct(); }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
@@ -328,15 +328,15 @@ export default React.memo(function ProductCard({
           {cardCategoryControl.visible && (
             <div className="flex items-center rtl:justify-start ltr:justify-start">
               <span data-store-muted className="text-[11px] sm:text-xs md:text-[12.5px] font-medium text-black/45 dark:text-white/45 tracking-tight line-clamp-1">
-                {lang === 'ar' && product.category_ar ? product.category_ar : product.category}
+                {categoryLabel(product.category, product.category_ar, lang)}
               </span>
             </div>
           )}
 
           {/* 2. Product Name - Prominent, strong visual weight */}
           <div className="flex items-start rtl:justify-start ltr:justify-start">
-            <h3 className="text-sm sm:text-[15px] md:text-base lg:text-[17px] font-extrabold text-[#15171c] dark:text-white leading-snug line-clamp-2 group-hover:text-[#004ad7] dark:group-hover:text-[#3b82f6] transition-colors">
-              {displayTitle}
+            <h3 className="text-sm sm:text-[15px] md:text-base lg:text-[17px] font-extrabold text-[#15171c] dark:text-white leading-snug group-hover:text-[#004ad7] dark:group-hover:text-[#3b82f6] transition-colors">
+              <button type="button" onClick={openProduct} className="min-h-11 line-clamp-2 text-start cursor-pointer rounded focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-500" aria-label={`${isAr ? 'عرض تفاصيل' : 'View details for'} ${displayTitle}`}>{displayTitle}</button>
             </h3>
           </div>
 

@@ -1,3 +1,5 @@
+import { useSiteControls } from '../../context/SiteControlsContext';
+import { parseCatalogBackup, PREVIOUS_CATALOG_BACKUP } from '../../lib/catalogBackup';
 import React, { useState } from 'react';
 import {
   Download,
@@ -32,6 +34,7 @@ export const AdminBackupTab: React.FC<AdminBackupTabProps> = ({
   exportAllDataJSON,
   importAllDataJSON,
 }) => {
+  const { controls } = useSiteControls();
   const [copiedJSON, setCopiedJSON] = useState(false);
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState<string | null>(null);
@@ -149,12 +152,12 @@ export const AdminBackupTab: React.FC<AdminBackupTabProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 space-y-4">
           <h3 className="text-sm font-bold text-white">
-            {isAr ? 'تصدير نسخة احتياطية كاملة' : 'Export Full Backup'}
+            {isAr ? 'نسخة الكتالوج وعناصر التحكم' : 'Catalog & controls backup'}
           </h3>
           <p className="text-xs text-white/60 leading-relaxed">
             {isAr
-              ? 'يشمل كافة القطع والعروض والأسعار والصور والبنرات ونصوص الموقع في ملف واحد.'
-              : 'Downloads all catalog pieces, custom offers, banners and site controls.'}
+              ? 'تشمل المنتجات وعناصر التحكم والعملة فقط، ولا تشمل الطلبات والمشتركين وبقية إعدادات النظام.'
+              : 'Includes products, controls and currency only; excludes orders, subscribers and other system settings.'}
           </p>
 
           <div className="flex gap-2 flex-wrap">
@@ -166,7 +169,7 @@ export const AdminBackupTab: React.FC<AdminBackupTabProps> = ({
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `vant_full_backup_${Date.now()}.json`;
+                a.download = `vant_catalog_controls_backup_${Date.now()}.json`;
                 a.click();
                 URL.revokeObjectURL(url);
               }}
@@ -178,10 +181,8 @@ export const AdminBackupTab: React.FC<AdminBackupTabProps> = ({
 
             <button
               type="button"
-              onClick={() => {
-                navigator.clipboard.writeText(exportAllDataJSON());
-                setCopiedJSON(true);
-                setTimeout(() => setCopiedJSON(false), 2000);
+              onClick={async () => {
+                try { await navigator.clipboard.writeText(exportAllDataJSON()); setCopiedJSON(true); setTimeout(() => setCopiedJSON(false), 2000); } catch { setImportError(isAr ? 'تعذّر النسخ. حمّل الملف بدلاً من ذلك.' : 'Copy failed. Download the file instead.'); }
               }}
               className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white hover:bg-white/10 transition-all cursor-pointer"
             >
@@ -196,6 +197,8 @@ export const AdminBackupTab: React.FC<AdminBackupTabProps> = ({
             {isAr ? 'استيراد واستعادة من ملف JSON' : 'Import & Restore from JSON'}
           </h3>
           <textarea
+            dir="ltr" spellCheck={false}
+            aria-label={isAr ? 'بيانات نسخة الكتالوج' : 'Catalog backup JSON'}
             rows={3}
             value={importText}
             onChange={(e) => setImportText(e.target.value)}
@@ -208,6 +211,10 @@ export const AdminBackupTab: React.FC<AdminBackupTabProps> = ({
           <button
             type="button"
             onClick={() => {
+              try {
+                const review = parseCatalogBackup(importText, controls);
+                if (!window.confirm(isAr ? `استبدال المنتجات: ${review.products?.length ?? 'بدون تغيير'} · عناصر التحكم: ${Object.keys(review.controls || {}).length}. سيتم حفظ نسخة رجوع محلية. متابعة؟` : `Replace products: ${review.products?.length ?? 'unchanged'} · Controls: ${Object.keys(review.controls || {}).length}. A local recovery copy will be saved. Continue?`)) return;
+              } catch { setImportError(isAr ? 'نسخة غير متوافقة. لم تتغير البيانات.' : 'Invalid backup. No data changed.'); return; }
               const success = importAllDataJSON(importText);
               if (success) {
                 alert(isAr ? 'تمت استعادة البيانات بنجاح!' : 'Restored successfully!');
@@ -220,8 +227,9 @@ export const AdminBackupTab: React.FC<AdminBackupTabProps> = ({
             className="flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 px-4 py-2 text-xs font-bold text-white shadow-md transition-all cursor-pointer"
           >
             <Upload className="h-4 w-4" />
-            <span>{isAr ? 'استعادة وتطبيق الآن' : 'Import & Restore'}</span>
+            <span>{isAr ? 'فحص النسخة ومراجعتها' : 'Validate & review backup'}</span>
           </button>
+          <button type="button" className="min-h-11 rounded-xl border border-white/15 px-4 text-xs text-white" onClick={() => { try { const previous = localStorage.getItem(PREVIOUS_CATALOG_BACKUP); if (previous) setImportText(previous); else setImportError(isAr ? 'لا توجد نسخة رجوع بعد.' : 'No recovery copy yet.'); } catch { setImportError(isAr ? 'تعذّر قراءة النسخة.' : 'Cannot read recovery copy.'); } }}>{isAr ? 'تحميل النسخة السابقة للمراجعة' : 'Load recovery copy for review'}</button>
         </div>
       </div>
     </div>

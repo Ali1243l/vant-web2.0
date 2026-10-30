@@ -1,3 +1,4 @@
+import { parseCatalogBackup, storeCatalogRestore } from '../../lib/catalogBackup';
 import { buildBannerChanges, storeBannerDraft, type BannerEdits, type TrendEdits } from '../../lib/bannerEditor';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { buildControlChanges, type ControlEdits } from '../../lib/siteControlModel';
@@ -11,6 +12,7 @@ import {
 } from '../../lib/storage';
 import {
   STORAGE_KEY,
+  PRODUCTS_STORAGE_KEY,
   CURRENCY_STORAGE_KEY,
   SETTINGS_STORAGE_KEY,
   SIZES_STORAGE_KEY,
@@ -320,19 +322,16 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
 
   const importFullSystemJSON = (jsonString: string): boolean => {
     try {
-      const parsed = JSON.parse(jsonString);
-      if (typeof parsed === 'object' && parsed !== null) {
-        if (parsed.currency && (parsed.currency === 'د.ع' || parsed.currency === 'IQD')) {
-          setCurrency(parsed.currency);
-        }
-        if (parsed.controls && typeof parsed.controls === 'object') {
-          setControls((prev) => ({ ...prev, ...parsed.controls }));
-        }
-        if (Array.isArray(parsed.products) && parsed.products.length > 0) {
-          setProducts(parsed.products);
-        }
-        return true;
-      }
+      const parsed = parseCatalogBackup(jsonString, controls);
+      storeCatalogRestore(localStorage, exportFullSystemJSON(), {
+        ...(parsed.currency ? { [CURRENCY_STORAGE_KEY]: parsed.currency } : {}),
+        ...(parsed.controls ? { [STORAGE_KEY]: JSON.stringify({ ...controls, ...parsed.controls }) } : {}),
+        ...(parsed.products ? { [PRODUCTS_STORAGE_KEY]: JSON.stringify(parsed.products) } : {}),
+      });
+      if (parsed.currency) setCurrencyState(parsed.currency);
+      if (parsed.controls) setControls(prev => ({ ...prev, ...parsed.controls }));
+      if (parsed.products) setProducts(parsed.products);
+      return true;
     } catch {
       // Invalid JSON
     }

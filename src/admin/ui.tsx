@@ -1,4 +1,6 @@
-import React, { forwardRef } from 'react';
+import { useModalFocus } from '../hooks/useModalFocus';
+import { useScrollLock } from '../hooks/useScrollLock';
+import React, { forwardRef, useRef } from 'react';
 import { LucideIcon, Loader2 } from 'lucide-react';
 
 /* ==========================================================================
@@ -225,6 +227,9 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   maxWidth = 'md',
 }) => {
+  const panelRef = useRef<HTMLDivElement>(null);
+  useScrollLock(isOpen);
+  useModalFocus(isOpen, panelRef, onClose);
   if (!isOpen) return null;
 
   const widthClasses: Record<string, string> = {
@@ -245,6 +250,8 @@ export const Modal: React.FC<ModalProps> = ({
       />
       {/* Dialog */}
       <div
+        ref={panelRef}
+        role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}
         className={`relative w-full ${
           widthClasses[maxWidth] || widthClasses.md
         } max-h-[92vh] sm:max-h-[88vh] flex flex-col bg-slate-900 border border-slate-800/90 rounded-2xl shadow-2xl z-10 animate-in fade-in zoom-in-95 duration-200 overflow-hidden my-auto`}
@@ -257,8 +264,9 @@ export const Modal: React.FC<ModalProps> = ({
             {description && <p className="text-xs text-slate-400 mt-1 leading-relaxed">{description}</p>}
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 border border-transparent hover:border-slate-700/60 transition-all cursor-pointer shrink-0"
+            className="min-h-11 min-w-11 text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 border border-transparent hover:border-slate-700/60 transition-all cursor-pointer shrink-0"
             aria-label="Close modal"
           >
             ✕

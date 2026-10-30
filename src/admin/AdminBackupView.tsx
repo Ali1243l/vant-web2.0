@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { parseCatalogBackup, PREVIOUS_CATALOG_BACKUP, type CatalogBackup } from '../lib/catalogBackup';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAdminBridge } from './useAdminBridge';
 import { useSiteControls } from '../context/SiteControlsContext';
 import {
@@ -26,20 +27,28 @@ import {
 
 export const AdminBackupView: React.FC = () => {
   const { lang, products } = useAdminBridge();
-  const { exportAllDataJSON, importAllDataJSON, syncAllToSupabaseCloud } = useSiteControls();
+  const { controls, exportAllDataJSON, importAllDataJSON, syncAllToSupabaseCloud } = useSiteControls();
   const isAr = lang === 'ar';
 
   const [copiedJSON, setCopiedJSON] = useState(false);
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState(false);
+  const [preview, setPreview] = useState<CatalogBackup | null>(null);
+  const previewRef = useRef<HTMLElement>(null);
+  const reviewButtonRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => { if (preview) previewRef.current?.focus(); }, [preview]);
+  const [previousBackup, setPreviousBackup] = useState(() => { try { return localStorage.getItem(PREVIOUS_CATALOG_BACKUP) || ''; } catch { return ''; } });
+  const [feedback, setFeedback] = useState('');
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
 
-  const handleCopyJSON = () => {
-    const json = exportAllDataJSON();
-    navigator.clipboard.writeText(json);
-    setCopiedJSON(true);
-    setTimeout(() => setCopiedJSON(false), 2000);
+  const handleCopyJSON = async () => {
+    setFeedback('');
+    try {
+      await navigator.clipboard.writeText(exportAllDataJSON());
+      setCopiedJSON(true);
+      setTimeout(() => setCopiedJSON(false), 2000);
+    } catch { setFeedback(isAr ? 'تعذّر النسخ. حمّل ملف النسخة بدلاً من ذلك.' : 'Copy failed. Download the backup file instead.'); }
   };
 
   const handleDownloadFullJSON = () => {
@@ -48,31 +57,36 @@ export const AdminBackupView: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `vant_full_backup_${Date.now()}.json`;
+    a.download = `vant_catalog_controls_backup_${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
+  const reviewImport = () => {
+    setImportSuccess(false);
+    try { setPreview(parseCatalogBackup(importText, controls)); setImportError(null); }
+    catch { setPreview(null); setImportError(isAr ? 'الملف غير متوافق: راجع الإصدار وبنية المنتجات والأسعار والصور وعناصر التحكم. لم تتغير أي بيانات.' : 'Invalid backup: check version, products, prices, images and controls. No data changed.'); }
+  };
   const handleImport = () => {
-    if (!importText.trim()) return;
+    if (!preview) return;
     const ok = importAllDataJSON(importText);
     if (ok) {
       setImportSuccess(true);
       setImportError(null);
+      setPreview(null);
       setImportText('');
-      setTimeout(() => setImportSuccess(false), 3000);
-    } else {
-      setImportError(isAr ? 'صيغة JSON غير صالحة، يرجى التأكد من الملف' : 'Invalid JSON payload structure');
-    }
+      setPreviousBackup(localStorage.getItem(PREVIOUS_CATALOG_BACKUP) || '');
+    } else { setImportError(isAr ? 'تعذّرت الاستعادة أو حفظ نسخة الرجوع. لم تُطبّق التغييرات.' : 'Restore or recovery backup failed. Changes were not applied.'); }
   };
 
   const handleCloudSync = async () => {
     setIsCloudSyncing(true);
+    setFeedback('');
     try {
-      await syncAllToSupabaseCloud();
-    } finally {
-      setIsCloudSyncing(false);
-    }
+      const ok = await syncAllToSupabaseCloud();
+      setFeedback(ok ? (isAr ? 'تمت مزامنة إعدادات الواجهة. هذا لا يزامن الطلبات أو مخزون المنتجات.' : 'Display settings synced. Orders and product stock are not synced by this action.') : (isAr ? 'تعذّرت المزامنة. لم يتم تأكيد حفظ سحابي.' : 'Sync failed. Cloud saving was not confirmed.'));
+    } catch { setFeedback(isAr ? 'تعذّرت المزامنة. حاول لاحقاً.' : 'Sync failed. Try again later.'); }
+    finally { setIsCloudSyncing(false); }
   };
 
   return (
@@ -86,9 +100,9 @@ export const AdminBackupView: React.FC = () => {
               <Download className="w-6 h-6" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-xl font-bold text-white">
-                  {isAr ? 'مركز تصدير البيانات والنسخ الاحتياطي متعدد الصيغ' : 'Multi-Format Export & System Backup Hub'}
+                  {isAr ? 'التقارير ونسخة الكتالوج وعناصر المتجر' : 'Reports & catalog/control backup'}
                 </h1>
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
                   Excel • CSV • JSON • PDF • MD
@@ -96,8 +110,8 @@ export const AdminBackupView: React.FC = () => {
               </div>
               <p className="text-xs text-slate-400 mt-1">
                 {isAr
-                  ? 'سحب وتصدير كافة بيانات المتجر، وسجلات الزبائن، والكتالوج، والطلبات بكافة الصيغ العالمية بنقرة واحدة.'
-                  : 'Instantly download or restore catalog, orders, visitor logs, and configurations across major formats.'}
+                  ? 'تقارير التحليلات ونسخة JSON للمنتجات وعناصر التحكم والعملة فقط. الطلبات والمشتركون وروابط التواصل ودليل المقاسات وإعدادات النظام الأخرى غير مشمولة بالنسخة.'
+                  : 'Analytics reports and a JSON backup of products, controls and currency only. Orders, subscribers, social links, sizing and other system settings are excluded.'}
               </p>
             </div>
           </div>
@@ -113,6 +127,7 @@ export const AdminBackupView: React.FC = () => {
         </div>
       </div>
 
+      {feedback && <p role="status" className="rounded-xl border border-slate-700 p-4 text-sm text-slate-200">{feedback}</p>}
       {/* Multi-Format Export Station */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
@@ -141,7 +156,7 @@ export const AdminBackupView: React.FC = () => {
               <div className="w-9 h-9 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
                 <FileSpreadsheet className="w-5 h-5" />
               </div>
-              <span className="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-500/20 px-1.5 py-0.5 rounded">.XLSX</span>
+              <span className="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-500/20 px-1.5 py-0.5 rounded">.XLS</span>
             </div>
             <div className="text-xs font-bold text-white">{isAr ? 'جدول إكسل' : 'Excel Sheet'}</div>
             <div className="text-[10px] text-slate-400 mt-0.5">{isAr ? 'جداول مبيعات ومخزون' : 'Formatted spreadsheets'}</div>
@@ -176,7 +191,7 @@ export const AdminBackupView: React.FC = () => {
               <span className="text-[10px] font-mono font-bold text-purple-300 bg-purple-500/20 px-1.5 py-0.5 rounded">.JSON</span>
             </div>
             <div className="text-xs font-bold text-white">{isAr ? 'بيانات JSON' : 'JSON Object'}</div>
-            <div className="text-[10px] text-slate-400 mt-0.5">{isAr ? 'كامل للربط البرمجي' : 'Standard API data'}</div>
+            <div className="text-[10px] text-slate-400 mt-0.5">{isAr ? 'بيانات تقرير التحليلات' : 'Analytics report data'}</div>
           </button>
 
           {/* PDF / Print */}
@@ -220,13 +235,13 @@ export const AdminBackupView: React.FC = () => {
           <div className="flex items-center gap-2">
             <Database className="w-5 h-5 text-indigo-400" />
             <h3 className="text-sm font-bold text-white">
-              {isAr ? 'تصدير نسخة احتياطية كاملة للمتجر' : 'Export Full Boutique Backup'}
+              {isAr ? 'نسخة الكتالوج وعناصر التحكم' : 'Catalog & controls backup'}
             </h3>
           </div>
           <p className="text-xs text-slate-400 leading-relaxed">
             {isAr
-              ? 'تنزيل ملف شامل لكافة قطع الكتالوج، الأسعار، العروض، إعدادات المتجر، البنرات وروابط التواصل في حزمة واحدة.'
-              : 'Download a complete JSON backup containing catalog items, custom offers, site settings, and assets.'}
+              ? 'تشمل المنتجات والأسعار والعروض المرتبطة بالمنتج وعناصر التحكم والعملة. ليست نسخة كاملة لكل بيانات المتجر.'
+              : 'Includes products, product prices/offers, controls and currency only. This is not a full-system backup.'}
           </p>
 
           <div className="flex items-center gap-3 pt-2">
@@ -258,20 +273,22 @@ export const AdminBackupView: React.FC = () => {
           </div>
           <p className="text-xs text-slate-400 leading-relaxed">
             {isAr
-              ? 'ألصق بيانات النسخة الاحتياطية هنا لاستعادة كافة إعدادات وقطع المتجر فوراً.'
-              : 'Paste your previously exported backup JSON payload below to instantly restore your store.'}
+              ? 'ألصق النسخة ثم راجع التغييرات. تُحفظ نسخة رجوع محلية قبل التطبيق؛ حمّل نسخة خارج المتصفح أيضاً. الاستعادة محلية لهذا المتصفح ولا تستورد المنتجات إلى قاعدة البيانات السحابية.'
+              : 'Paste a backup and review changes. A local recovery copy is saved before applying; also download a copy outside the browser. Restore is local to this browser and does not import products into the cloud database.'}
           </p>
 
           <textarea
+            dir="ltr" spellCheck={false}
+            aria-label={isAr ? 'بيانات نسخة الكتالوج' : 'Catalog backup JSON'}
             rows={3}
             value={importText}
-            onChange={(e) => setImportText(e.target.value)}
-            placeholder='{"siteSettings": {...}, "products": [...]}'
+            onChange={(e) => { setImportText(e.target.value); setPreview(null); setImportSuccess(false); setImportError(null); }}
+            placeholder='{"version":"2.0","currency":"IQD","controls":{...},"products":[...]}'
             className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs font-mono outline-none focus:border-indigo-500"
           />
 
           {importError && (
-            <div className="flex items-center gap-1.5 text-xs text-rose-400 font-medium">
+            <div role="alert" className="flex items-center gap-1.5 text-xs text-rose-400 font-medium">
               <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>{importError}</span>
             </div>
@@ -280,18 +297,26 @@ export const AdminBackupView: React.FC = () => {
           {importSuccess && (
             <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold">
               <Check className="w-4 h-4 shrink-0" />
-              <span>{isAr ? 'تمت استعادة البيانات بنجاح تام!' : 'Restored successfully!'}</span>
+              <span>{isAr ? 'تمت استعادة محتويات النسخة. نسخة الرجوع متاحة أدناه.' : 'Backup contents restored. The recovery copy is available below.'}</span>
             </div>
           )}
 
           <button
-            onClick={handleImport}
+            ref={reviewButtonRef}
+            onClick={reviewImport}
             disabled={!importText.trim()}
             className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-2 transition-all cursor-pointer"
           >
             <Upload className="w-4 h-4 text-emerald-400" />
-            <span>{isAr ? 'تأكيد الاستيراد والاستعادة' : 'Confirm & Restore'}</span>
+            <span>{isAr ? 'فحص النسخة ومراجعتها' : 'Validate & review backup'}</span>
           </button>
+          {preview && <section ref={previewRef} tabIndex={-1} aria-label={isAr ? 'مراجعة الاستعادة' : 'Restore review'} className="rounded-xl border border-amber-500/40 p-4 space-y-3">
+            <h4 className="font-bold">{isAr ? 'راجع قبل استبدال البيانات' : 'Review before replacing data'}</h4>
+            <p className="text-sm text-slate-300">{isAr ? `المنتجات: ${preview.products ? `${products.length} ← ${preview.products.length} (استبدال القائمة)` : 'بدون تغيير'} · عناصر التحكم: ${Object.keys(preview.controls || {}).length} · العملة: ${preview.currency || 'بدون تغيير'}` : `Products: ${preview.products ? `${products.length} → ${preview.products.length} (replace list)` : 'unchanged'} · Controls: ${Object.keys(preview.controls || {}).length} · Currency: ${preview.currency || 'unchanged'}`}</p>
+            <div className="flex flex-wrap gap-3"><button type="button" onClick={handleImport} className="min-h-11 rounded-xl bg-indigo-600 px-4 text-sm font-bold">{isAr ? 'تطبيق الاستعادة وحفظ نسخة رجوع' : 'Apply restore & save recovery copy'}</button><button type="button" onClick={() => { setPreview(null); queueMicrotask(() => reviewButtonRef.current?.focus()); }} className="min-h-11 px-4">{isAr ? 'إلغاء' : 'Cancel'}</button></div>
+          </section>}
+          {previousBackup && <button type="button" className="min-h-11 rounded-xl border border-slate-700 px-4 text-sm" onClick={() => { setImportText(previousBackup); setPreview(null); setImportSuccess(false); setImportError(null); }}>{isAr ? 'تحميل النسخة السابقة للمراجعة قبل استرجاعها' : 'Load previous copy for review before restoring'}</button>}
+
         </div>
       </div>
     </div>

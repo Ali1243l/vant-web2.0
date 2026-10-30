@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart3,
@@ -24,12 +24,12 @@ import {
   type UserBehaviorStats,
 } from '../lib/analytics';
 import { getStoredSubscribers } from '../lib/newsletter';
-import AdminAnalyticsDashboard from './AdminAnalyticsDashboard';
-import SocialLinksManager from './SocialLinksManager';
-import AdminNewsletterManager from './AdminNewsletterManager';
-import AdminOffersManager from './AdminOffersManager';
-import AdminSizesManager from './AdminSizesManager';
-import NewAdminApp from '../admin/App';
+const AdminAnalyticsDashboard = lazy(() => import('./AdminAnalyticsDashboard'));
+const SocialLinksManager = lazy(() => import('./SocialLinksManager'));
+const AdminNewsletterManager = lazy(() => import('./AdminNewsletterManager'));
+const AdminOffersManager = lazy(() => import('./AdminOffersManager'));
+const AdminSizesManager = lazy(() => import('./AdminSizesManager'));
+const NewAdminApp = lazy(() => import('../admin/App'));
 import AdminLockScreen from './admin_drawer/AdminLockScreen';
 import AdminProductFormModal from './admin_drawer/AdminProductFormModal';
 import AdminHeaderBar from './admin_drawer/AdminHeaderBar';
@@ -41,7 +41,7 @@ import AdminControlsTab from './admin_drawer/AdminControlsTab';
 import { type TabType, type AdminNavGroup } from './admin_drawer/types';
 import AdminSidebarNav from './admin_drawer/AdminSidebarNav';
 import AdminSubTabsBar from './admin_drawer/AdminSubTabsBar';
-import UIComponentsShowcase from './ui/UIComponentsShowcase';
+const UIComponentsShowcase = lazy(() => import('./ui/UIComponentsShowcase'));
 
 interface Props {
   lang?: Language;
@@ -458,6 +458,7 @@ export default function AdminDrawer({ lang = 'ar' }: Props) {
   };
 
   return (
+    <Suspense fallback={<div role="status" className="fixed inset-0 z-[9999] bg-slate-950 text-white grid place-items-center">{isAr ? 'جاري تحميل الإدارة…' : 'Loading administration…'}</div>}>
     <AnimatePresence>
       {isAdminOpen && (
         <motion.div
@@ -701,5 +702,6 @@ export default function AdminDrawer({ lang = 'ar' }: Props) {
         </motion.div>
       )}
     </AnimatePresence>
+    </Suspense>
   );
 }

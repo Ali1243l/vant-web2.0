@@ -309,7 +309,7 @@ export default function Header({
                     >
                       <Globe className="h-3.5 w-3.5" />
                     </motion.span>
-                    <span className="max-w-[4.5rem] truncate">{lang === 'ar' ? langControl.label_ar : langControl.label_en}</span>
+                    <span className="sm:hidden" aria-hidden="true">{lang === 'ar' ? 'EN' : 'عربي'}</span><span className="hidden sm:inline max-w-[4.5rem] truncate">{lang === 'ar' ? langControl.label_ar : langControl.label_en}</span>
                   </button>
                 )}
               </div>

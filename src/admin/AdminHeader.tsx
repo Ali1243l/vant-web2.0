@@ -299,7 +299,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
         {activeView === 'products' && onOpenProductSheet && (
           <Button
             size="sm"
-            onClick={onOpenProductSheet}
+            onClick={(event) => { event.currentTarget.focus(); onOpenProductSheet(); }}
             leftIcon={<Plus className="w-4 h-4" />}
             className="hidden sm:inline-flex shadow-sm shadow-indigo-900/50"
           >
@@ -322,7 +322,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           <Button
             size="sm"
             variant="outline"
-            onClick={onOpenProductSheet}
+            onClick={(event) => { event.currentTarget.focus(); onOpenProductSheet(); }}
             leftIcon={<Plus className="w-4 h-4 text-indigo-400" />}
             className="hidden xl:inline-flex border-slate-700 hover:bg-slate-800"
           >

@@ -1,4 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
+import { useModalFocus } from '../hooks/useModalFocus';
+import { useScrollLock } from '../hooks/useScrollLock';
 import { X } from 'lucide-react';
 
 export interface SheetProps {
@@ -23,33 +25,8 @@ export const Sheet: React.FC<SheetProps> = ({
   widthClass = 'max-w-2xl',
 }) => {
   const panelRef = useRef<HTMLDivElement>(null);
-  const closeRef = useRef(onClose);
-  closeRef.current = onClose;
-  useEffect(() => {
-    if (!isOpen) return;
-    const previousFocus = document.activeElement as HTMLElement | null;
-    const previousOverflow = document.body.style.overflow;
-    const focusable = () => Array.from(panelRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex="0"]') || []).filter(element => element.getClientRects().length > 0);
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        closeRef.current();
-      }
-      if (e.key === 'Tab') {
-        const elements = focusable(), first = elements[0], last = elements[elements.length - 1];
-        if (!first) { e.preventDefault(); return; }
-        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-      }
-    };
-    document.body.style.overflow = 'hidden';
-    focusable()[0]?.focus();
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', handleKeyDown);
-      if (previousFocus?.isConnected) previousFocus.focus();
-    };
-  }, [isOpen]);
+  useScrollLock(isOpen);
+  useModalFocus(isOpen, panelRef, onClose);
 
   if (!isOpen) return null;
 
@@ -70,6 +47,7 @@ export const Sheet: React.FC<SheetProps> = ({
       >
         <div
           ref={panelRef}
+          tabIndex={-1}
           role="dialog"
           aria-modal="true"
           aria-label={title}
