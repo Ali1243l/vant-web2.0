@@ -423,6 +423,7 @@ function MainApp() {
       {/* Interactive Maintenance Screen Preview Overlay (Triggered from Admin Test Button) */}
       {isPreviewMaintenance && (
         <MaintenanceScreen
+          theme={theme}
           maintenanceMessage={siteSettings.maintenance_message}
           maintenanceMessageAr={siteSettings.maintenance_message_ar}
           isPreview={true}
@@ -439,6 +440,7 @@ function MainApp() {
       {showMaintenance ? (
         <>
           <MaintenanceScreen
+            theme={theme}
             maintenanceMessage={siteSettings.maintenance_message}
             maintenanceMessageAr={siteSettings.maintenance_message_ar}
             onAdminUnlock={unlockAdmin}

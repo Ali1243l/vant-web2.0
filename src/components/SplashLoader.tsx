@@ -73,18 +73,21 @@ export default function SplashLoader({ isLoading, loadingTextEn = 'Preparing the
       </div>
     </header>
     <section className="vant-loader-center" aria-labelledby="vant-loader-title">
-      <div className="vant-loader-art" aria-hidden="true" key={replay}>{reduced ? <span className="vant-loader-static-v">V</span> : <FashionMotifGraphic motif={motif} isDark={isDark} />}</div>
-      <div className="vant-loader-eyebrow" dir="ltr">THE VANT COLLECTION</div>
-      <h1 id="vant-loader-title" dir="ltr">VANT<span dir="rtl">فانت</span></h1>
-      <p className="vant-loader-description">تفاصيل تُختار بعناية.<br /><span dir="ltr">Considered in every detail.</span></p>
+      <div className="vant-loader-presentation">
+        <div className="vant-loader-art" aria-hidden="true" key={replay}>{reduced ? <span className="vant-loader-static-v">V</span> : <FashionMotifGraphic motif={motif} isDark={isDark} />}</div>
+        <div className="vant-loader-identity"><div className="vant-loader-eyebrow" dir="ltr">CURATED BY VANT</div><h1 id="vant-loader-title" dir="ltr">VANT<span dir="rtl">فانت</span></h1><p className="vant-loader-description">تفاصيل تُختار بعناية.<br /><span dir="ltr">Considered in every detail.</span></p></div>
+      </div>
       <div className="vant-loader-status" role="status" aria-live="polite" aria-atomic="true">
         <span className="vant-loader-status-icon" aria-hidden="true">{ready ? <Check size={17} /> : <span className="vant-loader-wait" />}</span>
         <div><p dir="rtl">{ready ? (isPreview ? 'اكتملت المعاينة' : 'التشكيلة جاهزة') : loadingTextAr}</p><p dir="ltr">{ready ? (isPreview ? 'Preview complete · replay or close' : 'Ready to explore') : loadingTextEn}</p></div>
       </div>
+      <div className="vant-loader-progress">
+      <div className={`vant-loader-track ${ready ? 'vant-loader-track--ready' : ''}`} role="progressbar" aria-label={isPreview ? 'معاينة التحميل' : 'تجهيز المتجر'} aria-valuetext={ready ? (isPreview ? 'اكتملت المعاينة' : 'جاهز') : 'جاري التجهيز'}><span /></div>
+      </div>
     </section>
     <footer className="vant-loader-footer">
       <div className="vant-loader-footer-label"><span>{isPreview ? 'معاينة فقط · بدون تغيير إعدادات المتجر' : 'أهلاً بك في فانت'}</span><ArrowUpRight size={17} aria-hidden="true" /></div>
-      <div className={`vant-loader-track ${ready ? 'vant-loader-track--ready' : ''}`} role="progressbar" aria-label={isPreview ? 'معاينة التحميل' : 'تجهيز المتجر'} aria-valuetext={ready ? (isPreview ? 'اكتملت المعاينة' : 'جاهز') : 'جاري التجهيز'}><span /></div>
+
     </footer>
   </motion.div>}</AnimatePresence>, document.body);
 }
