@@ -365,6 +365,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
     if (!product || showShareModal) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
+      if (document.querySelector('dialog[open]')) return;
       if (e.key !== 'Escape' && e.target instanceof Element && e.target.closest('input, textarea, select')) return;
       if (e.key === 'Escape') {
         if (showSizeGuide) {

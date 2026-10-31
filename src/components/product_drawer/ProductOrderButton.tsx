@@ -128,7 +128,7 @@ export const ProductOrderButton: React.FC<ProductOrderButtonProps> = ({
             <>
               <MessageCircle className="h-4.5 w-4.5 fill-[#004ad7]/15 dark:fill-[#3b82f6]/20 stroke-[#004ad7] dark:stroke-[#60a5fa] stroke-[2] shrink-0" />
               <span className="hidden min-w-0 max-w-full truncate sm:inline md:inline">{inquiryText}</span>
-              <span className="sm:hidden md:hidden max-w-24 truncate text-xs">{isAr ? whatsappControl.label_ar : whatsappControl.label_en}</span>
+              <span className="sm:hidden md:hidden max-w-28 line-clamp-2 text-xs leading-snug">{isAr ? whatsappControl.label_ar : whatsappControl.label_en}</span>
             </>
           )}
         </a>

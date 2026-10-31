@@ -1,6 +1,7 @@
-import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
-import { ChevronLeft, ChevronRight, ImageOff } from 'lucide-react';
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { ChevronLeft, ChevronRight, ImageOff, ZoomIn } from 'lucide-react';
 import type { Product, Language } from '../../types';
+import ProductImageZoom from './ProductImageZoom';
 
 interface Props {
   images: string[];
@@ -22,6 +23,7 @@ export default function ProductDrawerGallery({ images, product, displayTitle, ac
   const activeIndexRef = useRef(activeImageIndex);
   activeIndexRef.current = activeImageIndex;
   const isAr = lang === 'ar';
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
 
   useEffect(() => {
     const track = trackRef.current;
@@ -72,6 +74,7 @@ export default function ProductDrawerGallery({ images, product, displayTitle, ac
             </div>
           )) : <div className="product-gallery-slide flex-col gap-3 text-black/35 dark:text-white/35"><ImageOff size={32} /><span className="text-xs">{isAr ? 'لا توجد صورة لهذه القطعة' : 'No image available'}</span></div>}
         </div>
+        {images[activeImageIndex] && <button type="button" className="product-gallery-zoom" onClick={() => setZoomImage(images[activeImageIndex])} aria-label={isAr ? 'تكبير الصورة' : 'Zoom image'}><ZoomIn size={20} /><span>{isAr ? 'تكبير' : 'Zoom'}</span></button>}
         {images.length > 1 && <>
           <span className="product-gallery-counter" aria-live="polite">{activeImageIndex + 1}<span className="opacity-40"> / </span>{images.length}</span>
           {carouselNavVisible && <>
@@ -85,6 +88,7 @@ export default function ProductDrawerGallery({ images, product, displayTitle, ac
           <img src={src} alt="" loading="lazy" draggable={false} referrerPolicy="no-referrer" />
         </button>)}
       </div>}
+      {zoomImage && <ProductImageZoom key={zoomImage} src={zoomImage} title={displayTitle || 'VANT'} lang={lang} onClose={() => setZoomImage(null)} />}
     </div>
   );
 }
