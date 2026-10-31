@@ -289,7 +289,7 @@ export default React.memo(function ProductCard({
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-20px" }}
           transition={{ duration: 0.5, delay: 0.15, ease: "easeOut" }}
-          className="mt-2.5 sm:mt-3 md:mt-3.5 px-1 sm:px-1.5 md:px-2 pb-1.5 space-y-1.5 sm:space-y-2 rtl:text-right ltr:text-left"
+          className="mt-2.5 sm:mt-3 md:mt-3.5 px-1 sm:px-1.5 md:px-2 pb-1.5 flex flex-1 flex-col gap-1.5 sm:gap-2 rtl:text-right ltr:text-left"
         >
           {/* 1. Category name - Subtle, smaller, refined grayish color */}
           {cardCategoryControl.visible && (
@@ -301,7 +301,7 @@ export default React.memo(function ProductCard({
           )}
 
           {/* 2. Product Name - Prominent, strong visual weight */}
-          <div className="flex items-start rtl:justify-start ltr:justify-start">
+          <div className="flex min-h-12 items-start rtl:justify-start ltr:justify-start">
             <h3 className="text-sm sm:text-[15px] md:text-base lg:text-[17px] font-extrabold text-[#15171c] dark:text-white leading-snug group-hover:text-[#004ad7] dark:group-hover:text-[#3b82f6] transition-colors">
               <button type="button" onClick={openProduct} className="min-h-11 line-clamp-2 text-start cursor-pointer rounded focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-500" aria-label={`${isAr ? 'عرض تفاصيل' : 'View details for'} ${displayTitle}`}>{displayTitle}</button>
             </h3>
@@ -311,7 +311,7 @@ export default React.memo(function ProductCard({
 
           {/* 3. Price - Bold, distinct signature blue */}
           {cardPriceControl.visible && (
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 pt-0.5 rtl:justify-start ltr:justify-start">
+            <div className="mt-auto flex flex-wrap items-baseline gap-x-2 gap-y-1 pt-0.5 rtl:justify-start ltr:justify-start">
               <span data-store-price className="whitespace-nowrap font-mono font-black text-sm sm:text-base md:text-[17px] lg:text-lg text-[#004ad7] dark:text-[#3b82f6] tabular-nums tracking-tight">
                 {formatPrice(activeVariant.price)}
               </span>

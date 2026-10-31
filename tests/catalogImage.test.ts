@@ -9,7 +9,7 @@ test('landscape, tall and square source images share one frame without rewriting
     const original = { id: `${width}-${height}`, title: 'Shirt', category: 'T-Shirts', sizes: ['M'], price: 25000, image_url: '/original.svg', width, height, aspect_ratio: `${width}:${height}` };
     const product = { ...original, catalog_image: { fit: 'cover', x: 25, y: 100 } };
     assert.equal(CATALOG_IMAGE_RATIO, '3 / 4');
-    assert.deepEqual(catalogImageStyle(undefined), { objectFit: 'contain', objectPosition: '50% 50%' });
+    assert.deepEqual(catalogImageStyle(undefined), { objectFit: 'cover', objectPosition: '50% 50%' });
     assert.deepEqual(catalogImageStyle(product.catalog_image), { objectFit: 'cover', objectPosition: '25% 100%' });
     const restored = parseCatalogBackup(JSON.stringify({ products: [product] }), {}).products![0];
     assert.deepEqual(restored.catalog_image, product.catalog_image);
@@ -19,10 +19,11 @@ test('landscape, tall and square source images share one frame without rewriting
   }
 });
 
-test('old products use full-image display; malformed positions cannot produce unsafe styles', () => {
-  assert.deepEqual(normalizeCatalogImage(null), { fit: 'contain', x: 50, y: 50 });
-  assert.deepEqual(normalizeCatalogImage({ fit: 'invalid', x: NaN, y: '10px' }), { fit: 'contain', x: 50, y: 50 });
+test('unconfigured products fill the frame, explicit full-image choices persist, and positions stay safe', () => {
+  assert.deepEqual(normalizeCatalogImage(null), { fit: 'cover', x: 50, y: 50 });
+  assert.deepEqual(normalizeCatalogImage({ fit: 'invalid', x: NaN, y: '10px' }), { fit: 'cover', x: 50, y: 50 });
   assert.deepEqual(normalizeCatalogImage({ fit: 'cover', x: -20, y: 200 }), { fit: 'cover', x: 0, y: 100 });
+  assert.equal(normalizeCatalogImage({ fit: 'contain', x: 50, y: 50 }).fit, 'contain');
   assert.equal(catalogImageStyle({ fit: 'contain', x: 0, y: 100 }).objectPosition, '50% 50%');
 });
 
