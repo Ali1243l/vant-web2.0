@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion, useMotionValue, useReducedMotion, useSpring } from 'framer-motion';
-import { cancelsImageHold, imageZoomPan, IMAGE_ZOOM_HOLD_MS } from '../../lib/imageZoomGesture';
+import { cancelsImageHold, imageDetailScale, imageZoomPan, measureZoomImage, IMAGE_ZOOM_HOLD_MS } from '../../lib/imageZoomGesture';
 
 export interface MobileTouchZoomProps {
   children: React.ReactNode;
@@ -27,24 +27,33 @@ export default function MobileTouchZoom({ children, zoomFactor = 1.8, className 
     if (!element) return;
     let startX = 0;
     let startY = 0;
+    let geometry: ReturnType<typeof measureZoomImage> = null;
+    let factor = zoomFactor;
     const clearTimer = () => { if (timer.current !== null) clearTimeout(timer.current); timer.current = null; };
     const reset = () => {
       clearTimer(); active.current = false; setTouching(false);
       scale.set(1); x.set(0); y.set(0);
     };
     const pan = (touch: Touch) => {
-      const rect = element.getBoundingClientRect();
-      x.set(imageZoomPan(touch.clientX - rect.left, rect.width, zoomFactor));
-      y.set(imageZoomPan(touch.clientY - rect.top, rect.height, zoomFactor));
+      if (!geometry) return;
+      const { bounds, left, top, width, height } = geometry;
+      x.set(imageZoomPan(touch.clientX - bounds.left - left, width, factor));
+      y.set(imageZoomPan(touch.clientY - bounds.top - top, height, factor));
     };
     const start = (event: TouchEvent) => {
       reset();
       if (event.touches.length !== 1) return;
       const touch = event.touches[0];
+      geometry = measureZoomImage(element);
+      if (!geometry || touch.clientX < geometry.bounds.left + geometry.left || touch.clientX > geometry.bounds.left + geometry.left + geometry.width || touch.clientY < geometry.bounds.top + geometry.top || touch.clientY > geometry.bounds.top + geometry.top + geometry.height) return;
       startX = touch.clientX; startY = touch.clientY;
       timer.current = setTimeout(() => {
-        timer.current = null; active.current = true; setTouching(true);
-        pan(touch); scale.set(zoomFactor);
+        timer.current = null;
+        const image = geometry!.image;
+        factor = /\.svg(?:[?#]|$)|^data:image\/svg/i.test(image.currentSrc) ? zoomFactor : imageDetailScale(image.naturalWidth, geometry!.width, zoomFactor, window.devicePixelRatio || 1);
+        if (factor <= 1) return;
+        active.current = true; setTouching(true);
+        pan(touch); scale.set(factor);
       }, IMAGE_ZOOM_HOLD_MS);
     };
     const move = (event: TouchEvent) => {

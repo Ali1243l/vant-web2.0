@@ -8,3 +8,13 @@ export function catalogImageProps(source: string, sizes?: string) {
     };
   } catch { return {}; }
 }
+
+export function zoomImageSource(source: string): string {
+  try {
+    const url = new URL(source);
+    if (url.protocol !== 'https:' || url.hostname !== 'images.unsplash.com' || ['s', 'sig', 'signature', 'token'].some(key => url.searchParams.has(key))) return source;
+    url.searchParams.set('w', String(Math.max(1600, Number(url.searchParams.get('w')) || 0)));
+    url.searchParams.set('q', String(Math.max(90, Number(url.searchParams.get('q')) || 0)));
+    return url.href;
+  } catch { return source; }
+}

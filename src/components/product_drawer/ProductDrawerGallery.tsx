@@ -1,8 +1,9 @@
-import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { ChevronLeft, ChevronRight, ImageOff } from 'lucide-react';
 import type { Product, Language } from '../../types';
 import Lens from '../ui/Lens';
 import MobileTouchZoom from '../ui/MobileTouchZoom';
+import { zoomImageSource } from '../../lib/responsiveImage';
 
 interface Props {
   images: string[];
@@ -24,6 +25,17 @@ export default function ProductDrawerGallery({ images, product, displayTitle, ac
   const activeIndexRef = useRef(activeImageIndex);
   activeIndexRef.current = activeImageIndex;
   const isAr = lang === 'ar';
+  const [detailSources, setDetailSources] = useState<Record<string, string>>({});
+  const requestedDetails = useRef(new Set<string>());
+  const prepareDetail = (source: string) => {
+    const detail = zoomImageSource(source);
+    if (detail === source || requestedDetails.current.has(source)) return;
+    requestedDetails.current.add(source);
+    const image = new Image();
+    image.referrerPolicy = 'no-referrer';
+    image.onload = () => { image.decode().then(() => setDetailSources(previous => ({ ...previous, [source]: detail }))).catch(() => {}); };
+    image.src = detail;
+  };
 
   useEffect(() => {
     const track = trackRef.current;
@@ -64,10 +76,11 @@ export default function ProductDrawerGallery({ images, product, displayTitle, ac
           onScrollEnd={syncIndex}
         >
           {images.length ? images.map((src, index) => (
-            <div key={`${src}-${index}`} className="product-gallery-slide" aria-hidden={index !== activeImageIndex}>
+            <div key={`${src}-${index}`} className="product-gallery-slide" aria-hidden={index !== activeImageIndex}
+              onPointerEnter={() => prepareDetail(src)} onFocus={() => prepareDetail(src)} onTouchStart={() => prepareDetail(src)}>
               <MobileTouchZoom className="h-full w-full">
                 <Lens className="h-full w-full focus-visible:outline-2 focus-visible:outline-blue-500" disabled={index !== activeImageIndex} ariaLabel={isAr ? 'تكبير الصورة: Enter للتفعيل، الأسهم للتحريك، Escape للإيقاف' : 'Image zoom: Enter to toggle, arrows to explore, Escape to stop'}>
-              <img src={src} alt={`${displayTitle || 'VANT'} · ${index + 1}`} draggable={false}
+              <img src={detailSources[src] || src} alt={`${displayTitle || 'VANT'} · ${index + 1}`} draggable={false}
                 loading={index === activeImageIndex ? 'eager' : 'lazy'} decoding="async" referrerPolicy="no-referrer"
                 onError={event => {
                   const fallback = product?.image_url?.trim();

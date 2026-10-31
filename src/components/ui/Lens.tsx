@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useMotionTemplate, useMotionValue, useReducedMotion } from 'framer-motion';
+import { imageLensAxis, imageDetailScale, measureZoomImage } from '../../lib/imageZoomGesture';
 
 export interface LensProps {
   children: React.ReactNode;
@@ -15,7 +16,7 @@ export const Lens: React.FC<LensProps> = ({ children, zoomFactor = 1.8, lensSize
   const containerRef = useRef<HTMLDivElement>(null);
   const [hovered, setHovered] = useState(false);
   const [keyboard, setKeyboard] = useState(false);
-  const [bounds, setBounds] = useState({ width: 0, height: 0 });
+  const [bounds, setBounds] = useState({ width: 0, height: 0, diameter: lensSize, factor: zoomFactor });
   const reducedMotion = useReducedMotion();
   const sampleX = useMotionValue(0);
   const sampleY = useMotionValue(0);
@@ -28,31 +29,35 @@ export const Lens: React.FC<LensProps> = ({ children, zoomFactor = 1.8, lensSize
     window.addEventListener('blur', reset);
     return () => { window.removeEventListener('resize', reset); window.removeEventListener('blur', reset); };
   }, []);
-  const diameter = Math.min(lensSize, bounds.width || lensSize, bounds.height || lensSize);
+  const diameter = bounds.diameter;
   const radius = diameter / 2;
   const left = useMotionTemplate`${ringX}px`;
   const top = useMotionTemplate`${ringY}px`;
-  const innerLeft = useMotionTemplate`calc(${radius}px - ${sampleX}px * ${zoomFactor})`;
-  const innerTop = useMotionTemplate`calc(${radius}px - ${sampleY}px * ${zoomFactor})`;
+  const innerLeft = useMotionTemplate`calc(${radius}px - ${sampleX}px * ${bounds.factor})`;
+  const innerTop = useMotionTemplate`calc(${radius}px - ${sampleY}px * ${bounds.factor})`;
   const move = (x: number, y: number) => {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect?.width || !rect.height) return;
-    setBounds(previous => previous.width === rect.width && previous.height === rect.height ? previous : { width: rect.width, height: rect.height });
-    const r = Math.min(lensSize, rect.width, rect.height) / 2;
-    sampleX.set(Math.max(0, Math.min(rect.width, x)));
-    sampleY.set(Math.max(0, Math.min(rect.height, y)));
-    ringX.set(Math.max(r, Math.min(rect.width - r, x)) - r);
-    ringY.set(Math.max(r, Math.min(rect.height - r, y)) - r);
+    const geometry = containerRef.current && measureZoomImage(containerRef.current);
+    if (!geometry || geometry.width <= 8 || geometry.height <= 8) return false;
+    const { image, bounds: rect, width, height, left, top } = geometry;
+    const diameter = Math.min(lensSize, width - 8, height - 8);
+    const factor = /\.svg(?:[?#]|$)|^data:image\/svg/i.test(image.currentSrc) ? zoomFactor : imageDetailScale(image.naturalWidth, width, zoomFactor, window.devicePixelRatio || 1);
+    setBounds(previous => previous.width === rect.width && previous.height === rect.height && previous.diameter === diameter && previous.factor === factor ? previous : { width: rect.width, height: rect.height, diameter, factor });
+    const horizontal = imageLensAxis(x, left, width, diameter);
+    const vertical = imageLensAxis(y, top, height, diameter);
+    sampleX.set(horizontal.sample); sampleY.set(vertical.sample);
+    ringX.set(horizontal.ring); ringY.set(vertical.ring);
+    return x >= left && x <= left + width && y >= top && y <= top + height;
   };
   return <div ref={containerRef} className={`relative overflow-hidden select-none ${hovered && !disabled ? 'cursor-none' : ''} ${className}`}
     tabIndex={disabled ? -1 : 0} role="group" aria-label={ariaLabel}
     onPointerMove={event => {
       if (disabled || event.pointerType !== 'mouse') return;
       const rect = event.currentTarget.getBoundingClientRect();
-      move(event.clientX - rect.left, event.clientY - rect.top);
-      setHovered(true);
+      const inside = move(event.clientX - rect.left, event.clientY - rect.top);
+      setHovered(Boolean(inside));
+      setKeyboard(false);
     }}
-    onPointerLeave={() => setHovered(false)} onBlur={() => setKeyboard(false)}
+    onPointerLeave={() => { setHovered(false); setKeyboard(false); }} onBlur={() => setKeyboard(false)}
     onKeyDown={event => {
       if (disabled) return;
       if (event.key === 'Enter' || event.key === ' ') {
@@ -68,9 +73,9 @@ export const Lens: React.FC<LensProps> = ({ children, zoomFactor = 1.8, lensSize
     <div className="relative h-full w-full">{children}</div>
     <AnimatePresence>{!disabled && (hovered || keyboard) && <motion.div aria-hidden="true" data-image-lens
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reducedMotion ? 0 : .12 }}
-      className="pointer-events-none absolute z-30 overflow-hidden rounded-full border-2 border-white/80 shadow-lg"
+      className="pointer-events-none absolute z-30 overflow-hidden rounded-full border border-white/60 shadow-md"
       style={{ left, top, width: diameter, height: diameter }}>
-      <motion.div className="absolute" style={{ width: bounds.width, height: bounds.height, left: innerLeft, top: innerTop, scale: zoomFactor, transformOrigin: '0 0' }}>{children}</motion.div>
+      <motion.div className="absolute" style={{ width: bounds.width, height: bounds.height, left: innerLeft, top: innerTop, scale: bounds.factor, transformOrigin: '0 0' }}>{children}</motion.div>
     </motion.div>}</AnimatePresence>
   </div>;
 };
