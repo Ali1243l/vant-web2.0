@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { ChevronLeft, ChevronRight, ImageOff, ZoomIn } from 'lucide-react';
+import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
+import { ChevronLeft, ChevronRight, ImageOff } from 'lucide-react';
 import type { Product, Language } from '../../types';
-import ProductImageZoom from './ProductImageZoom';
+import Lens from '../ui/Lens';
+import MobileTouchZoom from '../ui/MobileTouchZoom';
 
 interface Props {
   images: string[];
@@ -23,7 +24,6 @@ export default function ProductDrawerGallery({ images, product, displayTitle, ac
   const activeIndexRef = useRef(activeImageIndex);
   activeIndexRef.current = activeImageIndex;
   const isAr = lang === 'ar';
-  const [zoomImage, setZoomImage] = useState<string | null>(null);
 
   useEffect(() => {
     const track = trackRef.current;
@@ -65,16 +65,19 @@ export default function ProductDrawerGallery({ images, product, displayTitle, ac
         >
           {images.length ? images.map((src, index) => (
             <div key={`${src}-${index}`} className="product-gallery-slide" aria-hidden={index !== activeImageIndex}>
+              <MobileTouchZoom className="h-full w-full">
+                <Lens className="h-full w-full focus-visible:outline-2 focus-visible:outline-blue-500" disabled={index !== activeImageIndex} ariaLabel={isAr ? 'تكبير الصورة: Enter للتفعيل، الأسهم للتحريك، Escape للإيقاف' : 'Image zoom: Enter to toggle, arrows to explore, Escape to stop'}>
               <img src={src} alt={`${displayTitle || 'VANT'} · ${index + 1}`} draggable={false}
                 loading={index === activeImageIndex ? 'eager' : 'lazy'} decoding="async" referrerPolicy="no-referrer"
                 onError={event => {
                   const fallback = product?.image_url?.trim();
                   if (fallback && images.includes(fallback) && event.currentTarget.getAttribute('src') !== fallback) event.currentTarget.src = fallback;
                 }} />
+                </Lens>
+              </MobileTouchZoom>
             </div>
           )) : <div className="product-gallery-slide flex-col gap-3 text-black/35 dark:text-white/35"><ImageOff size={32} /><span className="text-xs">{isAr ? 'لا توجد صورة لهذه القطعة' : 'No image available'}</span></div>}
         </div>
-        {images[activeImageIndex] && <button type="button" className="product-gallery-zoom" onClick={() => setZoomImage(images[activeImageIndex])} aria-label={isAr ? 'تكبير الصورة' : 'Zoom image'}><ZoomIn size={20} /><span>{isAr ? 'تكبير' : 'Zoom'}</span></button>}
         {images.length > 1 && <>
           <span className="product-gallery-counter" aria-live="polite">{activeImageIndex + 1}<span className="opacity-40"> / </span>{images.length}</span>
           {carouselNavVisible && <>
@@ -83,12 +86,12 @@ export default function ProductDrawerGallery({ images, product, displayTitle, ac
           </>}
         </>}
       </div>
+      {images.length > 0 && <p className="product-gallery-zoom-hint text-center text-xs leading-relaxed text-black/55 dark:text-white/60 px-4 py-2"><span className="zoom-mouse-hint">{isAr ? 'حرّك المؤشر فوق الصورة للتكبير' : 'Hover over the image to inspect details'}</span><span className="zoom-touch-hint">{isAr ? 'اضغط مطوّلاً للتكبير، وارفع إصبعك للرجوع' : 'Hold still to zoom; release to return'}</span></p>}
       {images.length > 1 && <div className="product-gallery-thumbnails no-scrollbar" aria-label={isAr ? 'اختيار صورة' : 'Choose image'}>
         {images.map((src, index) => <button key={`${src}-${index}`} type="button" aria-pressed={index === activeImageIndex} aria-label={isAr ? `عرض الصورة ${index + 1}` : `View image ${index + 1}`} onClick={() => setActiveImageIndex(index)}>
           <img src={src} alt="" loading="lazy" draggable={false} referrerPolicy="no-referrer" />
         </button>)}
       </div>}
-      {zoomImage && <ProductImageZoom key={zoomImage} src={zoomImage} title={displayTitle || 'VANT'} lang={lang} onClose={() => setZoomImage(null)} />}
     </div>
   );
 }

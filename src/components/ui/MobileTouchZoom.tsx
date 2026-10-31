@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { motion, useSpring } from 'framer-motion';
+import React, { useRef, useState, useEffect } from 'react';
+import { motion, useMotionValue, useReducedMotion, useSpring } from 'framer-motion';
+import { cancelsImageHold, imageZoomPan, IMAGE_ZOOM_HOLD_MS } from '../../lib/imageZoomGesture';
 
 export interface MobileTouchZoomProps {
   children: React.ReactNode;
@@ -7,160 +8,78 @@ export interface MobileTouchZoomProps {
   className?: string;
 }
 
-/**
- * MobileTouchZoom Component (Hold & Pan UX)
- * Designed for Mobile Touch Devices.
- * - TouchStart: Instantly zooms in around the touch point with smooth spring physics.
- * - TouchMove: Pans image opposite to touch location to reveal fine product details.
- * - TouchEnd/TouchCancel: Resets scale and position with a smooth spring bounce back to default.
- */
-export const MobileTouchZoom: React.FC<MobileTouchZoomProps> = ({
-  children,
-  zoomFactor = 1.85,
-  className = '',
-}) => {
+/** Only a stationary hold takes over the gesture; ordinary swipes stay native. */
+export default function MobileTouchZoom({ children, zoomFactor = 1.8, className = '' }: MobileTouchZoomProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isTouching, setIsTouching] = useState(false);
-  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const startPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-
-  // Framer Motion Springs for fluid 60fps spring animations
-  const scale = useSpring(1, { stiffness: 320, damping: 28 });
-  const translateX = useSpring(0, { stiffness: 320, damping: 28 });
-  const translateY = useSpring(0, { stiffness: 320, damping: 28 });
-
-  const clearHoldTimer = useCallback(() => {
-    if (holdTimerRef.current) {
-      clearTimeout(holdTimerRef.current);
-      holdTimerRef.current = null;
-    }
-  }, []);
-
-  const updatePanPosition = useCallback(
-    (clientX: number, clientY: number) => {
-      if (!containerRef.current) return;
-
-      const rect = containerRef.current.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) return;
-
-      // Clamp touch point strictly within image bounds
-      const touchX = Math.max(0, Math.min(rect.width, clientX - rect.left));
-      const touchY = Math.max(0, Math.min(rect.height, clientY - rect.top));
-
-      // Calculate relative coordinate from center [-1, 1]
-      const relativeX = (touchX / rect.width - 0.5) * 2;
-      const relativeY = (touchY / rect.height - 0.5) * 2;
-
-      // Maximum allowable translation to keep zoomed image edges aligned
-      const maxPanX = (rect.width * (zoomFactor - 1)) / 2;
-      const maxPanY = (rect.height * (zoomFactor - 1)) / 2;
-
-      translateX.set(-relativeX * maxPanX);
-      translateY.set(-relativeY * maxPanY);
-    },
-    [translateX, translateY, zoomFactor]
-  );
-
-  const handleTouchStart = useCallback(
-    (e: React.TouchEvent<HTMLDivElement>) => {
-      if (e.touches.length !== 1) {
-        clearHoldTimer();
-        return;
-      }
-
-      const touch = e.touches[0];
-      startPosRef.current = { x: touch.clientX, y: touch.clientY };
-      clearHoldTimer();
-
-      // Activate hold-to-zoom after a brief stationary press so normal swipes/scrolls remain effortless
-      holdTimerRef.current = setTimeout(() => {
-        setIsTouching(true);
-        scale.set(zoomFactor);
-        updatePanPosition(touch.clientX, touch.clientY);
-      }, 220);
-    },
-    [clearHoldTimer, scale, updatePanPosition, zoomFactor]
-  );
-
-  const handleTouchMove = useCallback(
-    (e: React.TouchEvent<HTMLDivElement>) => {
-      if (e.touches.length !== 1) return;
-      const touch = e.touches[0];
-
-      if (!isTouching) {
-        const dx = Math.abs(touch.clientX - startPosRef.current.x);
-        const dy = Math.abs(touch.clientY - startPosRef.current.y);
-        if (dx > 8 || dy > 8) {
-          clearHoldTimer();
-        }
-        return;
-      }
-
-      updatePanPosition(touch.clientX, touch.clientY);
-    },
-    [clearHoldTimer, isTouching, updatePanPosition]
-  );
-
-  const handleTouchEnd = useCallback(() => {
-    clearHoldTimer();
-    if (isTouching) {
-      setIsTouching(false);
-      scale.set(1);
-      translateX.set(0);
-      translateY.set(0);
-    }
-  }, [clearHoldTimer, isTouching, scale, translateX, translateY]);
+  const active = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [touching, setTouching] = useState(false);
+  const reducedMotion = useReducedMotion();
+  const scale = useMotionValue(1);
+  const smoothScale = useSpring(scale, { stiffness: 280, damping: 32 });
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const smoothX = useSpring(x, { stiffness: 280, damping: 32 });
+  const smoothY = useSpring(y, { stiffness: 280, damping: 32 });
 
   useEffect(() => {
-    return () => clearHoldTimer();
-  }, [clearHoldTimer]);
-
-  // Lock native scroll only while active hold-to-zoom is engaged
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el || !isTouching) return;
-
-    const preventNativeScroll = (e: TouchEvent) => {
-      if (e.touches.length === 1 && isTouching) {
-        if (e.cancelable) {
-          e.preventDefault();
-        }
-      }
+    const element = containerRef.current;
+    if (!element) return;
+    let startX = 0;
+    let startY = 0;
+    const clearTimer = () => { if (timer.current !== null) clearTimeout(timer.current); timer.current = null; };
+    const reset = () => {
+      clearTimer(); active.current = false; setTouching(false);
+      scale.set(1); x.set(0); y.set(0);
     };
-
-    el.addEventListener('touchmove', preventNativeScroll, { passive: false });
+    const pan = (touch: Touch) => {
+      const rect = element.getBoundingClientRect();
+      x.set(imageZoomPan(touch.clientX - rect.left, rect.width, zoomFactor));
+      y.set(imageZoomPan(touch.clientY - rect.top, rect.height, zoomFactor));
+    };
+    const start = (event: TouchEvent) => {
+      reset();
+      if (event.touches.length !== 1) return;
+      const touch = event.touches[0];
+      startX = touch.clientX; startY = touch.clientY;
+      timer.current = setTimeout(() => {
+        timer.current = null; active.current = true; setTouching(true);
+        pan(touch); scale.set(zoomFactor);
+      }, IMAGE_ZOOM_HOLD_MS);
+    };
+    const move = (event: TouchEvent) => {
+      if (event.touches.length !== 1) { reset(); return; }
+      const touch = event.touches[0];
+      if (!active.current) {
+        if (cancelsImageHold(startX, startY, touch.clientX, touch.clientY)) clearTimer();
+        return;
+      }
+      if (event.cancelable) event.preventDefault();
+      pan(touch);
+    };
+    element.addEventListener('touchstart', start, { passive: true });
+    element.addEventListener('touchmove', move, { passive: false });
+    element.addEventListener('touchend', reset);
+    element.addEventListener('touchcancel', reset);
+    document.addEventListener('visibilitychange', reset);
+    window.addEventListener('blur', reset);
+    window.addEventListener('resize', reset);
     return () => {
-      el.removeEventListener('touchmove', preventNativeScroll);
+      clearTimer(); active.current = false;
+      element.removeEventListener('touchstart', start);
+      element.removeEventListener('touchmove', move);
+      element.removeEventListener('touchend', reset);
+      element.removeEventListener('touchcancel', reset);
+      document.removeEventListener('visibilitychange', reset);
+      window.removeEventListener('blur', reset);
+      window.removeEventListener('resize', reset);
     };
-  }, [isTouching]);
+  }, [scale, x, y, zoomFactor]);
 
-  return (
-    <div
-      ref={containerRef}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchEnd}
-      className={`relative overflow-hidden select-none ${isTouching ? 'touch-none' : 'touch-pan-y'} ${className}`}
-      style={{ touchAction: isTouching ? 'none' : 'pan-y' }}
-    >
-      <motion.div
-        style={{
-          scale,
-          x: translateX,
-          y: translateY,
-        }}
-        className="w-full h-full origin-center flex items-center justify-center"
-      >
-        {children}
-      </motion.div>
-
-      {/* Subtle indicator ring while panning on mobile */}
-      {isTouching && (
-        <div className="absolute inset-0 pointer-events-none border border-primary/30 rounded-lg shadow-inner transition-opacity duration-200" />
-      )}
-    </div>
-  );
-};
-
-export default MobileTouchZoom;
+  return <div ref={containerRef} data-touch-zoom={touching ? 'active' : 'idle'}
+    className={`relative overflow-hidden select-none ${className}`}
+    style={{ touchAction: 'pan-x pan-y pinch-zoom', WebkitTouchCallout: 'none' }}
+    onContextMenu={event => { if (timer.current !== null || active.current) event.preventDefault(); }}>
+    <motion.div style={{ scale: reducedMotion ? scale : smoothScale, x: reducedMotion ? x : smoothX, y: reducedMotion ? y : smoothY }} className="h-full w-full origin-center">{children}</motion.div>
+  </div>;
+}

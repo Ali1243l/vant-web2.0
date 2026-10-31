@@ -211,17 +211,8 @@ html.dark ::-webkit-scrollbar-thumb {
 .product-gallery-thumbnails button { flex: 0 0 48px; height: 56px; overflow: hidden; padding: 3px; border: 1px solid transparent; border-radius: 8px; cursor: pointer; opacity: .55; }
 .product-gallery-thumbnails button[aria-pressed="true"] { border-color: #3b82f6; opacity: 1; background: rgb(59 130 246 / .06); }
 .product-gallery-thumbnails img { width: 100%; height: 100%; object-fit: contain; }
-.product-gallery-zoom { position: absolute; bottom: 12px; right: 12px; display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: 1px solid rgb(0 0 0 / .1); border-radius: 100px; background: rgb(255 255 255 / .95); color: #15171c; font-size: 13px; cursor: zoom-in; }
-.product-image-zoom { position: fixed; inset: 0; width: 100%; max-width: 100%; height: 100dvh; max-height: 100dvh; margin: 0; padding: 0; border: 0; background: #f4f4f3; color: #15171c; }
-.product-image-zoom[open] { display: flex; flex-direction: column; }
-.product-image-zoom::backdrop { background: rgb(0 0 0 / .8); }
-.dark .product-image-zoom { background: #101216; color: white; }
-.product-image-zoom-toolbar { display: flex; align-items: center; gap: 8px; padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 8px max(12px, env(safe-area-inset-left)); border-bottom: 1px solid rgb(128 128 128 / .2); }
-.product-image-zoom-toolbar button { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; }
-.product-image-zoom-toolbar button:disabled { opacity: .35; cursor: default; }
-.product-image-zoom button:focus-visible, .product-gallery-zoom:focus-visible { outline: 2px solid #3b82f6; outline-offset: -2px; }
-.product-image-zoom-viewport { min-height: 0; flex: 1; overflow: auto; overscroll-behavior: contain; touch-action: pan-x pan-y pinch-zoom; direction: ltr; padding-bottom: env(safe-area-inset-bottom); }
-.product-image-zoom-viewport img { width: 100%; height: 100%; max-width: none; object-fit: contain; user-select: none; }
+.zoom-touch-hint { display: none; }
+@media (hover: none), (pointer: coarse) { .zoom-mouse-hint { display: none; } .zoom-touch-hint { display: inline; } }
 .store-brand-slot { grid-column: 2; min-width: 80px; }
 @media (max-width: 639px) {
   .store-toolbar-actions > div:first-child { grid-column: 1; grid-row: 1; }
