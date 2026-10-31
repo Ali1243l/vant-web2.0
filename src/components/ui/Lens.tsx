@@ -76,12 +76,12 @@ export const Lens: React.FC<LensProps> = ({ children, zoomFactor = 1.8, lensSize
         else move(sampleX.get() + (event.key === 'ArrowRight' ? 24 : event.key === 'ArrowLeft' ? -24 : 0), sampleY.get() + (event.key === 'ArrowDown' ? 24 : event.key === 'ArrowUp' ? -24 : 0));
       }
     }}>
-    <div className="relative h-full w-full">{children}</div>
+    <div className="product-lens-content relative h-full w-full">{children}</div>
     <AnimatePresence>{!disabled && (hovered || keyboard) && <motion.div aria-hidden="true" data-image-lens
       initial={{ opacity: reducedMotion ? (keyboard ? 1 : edgeOpacity) : 0, scale: reducedMotion ? 1 : .96 }} animate={{ opacity: keyboard ? 1 : edgeOpacity, scale: 1 }} exit={{ opacity: 0, scale: reducedMotion ? 1 : .98 }} transition={{ duration: reducedMotion ? 0 : .16, ease: 'easeOut' }}
       className="pointer-events-none absolute z-30 overflow-hidden rounded-full border border-white/60 shadow-md"
       style={{ left, top, width: diameter, height: diameter }}>
-      <motion.div className="absolute" style={{ width: bounds.width, height: bounds.height, left: innerLeft, top: innerTop, scale: magnification, transformOrigin: '0 0' }}>{children}</motion.div>
+      <motion.div className="absolute" style={{ width: bounds.width, height: bounds.height, left: innerLeft, top: innerTop, scale: magnification, transformOrigin: '0 0' }}><div className="product-lens-content h-full w-full">{children}</div></motion.div>
     </motion.div>}</AnimatePresence>
   </div>;
 };

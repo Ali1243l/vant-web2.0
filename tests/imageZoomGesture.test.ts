@@ -3,16 +3,18 @@ import test from 'node:test';
 import { cancelsImageHold, imageDetailScale, imageLensAxis, imageLensOpacity, imageZoomPan, IMAGE_ZOOM_HOLD_MS } from '../src/lib/imageZoomGesture.ts';
 import { zoomImageSource } from '../src/lib/responsiveImage.ts';
 
-test('the lens fades in symmetrically after an inset from all four photo edges', () => {
+test('the lens starts fading just outside all four photo edges, including corners', () => {
   const opacity = (x: number, y: number) => imageLensOpacity(x, y, 80, 20, 300, 400);
-  assert.equal(opacity(90, 220), 0);
-  assert.equal(opacity(370, 220), 0);
-  assert.equal(opacity(230, 30), 0);
-  assert.equal(opacity(230, 410), 0);
+  assert.equal(opacity(65, 220), 0);
+  assert.equal(opacity(395, 220), 0);
+  assert.equal(opacity(230, 5), 0);
+  assert.equal(opacity(230, 435), 0);
   assert.equal(opacity(230, 220), 1);
-  assert.ok(opacity(104, 220) > 0 && opacity(104, 220) < opacity(116, 220));
-  assert.equal(opacity(104, 220), opacity(356, 220));
-  assert.equal(opacity(104, 220), opacity(230, 44));
+  assert.ok(opacity(72, 220) > 0 && opacity(72, 220) < opacity(80, 220));
+  assert.equal(opacity(80, 220), .5);
+  assert.equal(opacity(72, 220), opacity(388, 220));
+  assert.equal(opacity(72, 220), opacity(230, 12));
+  assert.equal(opacity(72, 12), opacity(72, 220));
   assert.equal(imageLensOpacity(NaN, 0, 0, 0, 300, 400), 0);
 });
 

@@ -4,7 +4,8 @@ export function imageLensOpacity(x: number, y: number, left: number, top: number
   if (![x, y, left, top, width, height].every(Number.isFinite) || width <= 0 || height <= 0) return 0;
   const edge = Math.min(x - left, left + width - x, y - top, top + height - y);
   const span = Math.min(width, height);
-  const progress = Math.max(0, Math.min(1, (edge - span * .04) / Math.min(40, span * .12)));
+  const margin = Math.min(12, span * .04);
+  const progress = Math.max(0, Math.min(1, (edge + margin) / (margin * 2)));
   return progress * progress * (3 - 2 * progress);
 }
 
