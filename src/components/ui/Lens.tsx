@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AnimatePresence, motion, useMotionTemplate, useMotionValue, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useMotionTemplate, useMotionValue, useReducedMotion, useSpring } from 'framer-motion';
 import { imageLensAxis, imageDetailScale, measureZoomImage } from '../../lib/imageZoomGesture';
 
 export interface LensProps {
@@ -22,6 +22,10 @@ export const Lens: React.FC<LensProps> = ({ children, zoomFactor = 1.8, lensSize
   const sampleY = useMotionValue(0);
   const ringX = useMotionValue(0);
   const ringY = useMotionValue(0);
+  const detailScale = useMotionValue(1);
+  const smoothScale = useSpring(detailScale, { stiffness: 300, damping: 34 });
+  const magnification = reducedMotion ? detailScale : smoothScale;
+  useEffect(() => { detailScale.set(!disabled && (hovered || keyboard) ? bounds.factor : 1); }, [disabled, hovered, keyboard, bounds.factor, detailScale]);
   useEffect(() => { if (disabled) { setHovered(false); setKeyboard(false); } }, [disabled]);
   useEffect(() => {
     const reset = () => { setHovered(false); setKeyboard(false); };
@@ -33,8 +37,8 @@ export const Lens: React.FC<LensProps> = ({ children, zoomFactor = 1.8, lensSize
   const radius = diameter / 2;
   const left = useMotionTemplate`${ringX}px`;
   const top = useMotionTemplate`${ringY}px`;
-  const innerLeft = useMotionTemplate`calc(${radius}px - ${sampleX}px * ${bounds.factor})`;
-  const innerTop = useMotionTemplate`calc(${radius}px - ${sampleY}px * ${bounds.factor})`;
+  const innerLeft = useMotionTemplate`calc(${radius}px - ${sampleX}px * ${magnification})`;
+  const innerTop = useMotionTemplate`calc(${radius}px - ${sampleY}px * ${magnification})`;
   const move = (x: number, y: number) => {
     const geometry = containerRef.current && measureZoomImage(containerRef.current);
     if (!geometry || geometry.width <= 8 || geometry.height <= 8) return false;
@@ -48,7 +52,7 @@ export const Lens: React.FC<LensProps> = ({ children, zoomFactor = 1.8, lensSize
     ringX.set(horizontal.ring); ringY.set(vertical.ring);
     return x >= left && x <= left + width && y >= top && y <= top + height;
   };
-  return <div ref={containerRef} className={`relative overflow-hidden select-none ${hovered && !disabled ? 'cursor-none' : ''} ${className}`}
+  return <div ref={containerRef} className={`relative overflow-hidden select-none ${hovered && !disabled ? 'cursor-crosshair' : ''} ${className}`}
     tabIndex={disabled ? -1 : 0} role="group" aria-label={ariaLabel}
     onPointerMove={event => {
       if (disabled || event.pointerType !== 'mouse') return;
@@ -72,10 +76,10 @@ export const Lens: React.FC<LensProps> = ({ children, zoomFactor = 1.8, lensSize
     }}>
     <div className="relative h-full w-full">{children}</div>
     <AnimatePresence>{!disabled && (hovered || keyboard) && <motion.div aria-hidden="true" data-image-lens
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reducedMotion ? 0 : .12 }}
+      initial={{ opacity: reducedMotion ? 1 : 0, scale: reducedMotion ? 1 : .96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: reducedMotion ? 1 : .98 }} transition={{ duration: reducedMotion ? 0 : .16, ease: 'easeOut' }}
       className="pointer-events-none absolute z-30 overflow-hidden rounded-full border border-white/60 shadow-md"
       style={{ left, top, width: diameter, height: diameter }}>
-      <motion.div className="absolute" style={{ width: bounds.width, height: bounds.height, left: innerLeft, top: innerTop, scale: bounds.factor, transformOrigin: '0 0' }}>{children}</motion.div>
+      <motion.div className="absolute" style={{ width: bounds.width, height: bounds.height, left: innerLeft, top: innerTop, scale: magnification, transformOrigin: '0 0' }}>{children}</motion.div>
     </motion.div>}</AnimatePresence>
   </div>;
 };
