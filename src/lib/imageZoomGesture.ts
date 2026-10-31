@@ -1,8 +1,17 @@
 export const IMAGE_ZOOM_HOLD_MS = 320;
 
+export function imageLensOpacity(x: number, y: number, left: number, top: number, width: number, height: number): number {
+  if (![x, y, left, top, width, height].every(Number.isFinite) || width <= 0 || height <= 0) return 0;
+  const edge = Math.min(x - left, left + width - x, y - top, top + height - y);
+  const span = Math.min(width, height);
+  const progress = Math.max(0, Math.min(1, (edge - span * .04) / Math.min(40, span * .12)));
+  return progress * progress * (3 - 2 * progress);
+}
+
 export function imageLensAxis(point: number, start: number, extent: number, diameter: number) {
   const radius = diameter / 2;
-  const ring = Math.max(start + 4, Math.min(start + extent - diameter - 4, point - radius));
+  const inset = Math.min(Math.max(4, Math.min(12, extent * .04)), (extent - diameter) / 2);
+  const ring = Math.max(start + inset, Math.min(start + extent - diameter - inset, point - radius));
   return {
     sample: ring + radius,
     ring,

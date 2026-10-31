@@ -1,7 +1,20 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { cancelsImageHold, imageDetailScale, imageLensAxis, imageZoomPan, IMAGE_ZOOM_HOLD_MS } from '../src/lib/imageZoomGesture.ts';
+import { cancelsImageHold, imageDetailScale, imageLensAxis, imageLensOpacity, imageZoomPan, IMAGE_ZOOM_HOLD_MS } from '../src/lib/imageZoomGesture.ts';
 import { zoomImageSource } from '../src/lib/responsiveImage.ts';
+
+test('the lens fades in symmetrically after an inset from all four photo edges', () => {
+  const opacity = (x: number, y: number) => imageLensOpacity(x, y, 80, 20, 300, 400);
+  assert.equal(opacity(90, 220), 0);
+  assert.equal(opacity(370, 220), 0);
+  assert.equal(opacity(230, 30), 0);
+  assert.equal(opacity(230, 410), 0);
+  assert.equal(opacity(230, 220), 1);
+  assert.ok(opacity(104, 220) > 0 && opacity(104, 220) < opacity(116, 220));
+  assert.equal(opacity(104, 220), opacity(356, 220));
+  assert.equal(opacity(104, 220), opacity(230, 44));
+  assert.equal(imageLensOpacity(NaN, 0, 0, 0, 300, 400), 0);
+});
 
 test('a deliberate hold tolerates finger jitter but cancels swipes in either direction', () => {
   assert.ok(IMAGE_ZOOM_HOLD_MS >= 300);
