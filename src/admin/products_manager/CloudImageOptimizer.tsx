@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Wand2 } from 'lucide-react';
 import { optimizeCloudImages, type ImageOptimizationProgress } from '../../lib/optimizeCloudImages';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
-import { requireCloudAdmin } from '../../lib/cloudAdminAccess';
+import { cloudSignInError, requireCloudAdmin } from '../../lib/cloudAdminAccess';
 
 export function CloudImageOptimizer({ isAr, onComplete }: { isAr: boolean; onComplete: () => void }) {
   const [busy, setBusy] = useState(false);
@@ -39,7 +39,7 @@ export function CloudImageOptimizer({ isAr, onComplete }: { isAr: boolean; onCom
     setSigningIn(true); setMessage('');
     try {
       const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-      if (error) throw new Error(isAr ? 'تعذّر تسجيل الدخول. راجع بريد وكلمة مرور حساب أدمن المتجر.' : 'Sign-in failed. Check the store admin email and password.');
+      if (error) throw new Error(cloudSignInError(error, isAr));
       await requireCloudAdmin(supabase);
       setPassword(''); setAuthorized(true);
       await start();

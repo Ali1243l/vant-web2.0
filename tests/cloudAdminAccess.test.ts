@@ -1,6 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { requireCloudAdmin } from '../src/lib/cloudAdminAccess.ts';
+import { cloudSignInError, requireCloudAdmin } from '../src/lib/cloudAdminAccess.ts';
+
+test('cloud sign-in explains actionable failures without exposing server error messages', () => {
+  assert.match(cloudSignInError({ code: 'invalid_credentials' }, true), /Authentication → Users/);
+  assert.match(cloudSignInError({ code: 'invalid_credentials' }, false), /not the Supabase dashboard password/);
+  assert.match(cloudSignInError({ code: 'email_not_confirmed' }, false), /Confirm/);
+  assert.match(cloudSignInError({ status: 429 }, false), /Wait/);
+  assert.match(cloudSignInError({ code: 'user_banned' }, false), /suspended/);
+  assert.match(cloudSignInError({ name: 'AuthRetryableFetchError' }, false), /connection/);
+  assert.match(cloudSignInError({}, false), /settings and logs/);
+});
 
 test('cloud media requires a server-verified user and the existing admin role, never the local PIN alone', async () => {
   let roleChecks = 0;
