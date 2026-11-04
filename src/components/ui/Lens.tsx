@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AnimatePresence, motion, useMotionTemplate, useMotionValue, useReducedMotion, useSpring } from 'framer-motion';
-import { imageLensAxis, imageLensOpacity, imageDetailScale, measureZoomImage } from '../../lib/imageZoomGesture';
+import { AnimatePresence, motion, useMotionTemplate, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
+import { imageLensAxis, imageLensContentOffset, imageLensOpacity, imageDetailScale, measureZoomImage } from '../../lib/imageZoomGesture';
 
 export interface LensProps {
   children: React.ReactNode;
@@ -18,7 +18,7 @@ export const Lens: React.FC<LensProps> = ({ children, zoomFactor = 1.8, lensSize
   const [hovered, setHovered] = useState(false);
   const [edgeOpacity, setEdgeOpacity] = useState(1);
   const [keyboard, setKeyboard] = useState(false);
-  const [bounds, setBounds] = useState({ width: 0, height: 0, diameter: lensSize, factor: zoomFactor });
+  const [bounds, setBounds] = useState({ width: 0, height: 0, diameter: lensSize, factor: zoomFactor, photoLeft: 0, photoTop: 0, photoWidth: lensSize, photoHeight: lensSize });
   const reducedMotion = useReducedMotion();
   const sampleX = useMotionValue(0);
   const sampleY = useMotionValue(0);
@@ -37,18 +37,17 @@ export const Lens: React.FC<LensProps> = ({ children, zoomFactor = 1.8, lensSize
     return () => { window.removeEventListener('resize', reset); window.removeEventListener('blur', reset); window.removeEventListener('scroll', reset, true); };
   }, []);
   const diameter = bounds.diameter;
-  const radius = diameter / 2;
   const left = useMotionTemplate`${ringX}px`;
   const top = useMotionTemplate`${ringY}px`;
-  const innerLeft = useMotionTemplate`calc(${radius}px - ${sampleX}px * ${magnification})`;
-  const innerTop = useMotionTemplate`calc(${radius}px - ${sampleY}px * ${magnification})`;
+  const innerLeft = useTransform([sampleX, magnification], ([point, factor]: number[]) => imageLensContentOffset(point, bounds.photoLeft, bounds.photoWidth, diameter, factor));
+  const innerTop = useTransform([sampleY, magnification], ([point, factor]: number[]) => imageLensContentOffset(point, bounds.photoTop, bounds.photoHeight, diameter, factor));
   const move = (x: number, y: number) => {
     const geometry = containerRef.current && measureZoomImage(containerRef.current);
     if (!geometry || geometry.width <= 8 || geometry.height <= 8) return 0;
     const { image, bounds: rect, width, height, left, top } = geometry;
     const diameter = Math.min(lensSize, width - 8, height - 8);
     const factor = /\.svg(?:[?#]|$)|^data:image\/svg/i.test(image.currentSrc) ? zoomFactor : imageDetailScale(image.naturalWidth, width, zoomFactor, window.devicePixelRatio || 1);
-    setBounds(previous => previous.width === rect.width && previous.height === rect.height && previous.diameter === diameter && previous.factor === factor ? previous : { width: rect.width, height: rect.height, diameter, factor });
+    setBounds(previous => previous.width === rect.width && previous.height === rect.height && previous.diameter === diameter && previous.factor === factor && previous.photoLeft === left && previous.photoTop === top && previous.photoWidth === width && previous.photoHeight === height ? previous : { width: rect.width, height: rect.height, diameter, factor, photoLeft: left, photoTop: top, photoWidth: width, photoHeight: height });
     const horizontal = imageLensAxis(x, left, width, diameter);
     const vertical = imageLensAxis(y, top, height, diameter);
     sampleX.set(horizontal.sample); sampleY.set(vertical.sample);

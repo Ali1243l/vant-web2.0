@@ -5,8 +5,15 @@ export function imageLensOpacity(x: number, y: number, left: number, top: number
   const edge = Math.min(x - left, left + width - x, y - top, top + height - y);
   const span = Math.min(width, height);
   const margin = Math.min(12, span * .04);
-  const progress = Math.max(0, Math.min(1, (edge + margin) / (margin * 2)));
+  const progress = Math.max(0, Math.min(1, (edge + margin) / margin));
   return progress * progress * (3 - 2 * progress);
+}
+
+export function imageLensContentOffset(point: number, start: number, extent: number, diameter: number, factor: number): number {
+  const radius = diameter / 2;
+  const inset = radius / factor;
+  const sample = Math.max(start + inset, Math.min(start + extent - inset, point));
+  return radius - sample * factor;
 }
 
 export function imageLensAxis(point: number, start: number, extent: number, diameter: number) {

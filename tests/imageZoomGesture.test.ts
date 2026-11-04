@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { cancelsImageHold, imageDetailScale, imageLensAxis, imageLensOpacity, imageZoomPan, IMAGE_ZOOM_HOLD_MS } from '../src/lib/imageZoomGesture.ts';
+import { cancelsImageHold, imageDetailScale, imageLensAxis, imageLensContentOffset, imageLensOpacity, imageZoomPan, IMAGE_ZOOM_HOLD_MS } from '../src/lib/imageZoomGesture.ts';
 import { zoomImageSource } from '../src/lib/responsiveImage.ts';
 
 test('the lens starts fading just outside all four photo edges, including corners', () => {
@@ -11,11 +11,22 @@ test('the lens starts fading just outside all four photo edges, including corner
   assert.equal(opacity(230, 435), 0);
   assert.equal(opacity(230, 220), 1);
   assert.ok(opacity(72, 220) > 0 && opacity(72, 220) < opacity(80, 220));
-  assert.equal(opacity(80, 220), .5);
+  assert.equal(opacity(80, 220), 1);
   assert.equal(opacity(72, 220), opacity(388, 220));
   assert.equal(opacity(72, 220), opacity(230, 12));
   assert.equal(opacity(72, 12), opacity(72, 220));
   assert.equal(imageLensOpacity(NaN, 0, 0, 0, 300, 400), 0);
+});
+
+test('real image pixels fill the circle at corners throughout the entry zoom transition', () => {
+  for (const start of [0, 28, 80]) for (const extent of [150, 300, 450]) for (const factor of [1, 1.2, 1.8]) {
+    for (const point of [start, start + extent / 2, start + extent]) {
+      const offset = imageLensContentOffset(point, start, extent, 140, factor);
+      assert.ok(offset + start * factor <= 1e-9);
+      assert.ok(offset + (start + extent) * factor >= 140 - 1e-9);
+    }
+  }
+  assert.equal(imageLensContentOffset(230, 80, 300, 140, 1.8), 70 - 230 * 1.8);
 });
 
 test('a deliberate hold tolerates finger jitter but cancels swipes in either direction', () => {
