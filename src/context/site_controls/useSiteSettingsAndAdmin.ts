@@ -72,6 +72,7 @@ export function useSiteSettingsAndAdmin() {
   };
 
   const lockAdmin = () => {
+    void supabase?.auth.signOut({ scope: 'local' }).then(({ error }) => { if (error) console.warn('Cloud admin sign-out failed:', error.message); });
     setIsAdminUnlocked(false);
     try {
       sessionStorage.removeItem(SESSION_AUTH_KEY);

@@ -302,9 +302,11 @@ export async function saveSiteConfigToSupabase(config: Partial<CloudSiteConfig>,
       return true;
     }
     console.warn('Supabase config sync error:', error.message);
+    if (requireFresh) throw new Error(error.message);
     return false;
   } catch (err) {
     console.warn('Failed to save site config to Supabase:', err);
+    if (requireFresh) throw err;
     return false;
   }
 }

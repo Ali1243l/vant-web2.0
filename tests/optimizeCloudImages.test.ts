@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const root = 'https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/';
 const bundle = await build({ entryPoints: [fileURLToPath(new URL('../src/lib/optimizeCloudImages.ts', import.meta.url))], bundle: true, write: false, format: 'esm', platform: 'node', plugins: [{ name: 'cloud-image-fixtures', setup(builder) {
   builder.onResolve({ filter: /^\.\/(supabase|storage|imageConversion)$/ }, args => ({ path: args.path, namespace: 'fixture' }));
-  builder.onLoad({ filter: /.*/, namespace: 'fixture' }, ({ path }) => ({ contents: path === './supabase' ? 'export const supabase = {from: (...args) => globalThis.cloudImageFixture.from(...args)};' : path === './storage' ? 'export const fetchSiteConfigFromSupabase = (...args) => globalThis.cloudImageFixture.config(...args); export const saveSiteConfigToSupabase = (...args) => globalThis.cloudImageFixture.save(...args); export const uploadDataUrlToSupabase = (...args) => globalThis.cloudImageFixture.upload(...args);' : 'export const smartConvertImage = (...args) => globalThis.cloudImageFixture.convert(...args); export const imageBlobDataUrl = async () => "data:image/webp;base64,test";' }));
+  builder.onLoad({ filter: /.*/, namespace: 'fixture' }, ({ path }) => ({ contents: path === './supabase' ? 'export const supabase = {auth:{getUser:async()=>({data:{user:{id:"admin"}}})},rpc:async()=>({data:true}),from: (...args) => globalThis.cloudImageFixture.from(...args)};' : path === './storage' ? 'export const fetchSiteConfigFromSupabase = (...args) => globalThis.cloudImageFixture.config(...args); export const saveSiteConfigToSupabase = (...args) => globalThis.cloudImageFixture.save(...args); export const uploadDataUrlToSupabase = (...args) => globalThis.cloudImageFixture.upload(...args);' : 'export const smartConvertImage = (...args) => globalThis.cloudImageFixture.convert(...args); export const imageBlobDataUrl = async () => "data:image/webp;base64,test";' }));
 } }] });
 const { optimizeCloudImages } = await import('data:text/javascript;base64,' + Buffer.from(bundle.outputFiles[0].text).toString('base64'));
 
@@ -50,6 +50,12 @@ test('batch scans all database pages, deduplicates shared images, verifies cloud
     saveFails = false; verifyFails = true;
     result = await optimizeCloudImages(() => {}, () => false);
     assert.equal(result.optimized, 0);
+    delete mappings[shared]; verifyFails = false; downloads.length = 0;
+    (globalThis as any).cloudImageFixture.upload = async () => { throw new Error('new row violates row-level security policy'); };
+    result = await optimizeCloudImages(() => {}, () => false);
+    assert.equal(result.blocked, true);
+    assert.equal(result.done, 1);
+    assert.equal(downloads.length, 1);
     stop = true;
     await assert.rejects(optimizeCloudImages(() => {}, () => stop));
   } finally { globalThis.fetch = fetcher; delete (globalThis as any).cloudImageFixture; }
