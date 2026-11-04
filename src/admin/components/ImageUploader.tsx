@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Upload,
   X,
@@ -14,6 +14,7 @@ import {
   Wand2,
 } from 'lucide-react';
 import { uploadImageToSupabase, uploadDataUrlToSupabase, fileToOptimizedDataUrl } from '../../lib/storage';
+import { imageBlobDataUrl, smartConvertImage } from '../../lib/imageConversion';
 
 interface ImageUploaderProps {
   images: string[];
@@ -23,6 +24,7 @@ interface ImageUploaderProps {
   enableAutoColorSort?: boolean;
   dropzoneTitle?: React.ReactNode;
   dropzoneSubtitle?: React.ReactNode;
+  onBusyChange?: (busy: boolean) => void;
 }
 
 export const ImageUploader: React.FC<ImageUploaderProps> = ({
@@ -33,11 +35,18 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   enableAutoColorSort = false,
   dropzoneTitle,
   dropzoneSubtitle,
+  onBusyChange,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!isUploading) return;
+    onBusyChange?.(true);
+    return () => onBusyChange?.(false);
+  }, [isUploading, onBusyChange]);
 
   // Preset sample thumbnails for quick insertion
   const sampleSuggestions = [
@@ -50,20 +59,28 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   ];
 
   const handleFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
+    if (isUploading || !files || files.length === 0) return;
 
     const fileArray = Array.from(files).filter((f) => f.type.startsWith('image/'));
     if (fileArray.length === 0) return;
 
     setIsUploading(true);
     setUploadNotice(null);
+    setUploadError(null);
 
     // If custom onRawFiles handler is provided (e.g. automatic color clustering & variant generation)
     if (onRawFiles) {
       try {
-        await onRawFiles(fileArray);
+        const prepared: File[] = [];
+        for (const file of fileArray) {
+          const converted = await smartConvertImage(file);
+          const extension = converted.type === 'image/jpeg' ? 'jpg' : converted.type.split('/')[1];
+          prepared.push(converted === file ? file : new File([converted], `${file.name.replace(/\.[^.]+$/, '')}.${extension}`, { type: converted.type }));
+        }
+        await onRawFiles(prepared);
       } catch (err) {
         console.error('Error handling raw files in ImageUploader:', err);
+        setUploadError(err instanceof Error ? err.message : 'تعذّرت معالجة الصور.');
       } finally {
         setIsUploading(false);
         if (fileInputRef.current) {
@@ -95,8 +112,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         try {
           const fallbackDataUrl = await fileToOptimizedDataUrl(file);
           newUrls.push(fallbackDataUrl);
-        } catch {
-          newUrls.push(URL.createObjectURL(file));
+        } catch (error) {
+          setUploadError(error instanceof Error ? error.message : 'تعذّرت معالجة الصورة.');
         }
       }
     }
@@ -104,11 +121,38 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     if (newUrls.length > 0) {
       const combined = [...images, ...newUrls].slice(0, maxFiles);
       onChange(combined);
-      setUploadNotice(`✓ تم رفع وتخزين ${newUrls.length} صور في السحابة بنجاح`);
+      setUploadNotice(newUrls.every(url => url.startsWith('https://')) ? `تم رفع ${newUrls.length} صور محسّنة للسحابة.` : 'الصور جاهزة في المسودة. بعض الملفات لم تتزامن مع السحابة بعد.');
       setTimeout(() => setUploadNotice(null), 3500);
     }
 
     setIsUploading(false);
+  };
+
+  const improveExisting = async () => {
+    if (isUploading) return;
+    setIsUploading(true); setUploadNotice(null); setUploadError(null);
+    try {
+      const next = [...images];
+      let saved = 0;
+      for (let index = 0; index < images.length; index++) {
+        const source = images[index];
+        if (!source.startsWith('data:image/')) {
+          if (!source.startsWith('https://')) continue;
+          const url = new URL(source);
+          if (url.origin !== 'https://gjjsdnyfhhbacuciqwbq.supabase.co' || !url.pathname.startsWith('/storage/v1/object/public/product-images/') || url.search || url.hash) continue;
+        }
+        const response = await fetch(source);
+        if (!response.ok) throw new Error('تعذّر تحميل إحدى الصور الأصلية. لم تتغيّر المسودة.');
+        const original = await response.blob();
+        const converted = await smartConvertImage(original);
+        if (converted === original) continue;
+        next[index] = await imageBlobDataUrl(converted);
+        saved += Math.max(0, original.size - converted.size);
+      }
+      onChange(next);
+      setUploadNotice(saved > 0 ? `تم تجهيز صور أخف بتوفير ${(saved / 1024).toFixed(0)} كيلوبايت. راجع المعاينة ثم احفظ المنتج؛ الأصل السحابي محفوظ.` : 'الصور لا تحتاج ضغطاً إضافياً. أي تصحيح للصيغة يبقى مسودة إلى الحفظ.');
+    } catch (error) { setUploadError(error instanceof Error ? error.message : 'تعذّر تحسين الصور.'); }
+    finally { setIsUploading(false); }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -149,7 +193,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   };
 
   return (
-    <div className="space-y-3 select-none">
+    <fieldset disabled={isUploading} aria-busy={isUploading} className="min-w-0 space-y-3 select-none">
       <div className="flex items-center justify-between">
         <label className="block text-xs font-semibold text-slate-200">
           صور المنتج والوسائط (Cloud Storage & Gallery)
@@ -189,7 +233,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
               <Sparkles className="w-3.5 h-3.5 text-amber-400 absolute -top-1 -right-1 animate-pulse" />
             </div>
             <span className="text-xs text-indigo-300 font-bold">
-              جاري فحص القمصان، قراءة درجات القماش، وتقسيم الألوان تلقائياً...
+              جارِ فحص الصور وتحويلها وتجهيز المعاينة...
             </span>
             <span className="text-[10px] text-slate-400 font-mono">
               راجع النتائج قبل الحفظ
@@ -243,6 +287,12 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         </button>
       </div>
 
+      {images.length > 0 && <button type="button" onClick={improveExisting} disabled={isUploading}
+        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-3 py-2 text-xs font-semibold text-indigo-200 disabled:opacity-50">
+        <Wand2 size={16} /> تحسين صيغ الصور الحالية
+      </button>}
+      <p className="text-[11px] leading-relaxed text-slate-400">تحويل تلقائي حسب محتوى الصورة والشفافية والحجم، مع الحفاظ على الصور المتحركة. تحسين الصور الحالية يبقى مسودة إلى حفظ المنتج.</p>
+      {uploadError && <p role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">{uploadError}</p>}
       {uploadNotice && (
         <div className="text-[11px] text-emerald-400 flex items-center gap-1.5 animate-in fade-in">
           <CheckCircle2 className="w-3.5 h-3.5" />
@@ -347,7 +397,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       )}
 
 
-    </div>
+    </fieldset>
   );
 };
 export default ImageUploader;

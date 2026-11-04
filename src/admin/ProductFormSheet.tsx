@@ -1,6 +1,6 @@
 import { ProductCatalogImageSection } from './productForm/ProductCatalogImageSection';
 import { normalizeCatalogImage } from '../lib/catalogImage';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sheet } from './Sheet';
 import { Button, Input } from './ui';
@@ -90,6 +90,8 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
   const [variantCustomSizeInputs, setVariantCustomSizeInputs] = useState<Record<string, string>>({});
   const [variantShowCustom, setVariantShowCustom] = useState<Record<string, boolean>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mediaJobs, setMediaJobs] = useState(0);
+  const onMediaBusyChange = useCallback((busy: boolean) => setMediaJobs(count => Math.max(0, count + (busy ? 1 : -1))), []);
   const [formError, setFormError] = useState('');
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -711,7 +713,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
   // Submit Handler
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (isSubmitting) return;
+    if (isSubmitting || mediaJobs > 0) return;
     setFormError('');
     if (!formData.name.trim()) { setFormError(isAr ? 'اكتب اسم المنتج.' : 'Enter a product name.'); return; }
 
@@ -832,7 +834,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
   return (
     <Sheet
       isOpen={isOpen}
-      onClose={() => { if (!isSubmitting) onClose(); }}
+      onClose={() => { if (!isSubmitting && mediaJobs === 0) onClose(); }}
       widthClass="w-full max-w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl"
       title={
         editingProduct
@@ -864,7 +866,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
               type="button"
               variant="ghost"
               onClick={onClose}
-              disabled={isSubmitting}
+              disabled={isSubmitting || mediaJobs > 0}
               className="w-full sm:w-auto"
             >
               {isAr ? 'إلغاء' : 'Cancel'}
@@ -874,6 +876,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
               variant="primary"
               onClick={() => handleSubmit()}
               isLoading={isSubmitting}
+              disabled={mediaJobs > 0}
               leftIcon={<Check className="w-4 h-4" />}
               className="w-full sm:w-auto shadow-md shadow-indigo-600/30"
             >
@@ -917,6 +920,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
         {/* Color Variants Builder (when enabled) */}
         <div data-form-section="media" className="space-y-5 scroll-mt-20">
         <ProductColorVariantsSection
+          onMediaBusyChange={onMediaBusyChange}
           formData={formData}
           setFormData={setFormData}
           isAr={isAr}
@@ -941,6 +945,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
         {/* Standard Single Product Media & Sizes (when variants not enabled) */}
         {!formData.hasVariants && (
           <ProductSingleMediaSection
+            onMediaBusyChange={onMediaBusyChange}
             formData={formData}
             setFormData={setFormData}
             isAr={isAr}

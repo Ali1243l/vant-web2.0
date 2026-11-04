@@ -1,6 +1,8 @@
 import { saveOfferSnapshot, fetchOfferSnapshot } from './offerStorage';
 import { supabase } from './supabase';
 import { normalizeOrders } from './orderModel';
+import { imageBlobDataUrl, imageUploadPath, smartConvertImage } from './imageConversion';
+import { replaceOptimizedImages } from './imageOptimizationModel';
 
 export interface UploadedMediaItem {
   url: string;
@@ -38,83 +40,15 @@ export async function uploadToFreeCdn(fileOrBlob: Blob | File): Promise<string |
 }
 
 /**
- * Optimizes and compresses any image File into a high-definition Data URL
- * Scales down massive phone camera images (e.g. 10MB/4000px) to max 1400px width/height
- * while preserving high-end luxury color depth and sharpness.
+ * The same conversion serves previews, cloud uploads and offline fallback.
  */
 export async function fileToOptimizedDataUrl(
   file: File,
-  maxWidth = 1400,
-  maxHeight = 1600,
-  quality = 0.88
+  maxWidth = 2048,
+  maxHeight = 2560,
+  quality = 0.9
 ): Promise<string> {
-  return new Promise((resolve, reject) => {
-    // If SVG, read as text/dataURL directly
-    if (file.type === 'image/svg+xml') {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(file);
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        let width = img.width;
-        let height = img.height;
-
-        if (width > maxWidth || height > maxHeight) {
-          if (width / maxWidth > height / maxHeight) {
-            height = Math.round((height * maxWidth) / width);
-            width = maxWidth;
-          } else {
-            width = Math.round((width * maxHeight) / height);
-            height = maxHeight;
-          }
-        }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-
-        if (!ctx) {
-          resolve(e.target?.result as string);
-          return;
-        }
-
-        // Enable crisp high quality image smoothing
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(img, 0, 0, width, height);
-
-        // Try WebP first, fallback to JPEG
-        try {
-          const webpData = canvas.toDataURL('image/webp', quality);
-          if (webpData.startsWith('data:image/webp')) {
-            resolve(webpData);
-            return;
-          }
-        } catch {
-          // fallback
-        }
-
-        const jpegData = canvas.toDataURL('image/jpeg', quality);
-        resolve(jpegData);
-      };
-
-      img.onerror = () => {
-        resolve(e.target?.result as string);
-      };
-
-      img.src = e.target?.result as string;
-    };
-
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
+  return imageBlobDataUrl(await smartConvertImage(file, maxWidth, maxHeight, quality));
 }
 
 /**
@@ -160,6 +94,7 @@ export async function testImageUrl(url: string, timeoutMs = 2500): Promise<boole
  * Returns the permanent public Supabase URL.
  */
 export interface CloudSiteConfig {
+  image_optimizations?: Record<string, string>;
   controls?: Record<string, any>;
   currency?: string;
   trendItems?: any[];
@@ -174,6 +109,10 @@ export interface CloudSiteConfig {
 
 // In-memory cache of cloud configuration to ensure instant synchronous access and perfect merging
 let cachedCloudConfig: CloudSiteConfig | null = null;
+
+export function resolveStoredImages<T>(value: T): T {
+  return replaceOptimizedImages(value, cachedCloudConfig?.image_optimizations);
+}
 
 const SUPABASE_PROJECT_ID = 'gjjsdnyfhhbacuciqwbq';
 const SUPABASE_STORAGE_ORIGIN = `https://${SUPABASE_PROJECT_ID}.supabase.co`;
@@ -205,38 +144,19 @@ export async function uploadImageToSupabase(
   customPath?: string
 ): Promise<string> {
   if (!file) throw new Error('No file provided for upload');
+  const converted = await smartConvertImage(file);
 
   // 1. Upload directly to Supabase Storage bucket `product-images`
   if (supabase) {
     try {
-      const rawExt = file.name ? file.name.split('.').pop()?.toLowerCase() : '';
-      const safeExt = rawExt && ['jpg', 'jpeg', 'png', 'webp', 'avif', 'gif', 'svg'].includes(rawExt)
-        ? rawExt
-        : file.type === 'image/png'
-        ? 'png'
-        : file.type === 'image/webp'
-        ? 'webp'
-        : file.type === 'image/svg+xml'
-        ? 'svg'
-        : 'jpg';
-
-      let fileName: string;
-      if (customPath) {
-        const cleanCustom = customPath.replace(/[^a-zA-Z0-9._/-]/g, '_').toLowerCase();
-        fileName = `${folder}/${cleanCustom}`;
-      } else {
-        const randomHash = Math.random().toString(36).substring(2, 9);
-        fileName = `${folder}/${Date.now()}_${randomHash}.${safeExt}`;
-      }
-
-      const mimeType = file.type || (safeExt === 'png' ? 'image/png' : safeExt === 'webp' ? 'image/webp' : 'image/jpeg');
+      const fileName = imageUploadPath(folder, customPath || file.name || 'image', converted.type);
 
       const { data, error } = await supabase.storage
         .from('product-images')
-        .upload(fileName, file, {
-          contentType: mimeType,
-          cacheControl: '3600',
-          upsert: true,
+        .upload(fileName, converted, {
+          contentType: converted.type,
+          cacheControl: '31536000',
+          upsert: false,
         });
 
       if (!error && data?.path) {
@@ -260,7 +180,7 @@ export async function uploadImageToSupabase(
 
   // Fallback to high-res data URL only if Supabase client is offline/disconnected
   console.warn('Supabase client unavailable, using optimized data URL fallback');
-  return await fileToOptimizedDataUrl(file);
+  return imageBlobDataUrl(converted);
 }
 
 /**
@@ -273,31 +193,26 @@ export async function uploadDataUrlToSupabase(
   filePrefix: string = 'media'
 ): Promise<string> {
   if (!dataUrl || !dataUrl.startsWith('data:')) return dataUrl;
-  if (!supabase) return dataUrl;
+  if (dataUrl.length > 28 * 1024 * 1024) throw new Error('حجم الصورة يتجاوز الحد المسموح.');
+  const [header, base64Data] = dataUrl.split(',');
+  if (!header.includes(';base64') || !base64Data) throw new Error('بيانات الصورة غير صالحة.');
+  const mimeMatch = header.match(/:(.*?);/);
+  const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+
+  const byteCharacters = atob(base64Data);
+  const byteArray = Uint8Array.from(byteCharacters, character => character.charCodeAt(0));
+  const blob = await smartConvertImage(new Blob([byteArray], { type: mimeType }));
+  if (!supabase) return imageBlobDataUrl(blob);
 
   try {
-    const [header, base64Data] = dataUrl.split(',');
-    const mimeMatch = header.match(/:(.*?);/);
-    const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-    const ext = mimeType.split('/')[1] || 'jpg';
-    const safeExt = ['jpg', 'jpeg', 'png', 'webp', 'avif', 'svg'].includes(ext) ? ext : 'jpg';
-
-    const byteCharacters = atob(base64Data);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-    const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray], { type: mimeType });
-
-    const fileName = `${folder}/${filePrefix}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${safeExt}`;
+    const fileName = imageUploadPath(folder, filePrefix, blob.type);
 
     const { data, error } = await supabase.storage
       .from('product-images')
       .upload(fileName, blob, {
-        contentType: mimeType,
-        cacheControl: '3600',
-        upsert: true,
+        contentType: blob.type,
+        cacheControl: '31536000',
+        upsert: false,
       });
 
     if (!error && data?.path) {
@@ -316,18 +231,19 @@ export async function uploadDataUrlToSupabase(
     console.warn('Failed to upload Data URL to Supabase Storage:', err);
   }
 
-  return dataUrl;
+  return imageBlobDataUrl(blob);
 }
 
 /**
  * Persists site configuration, banner images, and trend cards directly into Supabase Storage
  * Using a non-destructive deep-merge so no section is ever overwritten or lost!
  */
-export async function saveSiteConfigToSupabase(config: Partial<CloudSiteConfig>): Promise<boolean> {
+export async function saveSiteConfigToSupabase(config: Partial<CloudSiteConfig>, requireFresh = false): Promise<boolean> {
   if (!supabase) return false;
   try {
     // 1. Fetch current config from Supabase (or fallback to cache) to guarantee zero clobbering
-    const existing = await fetchSiteConfigFromSupabase();
+    const existing = await fetchSiteConfigFromSupabase(!requireFresh);
+    if (requireFresh && !existing) return false;
 
     const bannerBg =
       config.banner_hero_bg ||
@@ -352,6 +268,7 @@ export async function saveSiteConfigToSupabase(config: Partial<CloudSiteConfig>)
         ...(existing?.enhancements || {}),
         ...(config.enhancements || {}),
       },
+      image_optimizations: { ...(existing?.image_optimizations || {}), ...(config.image_optimizations || {}) },
       trendItems: config.trendItems || existing?.trendItems || [],
       socialLinks: config.socialLinks || existing?.socialLinks || [],
       sizeGuideRows: config.sizeGuideRows || existing?.sizeGuideRows || [],
@@ -370,8 +287,6 @@ export async function saveSiteConfigToSupabase(config: Partial<CloudSiteConfig>)
       }
     }
 
-    cachedCloudConfig = merged;
-
     const payload = JSON.stringify(merged, null, 2);
     const blob = new Blob([payload], { type: 'application/json' });
     const { error } = await supabase.storage.from('product-images').upload('config/site_settings.json', blob, {
@@ -381,6 +296,7 @@ export async function saveSiteConfigToSupabase(config: Partial<CloudSiteConfig>)
     });
 
     if (!error) {
+      cachedCloudConfig = merged;
       console.log('✓ Site configuration, display image & banners permanently synced to Supabase Cloud');
       return true;
     }
@@ -395,8 +311,8 @@ export async function saveSiteConfigToSupabase(config: Partial<CloudSiteConfig>)
 /**
  * Loads latest site configuration, banner images, and trend cards from Supabase Storage
  */
-export async function fetchSiteConfigFromSupabase(): Promise<CloudSiteConfig | null> {
-  if (!supabase) return cachedCloudConfig;
+export async function fetchSiteConfigFromSupabase(allowCached = true): Promise<CloudSiteConfig | null> {
+  if (!supabase) return allowCached ? cachedCloudConfig : null;
   try {
     const { data: pubData } = supabase.storage.from('product-images').getPublicUrl('config/site_settings.json');
     if (pubData?.publicUrl) {
@@ -412,7 +328,7 @@ export async function fetchSiteConfigFromSupabase(): Promise<CloudSiteConfig | n
   } catch (err) {
     console.warn('Failed to fetch site config from Supabase:', err);
   }
-  return cachedCloudConfig;
+  return allowCached ? cachedCloudConfig : null;
 }
 
 /**

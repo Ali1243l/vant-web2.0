@@ -8,6 +8,7 @@ import { DEFAULT_SITE_CONTROLS } from '../defaultSiteControls';
 import {
   saveSiteConfigToSupabase,
   fetchSiteConfigFromSupabase,
+  resolveStoredImages,
   type CloudSiteConfig,
 } from '../../lib/storage';
 import {
@@ -157,6 +158,7 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
   const applyCloudConfig = useCallback(
     (cloudConfig: CloudSiteConfig) => {
       if (!cloudConfig) return;
+      cloudConfig = resolveStoredImages(cloudConfig);
 
       // 1. Currency Sync across devices
       if (

@@ -13,6 +13,7 @@ import { toEnglishDigits } from '../format';
 import { STANDARD_SIZES, type ProductFormData } from './productFormTypes';
 
 interface Props {
+  onMediaBusyChange?: (busy: boolean) => void;
   formData: ProductFormData;
   setFormData: React.Dispatch<React.SetStateAction<ProductFormData>>;
   isAr: boolean;
@@ -27,6 +28,7 @@ interface Props {
 }
 
 export const ProductSingleMediaSection: React.FC<Props> = ({
+  onMediaBusyChange,
   formData,
   setFormData,
   isAr,
@@ -58,6 +60,7 @@ export const ProductSingleMediaSection: React.FC<Props> = ({
         </div>
 
         <ImageUploader
+          onBusyChange={onMediaBusyChange}
           images={formData.images}
           onChange={(imgs) => setFormData((prev) => ({ ...prev, images: imgs }))}
           maxFiles={12}

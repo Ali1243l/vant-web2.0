@@ -23,6 +23,7 @@ import {
 } from './productFormTypes';
 
 interface Props {
+  onMediaBusyChange?: (busy: boolean) => void;
   formData: ProductFormData;
   setFormData: React.Dispatch<React.SetStateAction<ProductFormData>>;
   isAr: boolean;
@@ -52,6 +53,7 @@ interface Props {
 }
 
 export const ProductColorVariantsSection: React.FC<Props> = ({
+  onMediaBusyChange,
   formData,
   setFormData,
   isAr,
@@ -607,6 +609,7 @@ export const ProductColorVariantsSection: React.FC<Props> = ({
                             </div>
 
                             <ImageUploader
+                              onBusyChange={onMediaBusyChange}
                               images={variant.images}
                               onChange={(imgs) => updateVariant(variant.id, { images: imgs })}
                               maxFiles={8}

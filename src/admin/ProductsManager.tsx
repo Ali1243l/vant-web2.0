@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CloudImageOptimizer } from './products_manager/CloudImageOptimizer';
 import { useAdminBridge, Product } from './useAdminBridge';
 import { filterCatalog, hasProductOffer, productSellingPrice, productLink, catalogOfferPlan } from './products_manager/catalogModel';
 import { ProductFormSheet } from './ProductFormSheet';
@@ -175,6 +176,7 @@ export const ProductsManager: React.FC = () => {
       />
 
       {/* Header and Filter Controls */}
+      <CloudImageOptimizer isAr={isAr} onComplete={() => { void catalog.refreshProducts(); }} />
       <ProductsManagerHeader
         isAr={isAr}
         productsCount={products.length}

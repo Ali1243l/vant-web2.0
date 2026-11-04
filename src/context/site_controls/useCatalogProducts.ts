@@ -2,7 +2,7 @@ import { fetchCatalogPage } from '../../lib/catalogFetch';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Product, ProductAvailability } from '../../types';
 import { supabase } from '../../lib/supabase';
-import { uploadDataUrlToSupabase } from '../../lib/storage';
+import { uploadDataUrlToSupabase, resolveStoredImages } from '../../lib/storage';
 import {
   PRODUCTS_STORAGE_KEY,
   getStoredEnhancements,
@@ -39,8 +39,8 @@ export function useCatalogProducts() {
   const PAGE_SIZE = 12;
 
   const mapSupabaseProducts = (data: any[]): Product[] => {
-    const enhancements = getStoredEnhancements();
-    return (data || []).map((p) => {
+    const enhancements = resolveStoredImages(getStoredEnhancements());
+    return resolveStoredImages(data || []).map((p) => {
       const pIdStr = String(p.id);
       const enh = enhancements[pIdStr] || {};
       const statusStr = String(p.status || '').toUpperCase();
