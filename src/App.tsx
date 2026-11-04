@@ -26,6 +26,7 @@ import { STORE_THEME_CONTROL, parseStoreTheme, storeThemeVariables } from './lib
 import { BANNER_TARGET_CONTROL, parseBannerTarget, matchesBannerTarget, bannerPageRequestKey, type BannerTarget } from './lib/bannerTarget';
 import './storefront-theme.css';
 import { controlActive } from './lib/siteControlModel';
+import { resolveStoreLanguage, STORE_TITLES } from './lib/storeLanguage';
 
 const ALL = 'All';
 const AdminDrawer = lazy(() => import('./components/AdminDrawer'));
@@ -79,7 +80,11 @@ function MainApp() {
     } catch {}
   }, []);
 
-  const [lang, setLang] = useState<Language>('ar');
+  const [lang, setLang] = useState<Language>(() => {
+    let saved: string | null = null;
+    try { saved = localStorage.getItem('vant-language'); } catch {}
+    return resolveStoreLanguage(saved, navigator.languages || [navigator.language]);
+  });
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('vant-theme') as Theme | null;
     if (saved === 'dark' || saved === 'light') return saved;
@@ -222,6 +227,8 @@ function MainApp() {
   useEffect(() => {
     document.documentElement.lang = lang;
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    document.title = STORE_TITLES[lang];
+    try { localStorage.setItem('vant-language', lang); } catch {}
   }, [lang]);
 
   // Sync Theme (Dark Mode)
