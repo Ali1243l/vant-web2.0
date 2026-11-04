@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { cancelsImageHold, imageDetailScale, imageLensAxis, imageLensContentOffset, imageLensOpacity, imageZoomPan, IMAGE_ZOOM_HOLD_MS } from '../src/lib/imageZoomGesture.ts';
+import { cancelsImageHold, imageDetailScale, imageLensAxis, imageLensClip, imageLensContentOffset, imageLensOpacity, imageZoomPan, IMAGE_ZOOM_HOLD_MS } from '../src/lib/imageZoomGesture.ts';
 import { zoomImageSource } from '../src/lib/responsiveImage.ts';
 
 test('the lens starts fading just outside all four photo edges, including corners', () => {
@@ -18,15 +18,22 @@ test('the lens starts fading just outside all four photo edges, including corner
   assert.equal(imageLensOpacity(NaN, 0, 0, 0, 300, 400), 0);
 });
 
-test('real image pixels fill the circle at corners throughout the entry zoom transition', () => {
+test('magnification preserves the pointer sample while its photo window aligns with original edges', () => {
   for (const start of [0, 28, 80]) for (const extent of [150, 300, 450]) for (const factor of [1, 1.2, 1.8]) {
     for (const point of [start, start + extent / 2, start + extent]) {
       const offset = imageLensContentOffset(point, start, extent, 140, factor);
-      assert.ok(offset + start * factor <= 1e-9);
-      assert.ok(offset + (start + extent) * factor >= 140 - 1e-9);
+      assert.equal(offset, 69 - point * factor);
+      const clip = imageLensClip(point, start, extent, 140);
+      const windowStart = point - 69 + clip.start;
+      const windowEnd = point + 69 - clip.end;
+      assert.ok(windowStart >= start && windowEnd <= start + extent);
+      if (point - 69 < start) assert.equal(windowStart, start);
+      if (point + 69 > start + extent) assert.equal(windowEnd, start + extent);
+      assert.ok(point - 69 + offset + start * factor <= windowStart + 1e-9);
+      assert.ok(point - 69 + offset + (start + extent) * factor >= windowEnd - 1e-9);
     }
   }
-  assert.equal(imageLensContentOffset(230, 80, 300, 140, 1.8), 70 - 230 * 1.8);
+  assert.equal(imageLensContentOffset(230, 80, 300, 140, 1.8), 69 - 230 * 1.8);
 });
 
 test('a deliberate hold tolerates finger jitter but cancels swipes in either direction', () => {

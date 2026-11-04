@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useMotionTemplate, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
-import { imageLensAxis, imageLensContentOffset, imageLensOpacity, imageDetailScale, measureZoomImage } from '../../lib/imageZoomGesture';
+import { imageLensAxis, imageLensClip, imageLensContentOffset, imageLensOpacity, imageDetailScale, measureZoomImage } from '../../lib/imageZoomGesture';
 
 export interface LensProps {
   children: React.ReactNode;
@@ -41,6 +41,11 @@ export const Lens: React.FC<LensProps> = ({ children, zoomFactor = 1.8, lensSize
   const top = useMotionTemplate`${ringY}px`;
   const innerLeft = useTransform([sampleX, magnification], ([point, factor]: number[]) => imageLensContentOffset(point, bounds.photoLeft, bounds.photoWidth, diameter, factor));
   const innerTop = useTransform([sampleY, magnification], ([point, factor]: number[]) => imageLensContentOffset(point, bounds.photoTop, bounds.photoHeight, diameter, factor));
+  const clipLeft = useTransform(sampleX, point => imageLensClip(point, bounds.photoLeft, bounds.photoWidth, diameter).start);
+  const clipRight = useTransform(sampleX, point => imageLensClip(point, bounds.photoLeft, bounds.photoWidth, diameter).end);
+  const clipTop = useTransform(sampleY, point => imageLensClip(point, bounds.photoTop, bounds.photoHeight, diameter).start);
+  const clipBottom = useTransform(sampleY, point => imageLensClip(point, bounds.photoTop, bounds.photoHeight, diameter).end);
+  const photoClip = useMotionTemplate`inset(${clipTop}px ${clipRight}px ${clipBottom}px ${clipLeft}px)`;
   const move = (x: number, y: number) => {
     const geometry = containerRef.current && measureZoomImage(containerRef.current);
     if (!geometry || geometry.width <= 8 || geometry.height <= 8) return 0;
@@ -79,10 +84,12 @@ export const Lens: React.FC<LensProps> = ({ children, zoomFactor = 1.8, lensSize
     }}>
     <div className="product-lens-content relative h-full w-full">{children}</div>
     {createPortal(<AnimatePresence>{!disabled && (hovered || keyboard) && <motion.div aria-hidden="true" data-image-lens
-      initial={{ opacity: reducedMotion ? (keyboard ? 1 : edgeOpacity) : 0, scale: reducedMotion ? 1 : .96 }} animate={{ opacity: keyboard ? 1 : edgeOpacity, scale: 1 }} exit={{ opacity: 0, scale: reducedMotion ? 1 : .98 }} transition={{ duration: reducedMotion ? 0 : .16, ease: 'easeOut' }}
+      initial={{ opacity: reducedMotion ? (keyboard ? 1 : edgeOpacity) : 0 }} animate={{ opacity: keyboard ? 1 : edgeOpacity }} exit={{ opacity: 0 }} transition={{ duration: reducedMotion ? 0 : .16, ease: 'easeOut' }}
       className="pointer-events-none fixed z-[1002] overflow-hidden rounded-full border border-white/60 bg-[#f4f4f3] shadow-md dark:bg-[#181a1d]"
       style={{ left, top, width: diameter, height: diameter }}>
-      <motion.div className="absolute" style={{ width: bounds.width, height: bounds.height, left: innerLeft, top: innerTop, scale: magnification, transformOrigin: '0 0' }}><div className="product-lens-content h-full w-full">{children}</div></motion.div>
+      <motion.div data-lens-photo-window className="absolute inset-0" style={{ clipPath: photoClip }}>
+        <motion.div className="absolute" style={{ width: bounds.width, height: bounds.height, left: innerLeft, top: innerTop, scale: magnification, transformOrigin: '0 0' }}><div className="product-lens-content h-full w-full">{children}</div></motion.div>
+      </motion.div>
     </motion.div>}</AnimatePresence>, document.body)}
   </div>;
 };

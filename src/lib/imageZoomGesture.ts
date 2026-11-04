@@ -10,10 +10,14 @@ export function imageLensOpacity(x: number, y: number, left: number, top: number
 }
 
 export function imageLensContentOffset(point: number, start: number, extent: number, diameter: number, factor: number): number {
-  const radius = diameter / 2;
-  const inset = radius / factor;
-  const sample = Math.max(start + inset, Math.min(start + extent - inset, point));
+  const radius = diameter / 2 - 1;
+  const sample = Math.max(start, Math.min(start + extent, point));
   return radius - sample * factor;
+}
+
+export function imageLensClip(center: number, start: number, extent: number, diameter: number) {
+  const innerRadius = diameter / 2 - 1;
+  return { start: Math.max(0, start - (center - innerRadius)), end: Math.max(0, center + innerRadius - start - extent) };
 }
 
 export function imageLensAxis(point: number, start: number, extent: number, diameter: number) {
