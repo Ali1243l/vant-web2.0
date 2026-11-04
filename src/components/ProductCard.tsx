@@ -1,5 +1,5 @@
 import { catalogImageStyle, CATALOG_IMAGE_RATIO } from '../lib/catalogImage';
-import { catalogImageProps } from '../lib/responsiveImage';
+import { catalogImageProps, retryOriginalImage } from '../lib/responsiveImage';
 import { categoryLabel } from '../lib/categoryLabel';
 import { controlActive } from '../lib/siteControlModel';
 import React, { useState, useMemo } from 'react';
@@ -202,7 +202,7 @@ export default React.memo(function ProductCard({
                 decoding="async"
                 referrerPolicy="no-referrer"
                 onLoad={() => setImageResult({ src: primaryImage, failed: false })}
-                onError={() => setImageResult({ src: primaryImage, failed: true })}
+                onError={event => { if (!retryOriginalImage(event.currentTarget)) setImageResult({ src: primaryImage, failed: true }); }}
                 className={`h-full w-full object-cover object-center transition-opacity duration-300 ${
                   availability === 'sold_out' ? 'saturate-[85%]' : ''
                 } ${
@@ -224,6 +224,7 @@ export default React.memo(function ProductCard({
                   loading="lazy"
                   decoding="async"
                   referrerPolicy="no-referrer"
+                  onError={event => { retryOriginalImage(event.currentTarget); }}
                   className={`absolute inset-0 h-full w-full object-cover object-center transition-all duration-500 ease-out ${
                     isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-100 pointer-events-none'
                   }`}

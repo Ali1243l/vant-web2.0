@@ -9,7 +9,6 @@ import Footer from './components/Footer';
 import MasonryGrid from './components/MasonryGrid';
 import ProductDrawer from './components/ProductDrawer';
 import CartDrawer from './components/CartDrawer';
-import ImagePreloader from './components/ImagePreloader';
 import BackToTop from './components/BackToTop';
 import SplashLoader from './components/SplashLoader';
 import MaintenanceScreen from './components/MaintenanceScreen';
@@ -497,9 +496,6 @@ function MainApp() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Background image preloader for butter-smooth carousel & lookbook exploration */}
-      <ImagePreloader products={products} />
 
       {/* Haute-Couture Sticky Header with glassmorphism */}
       <Header

@@ -50,14 +50,6 @@ export default function ProductColorSelector({ variants, lang, selectedColorIdx,
     const left = button.left < bounds.left ? button.left - bounds.left : button.right > bounds.right ? button.right - bounds.right : 0;
     if (left) rail.scrollBy({ left, behavior: 'instant' });
   }, [selectedColorIdx, variants, isAr]);
-  useEffect(() => {
-    for (const variant of variants) {
-      if (variant.images[0]) {
-        const image = new Image();
-        image.src = variant.images[0];
-      }
-    }
-  }, [variants]);
   return (
     <div className="product-color-selector" dir={isAr ? 'rtl' : 'ltr'} role="group" aria-label={isAr ? 'اختيار لون القطعة' : 'Choose piece color'}>
       <div className="product-color-heading">

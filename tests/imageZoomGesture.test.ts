@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { cancelsImageHold, imageDetailScale, imageLensAxis, imageLensClip, imageLensContentOffset, imageLensOpacity, imageZoomPan, IMAGE_ZOOM_HOLD_MS } from '../src/lib/imageZoomGesture.ts';
+import { cancelsImageHold, imageDetailScale, imagePinchScale, imageLensAxis, imageLensClip, imageLensContentOffset, imageLensOpacity, imageZoomPan, IMAGE_ZOOM_HOLD_MS } from '../src/lib/imageZoomGesture.ts';
 import { zoomImageSource } from '../src/lib/responsiveImage.ts';
 
 test('the lens starts fading just outside all four photo edges, including corners', () => {
@@ -72,6 +72,17 @@ test('raster detail scale respects source pixels and high density displays', () 
   assert.equal(imageDetailScale(800, 400, 1.8, 2), 1);
   assert.equal(imageDetailScale(300, 600, 1.8), 1);
   assert.equal(imageDetailScale(NaN, 400, 1.8), 1);
+});
+
+test('mobile pinch magnifies image detail without requesting nonexistent source pixels', () => {
+  const maximum = imageDetailScale(1080, 300, 2.4);
+  assert.equal(maximum, 2.4);
+  assert.equal(imagePinchScale(150, 100, maximum), 1.5);
+  assert.equal(imagePinchScale(400, 100, maximum), 2.4);
+  assert.equal(imagePinchScale(50, 100, maximum), 1);
+  assert.equal(imagePinchScale(200, 0, maximum), 1);
+  assert.equal(imagePinchScale(NaN, 100, maximum), 1);
+  assert.equal(imagePinchScale(400, 100, imageDetailScale(450, 300, 2.4)), 1.5);
 });
 
 test('detail requests upgrade supported images without changing originals or signed links', () => {

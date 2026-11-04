@@ -1,5 +1,10 @@
 export const IMAGE_ZOOM_HOLD_MS = 320;
 
+export function imagePinchScale(distance: number, initialDistance: number, maximum: number): number {
+  if (![distance, initialDistance, maximum].every(Number.isFinite) || initialDistance <= 0) return 1;
+  return Math.max(1, Math.min(maximum, distance / initialDistance));
+}
+
 export function imageLensOpacity(x: number, y: number, left: number, top: number, width: number, height: number): number {
   if (![x, y, left, top, width, height].every(Number.isFinite) || width <= 0 || height <= 0) return 0;
   const edge = Math.min(x - left, left + width - x, y - top, top + height - y);

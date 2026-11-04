@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "images": {
+    "sizes": [96, 240, 400, 640, 960, 1280],
+    "remotePatterns": [{
+      "protocol": "https",
+      "hostname": "gjjsdnyfhhbacuciqwbq.supabase.co",
+      "port": "",
+      "pathname": "^/storage/v1/object/public/product-images/.*$",
+      "search": ""
+    }],
+    "qualities": [80],
+    "formats": ["image/webp"],
+    "minimumCacheTTL": 3600
+  }
+}
