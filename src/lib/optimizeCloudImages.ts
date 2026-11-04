@@ -3,7 +3,7 @@ import { fetchSiteConfigFromSupabase, saveSiteConfigToSupabase, uploadDataUrlToS
 import { imageBlobDataUrl, smartConvertImage } from './imageConversion';
 import { collectStoreImages, isStoreImage } from './imageOptimizationModel';
 
-export interface ImageOptimizationProgress { done: number; total: number; optimized: number; skipped: number; failed: number; savedBytes: number; }
+export interface ImageOptimizationProgress { done: number; total: number; optimized: number; skipped: number; failed: number; savedBytes: number; lastError?: string; }
 
 /** Originals and database rows stay intact; the shared cloud map switches published references. */
 export async function optimizeCloudImages(onProgress: (progress: ImageOptimizationProgress) => void, stopped: () => boolean) {
@@ -38,7 +38,7 @@ export async function optimizeCloudImages(onProgress: (progress: ImageOptimizati
         progress.optimized++;
         progress.savedBytes += Math.max(0, original.size - converted.size);
       }
-    } catch { progress.failed++; }
+    } catch (error) { progress.failed++; progress.lastError = `${source.split('/').pop()}: ${error instanceof Error ? error.message : 'تعذّرت معالجة الصورة'}`; }
     progress.done++;
     onProgress({ ...progress });
   }

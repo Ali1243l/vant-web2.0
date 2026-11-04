@@ -25,5 +25,6 @@ export function CloudImageOptimizer({ isAr, onComplete }: { isAr: boolean; onCom
     {!isSupabaseConfigured && <p className="text-xs text-amber-300">{isAr ? 'المعالجة السحابية متاحة بالنسخة المتصلة بـSupabase.' : 'Cloud processing requires a Supabase connection.'}</p>}
     {progress && <div className="space-y-2 text-xs text-slate-300"><progress className="w-full accent-indigo-500" value={progress.done} max={progress.total || 1} aria-label={isAr ? 'تقدم تحسين الصور' : 'Image optimization progress'}/><p role="status">{progress.done} / {progress.total} · {isAr ? 'محسّنة' : 'Optimized'}: {progress.optimized} · {isAr ? 'لا تحتاج تحويل' : 'Already efficient'}: {progress.skipped} · {isAr ? 'تعذّرت وبقيت أصولها' : 'Failed, originals retained'}: {progress.failed} · {isAr ? 'التوفير' : 'Saved'}: {(progress.savedBytes / 1024 / 1024).toFixed(2)} MB</p></div>}
     {message && <p role="status" className="text-xs leading-relaxed text-indigo-200">{message}</p>}
+    {progress?.lastError && <p role="alert" className="break-words text-xs leading-relaxed text-amber-300">{progress.lastError}</p>}
   </section>;
 }

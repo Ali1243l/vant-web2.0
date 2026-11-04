@@ -36,7 +36,7 @@ test('batch scans all database pages, deduplicates shared images, verifies cloud
     let result = await optimizeCloudImages((report: any) => reports.push(report), () => stop);
     assert.equal(pages, 2);
     assert.equal(downloads.filter(url => url === shared).length, 1);
-    assert.deepEqual(result, { done: 3, total: 3, optimized: 1, skipped: 1, failed: 1, savedBytes: 980 });
+    assert.deepEqual(result, { done: 3, total: 3, optimized: 1, skipped: 1, failed: 1, savedBytes: 980, lastError: 'broken.jpg: offline' });
     assert.equal(mappings[shared], root + 'optimized/result.webp');
     assert.equal(mappings[broken], undefined);
     assert.ok(reports.every(report => report.done <= report.total));
