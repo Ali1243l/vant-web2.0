@@ -8,6 +8,7 @@ import { AdminDrawer } from './AdminDrawer';
 import { Nav } from './Nav';
 import { LockScreen } from './LockScreen';
 const AdminAnalyticsDashboard = lazy(() => import('./AdminAnalyticsDashboard').then(module => ({ default: module.AdminAnalyticsDashboard })));
+const AdminActivityView = lazy(() => import('./AdminActivityView').then(module => ({ default: module.AdminActivityView })));
 const ProductsManager = lazy(() => import('./ProductsManager').then(module => ({ default: module.ProductsManager })));
 const AdminOffersManager = lazy(() => import('./AdminOffersManager').then(module => ({ default: module.AdminOffersManager })));
 const SubscribersList = lazy(() => import('./SubscribersList').then(module => ({ default: module.SubscribersList })));
@@ -101,6 +102,7 @@ function MainLayout({ onClose }: AdminAppProps) {
               </nav>}
               <Suspense fallback={<p role="status" className="p-6 text-slate-300">{isAr ? 'جاري تحميل القسم…' : 'Loading section…'}</p>}>
               {activeView === 'dashboard' && <AdminAnalyticsDashboard />}
+              {activeView === 'activity' && <AdminActivityView />}
               {activeView === 'orders' && <OrdersManager />}
               {activeView === 'products' && <ProductsManager />}
               {activeView === 'sizes' && <AdminSizesView />}

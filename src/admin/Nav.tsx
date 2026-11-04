@@ -12,6 +12,7 @@ import {
   X,
   Ruler,
   Image as ImageIcon,
+  History,
 } from 'lucide-react';
 import { useAdminBridge, AdminView } from './useAdminBridge';
 
@@ -57,6 +58,7 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
     ]},
     { title: 'الإدارة', titleEn: 'MANAGEMENT', items: [
       { id: 'settings', label: 'الإعدادات', labelEn: 'Settings', icon: Store },
+      { id: 'activity', label: 'سجل النشاط', labelEn: 'Activity log', icon: History },
     ]},
   ];
   const selectedSection = ['social', 'backup', 'security'].includes(activeView) ? 'settings' : activeView === 'welcome_modal' ? 'banners' : activeView;

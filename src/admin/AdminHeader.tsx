@@ -96,6 +96,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
     backup: { ar: 'تصدير البيانات والنسخ الاحتياطي', en: 'Multi-Format Export & Backup Hub' },
     settings: { ar: 'الإعدادات', en: 'Master Site Controls & Settings' },
     security: { ar: 'الأمان ورمز دخول الإدارة', en: 'Security & Access Key' },
+    activity: { ar: 'سجل النشاط', en: 'Activity log' },
     widgets: { ar: 'استوديو الأدوات والوحدات المعيارية', en: 'Widgets Studio & UI Tools' },
   };
 
