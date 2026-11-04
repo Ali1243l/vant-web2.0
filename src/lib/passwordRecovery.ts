@@ -5,7 +5,7 @@ export function isPasswordRecoveryUrl(url: string): boolean {
 }
 
 export async function saveRecoveredPassword(client: any, password: string, confirmation: string): Promise<void> {
-  if (password.length < 12 || password.length > 128) throw new Error('اختَر كلمة مرور بين 12 و128 حرفاً.');
+  if (password.length < 8 || password.length > 128) throw new Error('اختَر كلمة مرور بين 8 و128 حرفاً.');
   if (password !== confirmation) throw new Error('كلمتا المرور غير متطابقتين.');
   if (!client) throw new Error('اتصال خدمة الحسابات غير متاح.');
   const { data, error } = await client.auth.getUser();

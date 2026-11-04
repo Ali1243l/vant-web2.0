@@ -4,6 +4,7 @@ import { DEFAULT_SITE_SETTINGS } from '../siteControlsTypes';
 import { supabase } from '../../lib/supabase';
 import { saveSiteConfigToSupabase } from '../../lib/storage';
 import { safeStorage } from '../../utils/safeStorage';
+import { requireCloudAdmin } from '../../lib/cloudAdminAccess';
 import {
   CURRENCY_STORAGE_KEY,
   PIN_STORAGE_KEY,
@@ -45,6 +46,31 @@ export function useSiteSettingsAndAdmin() {
     } catch {}
     return false;
   });
+
+  useEffect(() => {
+    const client = supabase;
+    if (!client) return;
+    let active = true;
+    let revision = 0;
+    const restore = async () => {
+      const current = ++revision;
+      try {
+        await requireCloudAdmin(client);
+        if (!active || current !== revision) return;
+        setIsAdminUnlocked(true);
+        try { sessionStorage.setItem(SESSION_AUTH_KEY, 'true'); } catch {}
+      } catch { /* Keep the local lock available when cloud sign-in is unavailable. */ }
+    };
+    void restore();
+    const { data } = client.auth.onAuthStateChange(event => {
+      if (event === 'SIGNED_OUT') {
+        revision++;
+        setIsAdminUnlocked(false);
+        try { sessionStorage.removeItem(SESSION_AUTH_KEY); } catch {}
+      } else setTimeout(() => { if (active) void restore(); }, 0);
+    });
+    return () => { active = false; revision++; data.subscription.unsubscribe(); };
+  }, []);
 
   const unlockAdmin = (pin: string): boolean => {
     let currentPin = safeStorage.getItem(PIN_STORAGE_KEY) || '';

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Wand2 } from 'lucide-react';
+import { Eye, EyeOff, Wand2 } from 'lucide-react';
 import { optimizeCloudImages, type ImageOptimizationProgress } from '../../lib/optimizeCloudImages';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
 import { cloudSignInError, requireCloudAdmin } from '../../lib/cloudAdminAccess';
@@ -11,6 +11,7 @@ export function CloudImageOptimizer({ isAr, onComplete }: { isAr: boolean; onCom
   const [authorized, setAuthorized] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const stopped = useRef(false);
   const running = useRef(false);
@@ -51,7 +52,8 @@ export function CloudImageOptimizer({ isAr, onComplete }: { isAr: boolean; onCom
     {!isSupabaseConfigured && <p className="text-xs text-amber-300">{isAr ? 'المعالجة السحابية متاحة بالنسخة المتصلة بـSupabase.' : 'Cloud processing requires a Supabase connection.'}</p>}
     {isSupabaseConfigured && !authorized && <form onSubmit={signIn} className="space-y-3 rounded-xl border border-slate-700 p-3">
       <p className="text-xs leading-relaxed text-slate-300">{isAr ? 'رفع الصور يحتاج جلسة حساب أدمن المتجر المسجّل في Supabase Auth. سجّل الدخول مرة واحدة لتفعيل الرفع والتحسين تلقائياً.' : 'Image uploads require the store admin account in Supabase Auth. Sign in once to enable automatic uploads and optimization.'}</p>
-      <div className="grid gap-3 sm:grid-cols-2"><label className="text-xs text-slate-300">{isAr ? 'بريد أدمن المتجر' : 'Store admin email'}<input type="email" required autoComplete="username" dir="ltr" value={email} onChange={event => setEmail(event.target.value)} className="mt-2 min-h-11 w-full rounded-lg border border-slate-600 bg-slate-950 px-3 text-sm text-white"/></label><label className="text-xs text-slate-300">{isAr ? 'كلمة مرور حساب المتجر' : 'Store account password'}<input type="password" required autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} className="mt-2 min-h-11 w-full rounded-lg border border-slate-600 bg-slate-950 px-3 text-sm text-white"/></label></div>
+      <div className="grid gap-3 sm:grid-cols-2"><label className="text-xs text-slate-300">{isAr ? 'بريد أدمن المتجر' : 'Store admin email'}<input type="email" required autoComplete="username" dir="ltr" value={email} onChange={event => setEmail(event.target.value)} className="mt-2 min-h-11 w-full rounded-lg border border-slate-600 bg-slate-950 px-3 text-sm text-white"/></label><label className="text-xs text-slate-300">{isAr ? 'كلمة مرور حساب المتجر' : 'Store account password'}<input type={showPassword ? 'text' : 'password'} required autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} className="mt-2 min-h-11 w-full rounded-lg border border-slate-600 bg-slate-950 px-3 text-sm text-white"/></label></div>
+      <button type="button" aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)} className="inline-flex min-h-11 items-center gap-2 text-sm text-blue-300">{showPassword ? <EyeOff size={18} aria-hidden="true"/> : <Eye size={18} aria-hidden="true"/>}{isAr ? (showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور') : (showPassword ? 'Hide password' : 'Show password')}</button>
       <button type="submit" disabled={signingIn || busy} className="min-h-11 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white disabled:opacity-50">{signingIn ? (isAr ? 'جارِ التحقق...' : 'Verifying...') : (isAr ? 'تسجيل الدخول وبدء التحسين' : 'Sign in and optimize')}</button>
     </form>}
     {authorized && <p className="text-xs text-emerald-300">{isAr ? 'جلسة أدمن Supabase متصلة · الرفع التلقائي متاح' : 'Supabase admin connected · automatic uploads enabled'}</p>}

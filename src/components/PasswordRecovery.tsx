@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { saveRecoveredPassword } from '../lib/passwordRecovery';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function PasswordRecovery({ invalidLink }: { invalidLink: boolean }) {
   const [checking, setChecking] = useState(true);
@@ -10,6 +11,7 @@ export default function PasswordRecovery({ invalidLink }: { invalidLink: boolean
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [message, setMessage] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   useEffect(() => {
     document.title = 'استعادة كلمة المرور | VANT';
     const client = supabase;
@@ -43,9 +45,10 @@ export default function PasswordRecovery({ invalidLink }: { invalidLink: boolean
       <div><h1 id="recovery-title" className="text-2xl font-bold">{saved ? 'تم تحديث كلمة المرور' : 'تعيين كلمة مرور الحساب'}</h1><p className="mt-3 text-sm leading-7 text-slate-400">هذه كلمة مرور حساب المتجر السحابي، وهي مستقلة عن رمز قفل لوحة الإدارة.</p></div>
       {checking ? <p role="status">جارِ التحقق من رابط الاستعادة…</p> : saved ? <p role="status" className="text-emerald-300">حُفظت كلمة المرور الجديدة. ارجع إلى الإدارة وسجّل الدخول بحساب المتجر لإكمال تحسين الصور.</p> : ready ? <form onSubmit={submit} className="space-y-5">
         <fieldset disabled={busy} className="space-y-5">
-          <label className="block text-sm">كلمة المرور الجديدة<input type="password" autoComplete="new-password" dir="ltr" required minLength={12} maxLength={128} value={password} onChange={event => setPassword(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-slate-600 bg-slate-950 px-3 text-base"/></label>
-          <label className="block text-sm">تأكيد كلمة المرور<input type="password" autoComplete="new-password" dir="ltr" required minLength={12} maxLength={128} value={confirmation} onChange={event => setConfirmation(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-slate-600 bg-slate-950 px-3 text-base"/></label>
-          <p className="text-xs leading-6 text-slate-400">12 حرفاً على الأقل. استخدم كلمة فريدة واحفظها بمكان آمن.</p>
+          <label className="block text-sm">كلمة المرور الجديدة<input type={showPassword ? 'text' : 'password'} autoComplete="new-password" dir="ltr" required minLength={8} maxLength={128} value={password} onChange={event => setPassword(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-slate-600 bg-slate-950 px-3 text-base"/></label>
+          <label className="block text-sm">تأكيد كلمة المرور<input type={showPassword ? 'text' : 'password'} autoComplete="new-password" dir="ltr" required minLength={8} maxLength={128} value={confirmation} onChange={event => setConfirmation(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-slate-600 bg-slate-950 px-3 text-base"/></label>
+          <button type="button" aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)} className="inline-flex min-h-11 items-center gap-2 text-sm text-blue-300">{showPassword ? <EyeOff size={18} aria-hidden="true"/> : <Eye size={18} aria-hidden="true"/>}{showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}</button>
+          <p className="text-xs leading-6 text-slate-400">8 أحرف على الأقل. تعيين كلمة المرور مطلوب مرة واحدة، وتبقى جلسة الحساب محفوظة بهذا المتصفح ما لم تسجّل الخروج أو تنتهي صلاحيتها.</p>
           <button type="submit" className="min-h-12 w-full rounded-xl bg-blue-600 px-4 font-semibold disabled:opacity-50">{busy ? 'جارِ الحفظ…' : 'حفظ كلمة المرور الجديدة'}</button>
         </fieldset>
       </form> : <div className="space-y-3 rounded-xl border border-amber-400/30 bg-amber-400/5 p-4 text-sm leading-7"><h2 className="font-semibold text-amber-200">الرابط غير متاح أو انتهت صلاحيته</h2><p>اطلب رسالة جديدة من تفاصيل حسابك في Supabase عبر Send password recovery، ثم افتح رابط أحدث رسالة مرة واحدة.</p><p>إذا رجعك الرابط إلى localhost، صحّح Site URL من Authentication → URL Configuration إلى https://vant-web.vercel.app أولاً.</p></div>}
