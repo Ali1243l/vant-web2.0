@@ -24,5 +24,7 @@ if (typeof window !== 'undefined' && !recovering) {
   };
 }
 
-createRoot(document.getElementById('root')!).render(recovering ? <Suspense fallback={<p dir="rtl" role="status">جارِ التحقق من رابط الاستعادة…</p>}><PasswordRecovery invalidLink={recoveryLinkError} /></Suspense> : <App />);
+const root = document.getElementById('root')!;
+if (recovering) root.classList.add('app-mounted');
+createRoot(root).render(recovering ? <Suspense fallback={<p dir="rtl" role="status">جارِ التحقق من رابط الاستعادة…</p>}><PasswordRecovery invalidLink={recoveryLinkError} /></Suspense> : <App />);
 
