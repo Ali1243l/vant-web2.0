@@ -214,6 +214,7 @@ export async function uploadDataUrlToSupabase(
         cacheControl: '31536000',
         upsert: false,
       });
+    if (error) throw new Error(error.message);
 
     if (!error && data?.path) {
       const { data: pubData } = supabase.storage
@@ -229,9 +230,9 @@ export async function uploadDataUrlToSupabase(
     }
   } catch (err) {
     console.warn('Failed to upload Data URL to Supabase Storage:', err);
+    throw err;
   }
-
-  return imageBlobDataUrl(blob);
+  throw new Error('لم يرجع التخزين رابطاً للصورة المرفوعة.');
 }
 
 /**
