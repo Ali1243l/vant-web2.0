@@ -27,28 +27,26 @@ test('a deliberate hold tolerates finger jitter but cancels swipes in either dir
   assert.equal(cancelsImageHold(100, 100, NaN, 100), true);
 });
 
-test('the circle can cross each photo edge slightly while its sample stays attached to its center', () => {
-  for (const start of [0, 82]) for (const extent of [150, 300, 500]) for (const factor of [1, 1.4, 1.8]) {
+test('the lens center follows the pointer all the way to each photo edge', () => {
+  for (const start of [0, 82]) for (const extent of [150, 300, 500]) {
     const diameter = Math.min(140, extent - 8);
     for (const point of [-999, start, start + extent / 2, start + extent, 9999]) {
       const axis = imageLensAxis(point, start, extent, diameter);
       assert.equal(axis.sample, axis.ring + diameter / 2);
-      const margin = Math.min(12, extent * .04);
-      assert.ok(axis.ring >= start - margin && axis.ring + diameter <= start + extent + margin);
-      assert.ok(axis.sample - diameter / (2 * factor) >= start - margin - 1e-9);
-      assert.ok(axis.sample + diameter / (2 * factor) <= start + extent + margin + 1e-9);
+      assert.equal(axis.sample, Math.max(start, Math.min(start + extent, point)));
+      assert.ok(axis.ring >= start - diameter / 2 && axis.ring + diameter <= start + extent + diameter / 2);
     }
   }
 });
 
-test('the circle itself extends beyond the photo, rather than only extending its activation area', () => {
-  assert.equal(imageLensAxis(82, 82, 300, 140).ring, 70);
-  assert.equal(imageLensAxis(382, 82, 300, 140).ring + 140, 394);
+test('half the circle extends beyond the photo when its center reaches an edge', () => {
+  assert.equal(imageLensAxis(82, 82, 300, 140).ring, 12);
+  assert.equal(imageLensAxis(382, 82, 300, 140).ring + 140, 452);
 });
 
 test('moving beyond a lens boundary cannot slide its content inside a stationary circle', () => {
-  assert.deepEqual(imageLensAxis(0, 82, 300, 140), imageLensAxis(120, 82, 300, 140));
-  assert.deepEqual(imageLensAxis(350, 82, 300, 140), imageLensAxis(999, 82, 300, 140));
+  assert.deepEqual(imageLensAxis(0, 82, 300, 140), imageLensAxis(82, 82, 300, 140));
+  assert.deepEqual(imageLensAxis(382, 82, 300, 140), imageLensAxis(999, 82, 300, 140));
 });
 
 test('raster detail scale respects source pixels and high density displays', () => {

@@ -11,11 +11,10 @@ export function imageLensOpacity(x: number, y: number, left: number, top: number
 
 export function imageLensAxis(point: number, start: number, extent: number, diameter: number) {
   const radius = diameter / 2;
-  const margin = Math.min(12, extent * .04);
-  const ring = Math.max(start - margin, Math.min(start + extent - diameter + margin, point - radius));
+  const sample = Math.max(start, Math.min(start + extent, point));
   return {
-    sample: ring + radius,
-    ring,
+    sample,
+    ring: sample - radius,
   };
 }
 
