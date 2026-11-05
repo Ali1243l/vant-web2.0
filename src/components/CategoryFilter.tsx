@@ -174,6 +174,7 @@ export default function CategoryFilter({
                 {isOffersOnly && (
                   <motion.div
                     layoutId="activeTabPill"
+                    data-store-category-active
                     className="absolute inset-0 rounded-full bg-[#15171c] dark:bg-white shadow-xs ring-1 ring-black/10 dark:ring-white/20"
                     transition={{ type: 'spring', stiffness: 480, damping: 35 }}
                   />
@@ -213,6 +214,7 @@ export default function CategoryFilter({
                   {isActive && (
                     <motion.div
                       layoutId="activeTabPill"
+                      data-store-category-active
                       className="absolute inset-0 rounded-full bg-[#15171c] dark:bg-white shadow-xs ring-1 ring-black/10 dark:ring-white/20"
                       transition={{ type: 'spring', stiffness: 480, damping: 35 }}
                     />

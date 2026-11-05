@@ -11,6 +11,7 @@
 [data-storefront-theme] [data-store-price], [data-storefront-theme] [data-store-footer] a { color: var(--store-link); }
 [data-storefront-theme] [data-store-primary], [data-storefront-theme] .store-category-rail [role="tab"][aria-selected="true"] { background: var(--store-accent); color: var(--store-on-accent); border-color: var(--store-accent); border-radius: var(--store-button-radius); }
 [data-storefront-theme] .store-category-rail [role="tab"][aria-selected="false"] { background: var(--store-surface); color: var(--store-text); border-color: var(--store-border); }
+[data-storefront-theme] [data-store-category-active] { background:var(--store-accent); border-radius:var(--store-button-radius); box-shadow:none; }
 [data-storefront-theme] [data-store-footer] { background: var(--store-surface); border-color: var(--store-border); }
 [data-storefront-theme] [data-store-grid] { gap: var(--store-spacing); }
 [data-storefront-theme] [data-store-card-image] { border-radius: var(--store-radius); }
