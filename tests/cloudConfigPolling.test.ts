@@ -7,7 +7,7 @@ test('live config checks metadata, downloads changed content and always reads fr
   t.mock.method(console, 'warn', () => {});
   const bundle = await build({ entryPoints: [fileURLToPath(new URL('../src/lib/storage.ts', import.meta.url))], bundle: true, write: false, format: 'esm', platform: 'node', plugins: [{ name: 'config-fixture', setup(builder) {
     builder.onResolve({ filter: /^\.\/supabase$/ }, args => ({ path: args.path, namespace: 'fixture' }));
-    builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: 'export const supabase={storage:{from:()=>({upload:async()=>({error:null}),getPublicUrl:()=>({data:{publicUrl:"https://example.test/config.json"}})})}};' }));
+    builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: 'export const supabase={storage:{from:()=>({upload:async()=>({error:null}),download:async()=>({data:await(await fetch("https://example.test/config.json")).blob(),error:null}),getPublicUrl:()=>({data:{publicUrl:"https://example.test/config.json"}})})}};' }));
   } }] });
   const { fetchSiteConfigFromSupabase: read, saveSiteConfigToSupabase: save } = await import('data:text/javascript;base64,' + Buffer.from(bundle.outputFiles[0].text).toString('base64'));
   const originalFetch = globalThis.fetch;

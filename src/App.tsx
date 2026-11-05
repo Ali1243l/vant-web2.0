@@ -11,6 +11,8 @@ import ProductDrawer from './components/ProductDrawer';
 import CartDrawer from './components/CartDrawer';
 import BackToTop from './components/BackToTop';
 import SplashLoader from './components/SplashLoader';
+import StoreSeasonAtmosphere from './components/StoreSeasonAtmosphere';
+import { initialAdminModule } from './lib/initialAdminModule';
 import MaintenanceScreen from './components/MaintenanceScreen';
 import { SiteControlsProvider, useSiteControls } from './context/SiteControlsContext';
 import { trackEvent, trackVisitorRegion } from './lib/analytics';
@@ -30,7 +32,7 @@ import { controlActive } from './lib/siteControlModel';
 import { resolveStoreLanguage, STORE_TITLES } from './lib/storeLanguage';
 
 const ALL = 'All';
-const AdminDrawer = lazy(() => import('./components/AdminDrawer'));
+const AdminDrawer = lazy(() => initialAdminModule(() => import('./components/AdminDrawer')));
 
 
 
@@ -99,6 +101,7 @@ function MainApp() {
   const lastBannerPageAttempt = useRef<string | null>(null);
   const storeThemeRaw = getControl(STORE_THEME_CONTROL).actionValue;
   const seasonalAppearance = getControl(HERO_APPEARANCE_CONTROL).actionValue;
+  const storeSeason = useMemo(() => parseStoreTheme(storeThemeRaw).enabled ? parseHeroAppearance(seasonalAppearance) : undefined, [storeThemeRaw, seasonalAppearance]);
   useEffect(() => {
     const root = document.documentElement;
     const settings = parseStoreTheme(storeThemeRaw);
@@ -461,6 +464,7 @@ function MainApp() {
             theme === 'dark' ? 'bg-[#0d0f12] text-[#f3f4f6]' : 'bg-[#f8f9fa] text-[#15171c]'
           }`}
         >
+      {storeSeason && <StoreSeasonAtmosphere settings={storeSeason} paused={isAdminOpen || Boolean(selected) || isCartOpen || showSplash} />}
       {/* Luxury Ambient Lighting Glow Orbs */}
       <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 h-[520px] w-[850px] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(0,74,215,0.06),transparent_70%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.08),transparent_70%)] blur-3xl animate-luxury-glow" />
       <div className="pointer-events-none absolute top-[40%] ltr:-right-48 rtl:-left-48 h-[400px] w-[400px] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.03),transparent_70%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.04),transparent_70%)] blur-3xl" />
@@ -538,7 +542,7 @@ function MainApp() {
       </Header>
 
       {/* Main Content Area: Responsive Fluid Sizing for 16:9 Widescreen & 9:16 Mobile */}
-      <main className="mx-auto w-full max-w-[1920px] flex-1 px-3 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 pt-2 sm:pt-3 md:pt-4 pb-2 sm:pb-3 lg:pb-4 overflow-x-clip">
+      <main className="relative z-[1] mx-auto w-full max-w-[1920px] flex-1 px-3 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 pt-2 sm:pt-3 md:pt-4 pb-2 sm:pb-3 lg:pb-4 overflow-x-clip">
         {error && <div role="alert" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm"><p>{lang === 'ar' ? 'تعذّر تحديث التشكيلة. المعروض قد يكون آخر نسخة محفوظة؛ تأكد من التوفر مع المتجر.' : 'The collection could not refresh. Cached pieces may be shown; confirm availability with the store.'}</p><button type="button" disabled={loading} onClick={() => void refresh()} className="min-h-11 rounded-xl border border-current px-4">{lang === 'ar' ? 'إعادة المحاولة' : 'Retry'}</button></div>}
         {(bannerSelection || isOffersOnly) && hasMore && visible.length === 0 && <button type="button" disabled={loadingMore} onClick={() => void loadMore()} className="mb-4 min-h-11 rounded-xl border border-current px-4 text-sm disabled:opacity-50">{lang === 'ar' ? (loadingMore ? 'جاري تحميل باقي الاختيارات…' : 'تحميل المزيد من الاختيارات أو إعادة المحاولة') : (loadingMore ? 'Loading selections…' : 'Load more selections or retry')}</button>}
         {bannerSelection && <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-500/30 bg-blue-500/10 p-4 text-sm"><span>{lang === 'ar' ? 'اختيارات البانر' : 'Banner selection'} · {visible.length}{hasMore ? '+' : ''}</span><button type="button" onClick={() => { setBannerSelection(null); setIsOffersOnly(false); setSearchQuery(''); setAvailabilityFilter('all'); }} className="min-h-11 underline">{lang === 'ar' ? 'عرض التشكيلة الكاملة' : 'View full collection'}</button></div>}
@@ -662,6 +666,7 @@ function MainApp() {
         ) : (
           <div id="catalog-grid" className="w-full">
             <MasonryGrid
+              season={storeSeason}
               products={visible}
               loading={loading}
               loadingMore={loadingMore}

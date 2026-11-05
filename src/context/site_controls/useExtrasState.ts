@@ -1,321 +1,66 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { TrendItem } from '../../types';
 import { DEFAULT_FEATURED_TRENDS } from '../../data/trends';
 import { DEFAULT_ACTIVE_FOOTER_LINKS, type FooterSocialLink } from '../../data/socialPlatforms';
-import { MasterSizeItem, DEFAULT_MASTER_SIZES } from '../../data/sizeGuide';
+import { type MasterSizeItem, DEFAULT_MASTER_SIZES, validateMasterSize } from '../../data/sizeGuide';
 import { saveSiteConfigToSupabase } from '../../lib/storage';
-import { SIZES_STORAGE_KEY, getStoredEnhancements } from './constants';
-import type { SiteControlItem, CurrencyType } from '../siteControlsTypes';
+import { supabase } from '../../lib/supabase';
+import { SIZES_STORAGE_KEY } from './constants';
 
-export function useExtrasState(
-  currency: CurrencyType,
-  controls: Record<string, SiteControlItem>
-) {
-  // Trend Cards Studio State
-  const [trendItems, setTrendItems] = useState<TrendItem[]>(() => {
-    try {
-      if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem('vant_custom_trends_v2');
-        if (saved) return JSON.parse(saved);
+export function useExtrasState() {
+  const read = <T,>(key: string, fallback: T): T => {
+    try { const saved = JSON.parse(localStorage.getItem(key) || 'null'); return Array.isArray(saved) ? saved as T : fallback; } catch { return fallback; }
+  };
+  const [trendItems, setTrendItems] = useState<TrendItem[]>(() => read('vant_custom_trends_v2', DEFAULT_FEATURED_TRENDS));
+  const [socialLinks, setSocialLinks] = useState<FooterSocialLink[]>(() => read('vant_social_links_v1', DEFAULT_ACTIVE_FOOTER_LINKS));
+  const [masterSizes, setMasterSizes] = useState<MasterSizeItem[]>(() => read(SIZES_STORAGE_KEY, DEFAULT_MASTER_SIZES));
+  const current = useRef({ trendItems, socialLinks, masterSizes });
+  current.current = { trendItems, socialLinks, masterSizes };
+  const queue = useRef(Promise.resolve(true));
+  const setters = { trendItems: setTrendItems, socialLinks: setSocialLinks, masterSizes: setMasterSizes };
+  const keys = { trendItems: 'vant_custom_trends_v2', socialLinks: 'vant_social_links_v1', masterSizes: SIZES_STORAGE_KEY };
+  type Extras = typeof current.current;
+  const commit = <K extends keyof Extras>(key: K, transform: (rows: Extras[K]) => Extras[K]): Promise<boolean> => {
+    const operation = queue.current.then(async () => {
+      try {
+        const next = transform(current.current[key]);
+        if (key === 'masterSizes' && (next as MasterSizeItem[]).some(row => validateMasterSize(row, next as MasterSizeItem[]))) throw new Error('invalid sizes');
+        if (key === 'socialLinks') for (const link of next as FooterSocialLink[]) {
+          const url = new URL(link.href);
+          if (!['https:', 'http:', 'mailto:', 'tel:'].includes(url.protocol) || url.username || url.password || !link.name.trim()) throw new Error('invalid link');
+        }
+        if (supabase && !await saveSiteConfigToSupabase({ [key === 'masterSizes' ? 'sizeGuideRows' : key]: next }, true)) throw new Error('save');
+        if (!supabase) localStorage.setItem(keys[key], JSON.stringify(next));
+        current.current = { ...current.current, [key]: next };
+        (setters[key] as (rows: Extras[K]) => void)(next);
+        return true;
+      } catch {
+        return false;
       }
-    } catch {}
-    return DEFAULT_FEATURED_TRENDS;
-  });
-
-  // Social & Platforms State (60+ Presets & Custom Links)
-  const [socialLinks, setSocialLinks] = useState<FooterSocialLink[]>(() => {
-    try {
-      if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem('vant_social_links_v1');
-        if (saved) return JSON.parse(saved);
-      }
-    } catch {}
-    return DEFAULT_ACTIVE_FOOTER_LINKS;
-  });
-
-  // Master Sizing & Dimensions State (XS, S, M, L, XL, XXL, and Custom Sizes)
-  const [masterSizes, setMasterSizes] = useState<MasterSizeItem[]>(() => {
-    try {
-      if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem(SIZES_STORAGE_KEY);
-        if (saved) return JSON.parse(saved);
-      }
-    } catch {}
-    return DEFAULT_MASTER_SIZES;
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('vant_custom_trends_v2', JSON.stringify(trendItems));
-    } catch {}
-  }, [trendItems]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('vant_social_links_v1', JSON.stringify(socialLinks));
-    } catch {}
-  }, [socialLinks]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(SIZES_STORAGE_KEY, JSON.stringify(masterSizes));
-    } catch {}
-  }, [masterSizes]);
-
-  // Trends
-  const updateTrendItem = (id: string, updates: Partial<TrendItem>) => {
-    setTrendItems((prev) => {
-      const nextTrends = prev.map((item) => (item.id === id ? { ...item, ...updates } : item));
-      try {
-        localStorage.setItem('vant_custom_trends_v2', JSON.stringify(nextTrends));
-      } catch {}
-      saveSiteConfigToSupabase({
-        currency,
-        controls,
-        trendItems: nextTrends,
-        socialLinks,
-        enhancements: getStoredEnhancements(),
-      });
-      return nextTrends;
     });
+    queue.current = operation;
+    return operation;
   };
-
-  const resetTrendsToDefault = () => {
-    setTrendItems(DEFAULT_FEATURED_TRENDS);
-    try {
-      localStorage.removeItem('vant_custom_trends_v2');
-    } catch {}
-    saveSiteConfigToSupabase({
-      currency,
-      controls,
-      trendItems: DEFAULT_FEATURED_TRENDS,
-      socialLinks,
-      enhancements: getStoredEnhancements(),
-    });
-  };
-
-  // Social Links
-  const updateSocialLink = (id: string, updates: Partial<FooterSocialLink>) => {
-    setSocialLinks((prev) => {
-      const nextSocial = prev.map((link) => (link.id === id ? { ...link, ...updates } : link));
-      try {
-        localStorage.setItem('vant_social_links_v1', JSON.stringify(nextSocial));
-      } catch {}
-      saveSiteConfigToSupabase({
-        currency,
-        controls,
-        trendItems,
-        socialLinks: nextSocial,
-        enhancements: getStoredEnhancements(),
-      });
-      return nextSocial;
-    });
-  };
-
-  const addSocialLink = (link: FooterSocialLink) => {
-    setSocialLinks((prev) => {
-      const nextSocial = [...prev, link];
-      try {
-        localStorage.setItem('vant_social_links_v1', JSON.stringify(nextSocial));
-      } catch {}
-      saveSiteConfigToSupabase({
-        currency,
-        controls,
-        trendItems,
-        socialLinks: nextSocial,
-        enhancements: getStoredEnhancements(),
-      });
-      return nextSocial;
-    });
-  };
-
-  const removeSocialLink = (id: string) => {
-    setSocialLinks((prev) => {
-      const nextSocial = prev.filter((link) => link.id !== id);
-      try {
-        localStorage.setItem('vant_social_links_v1', JSON.stringify(nextSocial));
-      } catch {}
-      saveSiteConfigToSupabase({
-        currency,
-        controls,
-        trendItems,
-        socialLinks: nextSocial,
-        enhancements: getStoredEnhancements(),
-      });
-      return nextSocial;
-    });
-  };
-
-  const toggleSocialLinkActive = (id: string) => {
-    setSocialLinks((prev) => {
-      const nextSocial = prev.map((link) => (link.id === id ? { ...link, isActive: !link.isActive } : link));
-      try {
-        localStorage.setItem('vant_social_links_v1', JSON.stringify(nextSocial));
-      } catch {}
-      saveSiteConfigToSupabase({
-        currency,
-        controls,
-        trendItems,
-        socialLinks: nextSocial,
-        enhancements: getStoredEnhancements(),
-      });
-      return nextSocial;
-    });
-  };
-
-  const reorderSocialLinks = (reordered: FooterSocialLink[]) => {
-    setSocialLinks(reordered);
-    try {
-      localStorage.setItem('vant_social_links_v1', JSON.stringify(reordered));
-    } catch {}
-    saveSiteConfigToSupabase({
-      currency,
-      controls,
-      trendItems,
-      socialLinks: reordered,
-      enhancements: getStoredEnhancements(),
-    });
-  };
-
-  const resetSocialLinksToDefault = () => {
-    setSocialLinks(DEFAULT_ACTIVE_FOOTER_LINKS);
-    try {
-      localStorage.removeItem('vant_social_links_v1');
-    } catch {}
-    saveSiteConfigToSupabase({
-      currency,
-      controls,
-      trendItems,
-      socialLinks: DEFAULT_ACTIVE_FOOTER_LINKS,
-      sizeGuideRows: masterSizes,
-      enhancements: getStoredEnhancements(),
-    });
-  };
-
-  // Master Sizes
-  const updateMasterSize = (id: string, updates: Partial<MasterSizeItem>) => {
-    setMasterSizes((prev) => {
-      const next = prev.map((s) => (s.id === id ? { ...s, ...updates } : s));
-      try {
-        localStorage.setItem(SIZES_STORAGE_KEY, JSON.stringify(next));
-      } catch {}
-      saveSiteConfigToSupabase({
-        currency,
-        controls,
-        trendItems,
-        socialLinks,
-        sizeGuideRows: next,
-        enhancements: getStoredEnhancements(),
-      });
-      return next;
-    });
-  };
-
-  const addMasterSize = (item: Omit<MasterSizeItem, 'id'> & { id?: string }) => {
-    setMasterSizes((prev) => {
-      const newId = item.id || `size_${Date.now()}`;
-      const next = [...prev, { ...item, id: newId }];
-      try {
-        localStorage.setItem(SIZES_STORAGE_KEY, JSON.stringify(next));
-      } catch {}
-      saveSiteConfigToSupabase({
-        currency,
-        controls,
-        trendItems,
-        socialLinks,
-        sizeGuideRows: next,
-        enhancements: getStoredEnhancements(),
-      });
-      return next;
-    });
-  };
-
-  const deleteMasterSize = (id: string) => {
-    setMasterSizes((prev) => {
-      const next = prev.filter((s) => s.id !== id);
-      try {
-        localStorage.setItem(SIZES_STORAGE_KEY, JSON.stringify(next));
-      } catch {}
-      saveSiteConfigToSupabase({
-        currency,
-        controls,
-        trendItems,
-        socialLinks,
-        sizeGuideRows: next,
-        enhancements: getStoredEnhancements(),
-      });
-      return next;
-    });
-  };
-
-  const toggleMasterSize = (id: string) => {
-    setMasterSizes((prev) => {
-      const next = prev.map((s) => (s.id === id ? { ...s, enabled: !s.enabled } : s));
-      try {
-        localStorage.setItem(SIZES_STORAGE_KEY, JSON.stringify(next));
-      } catch {}
-      saveSiteConfigToSupabase({
-        currency,
-        controls,
-        trendItems,
-        socialLinks,
-        sizeGuideRows: next,
-        enhancements: getStoredEnhancements(),
-      });
-      return next;
-    });
-  };
-
-  const reorderMasterSizes = (reordered: MasterSizeItem[]) => {
-    setMasterSizes(reordered);
-    try {
-      localStorage.setItem(SIZES_STORAGE_KEY, JSON.stringify(reordered));
-    } catch {}
-    saveSiteConfigToSupabase({
-      currency,
-      controls,
-      trendItems,
-      socialLinks,
-      sizeGuideRows: reordered,
-      enhancements: getStoredEnhancements(),
-    });
-  };
-
-  const resetMasterSizesToDefault = () => {
-    setMasterSizes(DEFAULT_MASTER_SIZES);
-    try {
-      localStorage.removeItem(SIZES_STORAGE_KEY);
-    } catch {}
-    saveSiteConfigToSupabase({
-      currency,
-      controls,
-      trendItems,
-      socialLinks,
-      sizeGuideRows: DEFAULT_MASTER_SIZES,
-      enhancements: getStoredEnhancements(),
-    });
-  };
-
+  useEffect(() => { try { localStorage.setItem(keys.trendItems, JSON.stringify(trendItems)); } catch {} }, [trendItems]);
+  useEffect(() => { try { localStorage.setItem(keys.socialLinks, JSON.stringify(socialLinks)); } catch {} }, [socialLinks]);
+  useEffect(() => { try { localStorage.setItem(keys.masterSizes, JSON.stringify(masterSizes)); } catch {} }, [masterSizes]);
   return {
-    trendItems,
-    setTrendItems,
-    updateTrendItem,
-    resetTrendsToDefault,
-    socialLinks,
-    setSocialLinks,
-    updateSocialLink,
-    addSocialLink,
-    removeSocialLink,
-    toggleSocialLinkActive,
-    reorderSocialLinks,
-    resetSocialLinksToDefault,
-    masterSizes,
-    setMasterSizes,
-    updateMasterSize,
-    addMasterSize,
-    deleteMasterSize,
-    toggleMasterSize,
-    reorderMasterSizes,
-    resetMasterSizesToDefault,
+    trendItems, setTrendItems,
+    updateTrendItem: (id: string, patch: Partial<TrendItem>) => commit('trendItems', rows => rows.map(row => row.id === id ? { ...row, ...patch } : row)),
+    resetTrendsToDefault: () => commit('trendItems', () => DEFAULT_FEATURED_TRENDS),
+    socialLinks, setSocialLinks,
+    updateSocialLink: (id: string, patch: Partial<FooterSocialLink>) => commit('socialLinks', rows => rows.map(row => row.id === id ? { ...row, ...patch } : row)),
+    addSocialLink: (row: FooterSocialLink) => commit('socialLinks', rows => [...rows, row]),
+    removeSocialLink: (id: string) => commit('socialLinks', rows => rows.filter(row => row.id !== id)),
+    toggleSocialLinkActive: (id: string) => commit('socialLinks', rows => rows.map(row => row.id === id ? { ...row, isActive: !row.isActive } : row)),
+    reorderSocialLinks: (rows: FooterSocialLink[]) => commit('socialLinks', () => rows),
+    resetSocialLinksToDefault: () => commit('socialLinks', () => DEFAULT_ACTIVE_FOOTER_LINKS),
+    masterSizes, setMasterSizes,
+    updateMasterSize: (id: string, patch: Partial<MasterSizeItem>) => commit('masterSizes', rows => rows.map(row => row.id === id ? { ...row, ...patch } : row)),
+    addMasterSize: (row: Omit<MasterSizeItem, 'id'> & { id?: string }) => commit('masterSizes', rows => [...rows, { ...row, id: row.id || 'size_' + Date.now() }]),
+    deleteMasterSize: (id: string) => commit('masterSizes', rows => rows.filter(row => row.id !== id)),
+    toggleMasterSize: (id: string) => commit('masterSizes', rows => rows.map(row => row.id === id ? { ...row, enabled: !row.enabled } : row)),
+    reorderMasterSizes: (rows: MasterSizeItem[]) => commit('masterSizes', () => rows),
+    resetMasterSizesToDefault: () => commit('masterSizes', () => DEFAULT_MASTER_SIZES),
   };
 }

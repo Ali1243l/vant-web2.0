@@ -8,10 +8,14 @@ import { Heart, Tag, Check } from 'lucide-react';
 import type { Product, Language } from '../types';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { resolveProductColorVariants } from '../lib/productVariants';
+import { StoreSeasonCard } from './StoreSeasonAtmosphere';
+import type { HeroAppearance } from '../lib/heroAppearance';
 
 interface Props {
   product: Product;
   index: number;
+  season?: HeroAppearance;
+  seasonVariant?: number;
   imageSizes?: string;
   lang: Language;
   isWishlisted?: boolean;
@@ -36,6 +40,8 @@ export default React.memo(function ProductCard({
   product,
   index,
   imageSizes,
+  season,
+  seasonVariant = 0,
   lang,
   isWishlisted = false,
   onToggleWishlist,
@@ -178,6 +184,7 @@ export default React.memo(function ProductCard({
           className="catalog-image-frame relative shrink-0 overflow-hidden rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] transition-all duration-300 group-hover:shadow-[0_12px_32px_rgba(0,0,0,0.12)] dark:group-hover:shadow-[0_14px_36px_rgba(0,0,0,0.45)] group-hover:-translate-y-1 w-full"
           style={{ aspectRatio: CATALOG_IMAGE_RATIO }}
         >
+          {season && <StoreSeasonCard settings={season} variant={seasonVariant} />}
           {/* Shimmer skeleton behind loading image with cross-fade fadeout */}
           {!imgError && (
             <div

@@ -1,0 +1,25 @@
+.store-atmosphere{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;contain:strict;opacity:var(--atmosphere-opacity,.18)}
+.store-atmosphere-glow{position:absolute;inset:0;background:radial-gradient(ellipse at 5% 25%,currentColor,transparent 45%),radial-gradient(ellipse at 98% 80%,currentColor,transparent 35%);opacity:.08}
+.store-atmosphere-particle{position:absolute;width:var(--size);height:var(--size);animation:store-season-drift var(--duration) var(--delay) ease-in-out infinite alternate;animation-play-state:inherit}
+.store-atmosphere-particle svg{width:100%;height:100%}
+.store-atmosphere[data-motion=paused]{animation-play-state:paused}
+.store-atmosphere[data-motion=running]{animation-play-state:running}
+@keyframes store-season-drift{from{transform:translate3d(0,-28px,0) rotate(0);opacity:.15}to{transform:translate3d(var(--drift),120px,0) rotate(var(--turn));opacity:.9}}
+.store-atmosphere[data-store-atmosphere=summer] .store-atmosphere-particle,.store-atmosphere[data-store-atmosphere=ramadan] .store-atmosphere-particle,.store-atmosphere[data-store-atmosphere=school] .store-atmosphere-particle{animation-name:store-season-sway}
+@keyframes store-season-sway{from{transform:translate3d(0,0,0) rotate(-8deg);opacity:.15}to{transform:translate3d(var(--drift),12px,0) rotate(8deg);opacity:.65}}
+.store-atmosphere[data-store-atmosphere=black-friday] .store-atmosphere-particle{animation-name:store-season-scan}
+@keyframes store-season-scan{from{transform:translate3d(-20px,0,0);opacity:0}to{transform:translate3d(24px,0,0);opacity:.7}}
+.store-season-card{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden;color:var(--season-accent)}
+.store-snow-cap{position:absolute;top:-1px;left:var(--cap-left);width:var(--cap-width);height:clamp(18px,3vw,30px);fill:#eefaff;filter:drop-shadow(0 1px 1px #99c5db88);opacity:.9}
+.store-season-card-glyph{position:absolute;bottom:12px;right:12px;width:var(--glyph-size);height:28px;opacity:.32;transform:rotate(var(--glyph-turn))}
+.store-season-card-glyph svg{width:100%;height:100%}
+.store-season-card[data-design="1"] .store-season-card-glyph,.store-season-card[data-design="4"] .store-season-card-glyph,.store-season-card[data-design="7"] .store-season-card-glyph{left:12px;right:auto}
+.store-season-card--winter .store-season-card-glyph{color:#e4f7ff;opacity:.42}
+.store-season-edge{position:absolute;inset:0;border:1px solid currentColor;opacity:.16;border-radius:inherit;clip-path:polygon(0 0,40% 0,0 24%,0 100%,100% 100%,100% 76%,60% 100%,100% 100%,100% 0)}
+.store-season-card--spring .store-season-edge,.store-season-card--autumn .store-season-edge{border-radius:30% 0 35% 0;border-width:2px;clip-path:polygon(0 0,24% 0,0 40%,0 100%,100% 100%,100% 65%,76% 100%,100% 100%,100% 0)}
+.store-season-card--ramadan .store-season-edge{border-radius:50% 50% 0 0;clip-path:inset(0 0 72%)}
+.store-season-card--eid .store-season-edge,.store-season-card--new-year .store-season-edge{border-style:dashed;clip-path:inset(0 0 92%)}
+.store-season-card--holiday .store-season-edge,.store-season-card--summer .store-season-edge{border-radius:50%;inset:auto -12% -24px;height:40px;clip-path:none}
+.store-season-card--black-friday .store-season-edge,.store-season-card--weekend .store-season-edge{border-width:2px;clip-path:polygon(0 0,20% 0,0 12%,0 100%,100% 100%,100% 88%,80% 100%,100% 100%,100% 0)}
+@media(max-width:639px){.store-atmosphere-particle:nth-of-type(n+9){display:none}.store-season-card-glyph{width:18px;height:18px;bottom:8px;right:8px}.store-snow-cap{height:16px}}
+@media(prefers-reduced-motion:reduce){.store-atmosphere-particle{animation:none!important;opacity:.35}}

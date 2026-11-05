@@ -1,4 +1,5 @@
 import { useScrollLock } from '../hooks/useScrollLock';
+import { initialAdminModule } from '../lib/initialAdminModule';
 import React, { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -30,7 +31,7 @@ const SocialLinksManager = lazy(() => import('./SocialLinksManager'));
 const AdminNewsletterManager = lazy(() => import('./AdminNewsletterManager'));
 const AdminOffersManager = lazy(() => import('./AdminOffersManager'));
 const AdminSizesManager = lazy(() => import('./AdminSizesManager'));
-const NewAdminApp = lazy(() => import('../admin/App'));
+const NewAdminApp = lazy(() => initialAdminModule(() => import('../admin/App')));
 import AdminLockScreen from './admin_drawer/AdminLockScreen';
 import ToastNotification from './ToastNotification';
 import AdminProductFormModal from './admin_drawer/AdminProductFormModal';

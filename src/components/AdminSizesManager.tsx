@@ -1,16 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { isSupabaseConfigured } from '../lib/supabase';
 import { Plus, Search, ArrowUp, ArrowDown, Pencil, Trash2, RotateCcw } from 'lucide-react';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { Sheet } from '../admin/Sheet';
 import { Button, Input } from '../admin/ui';
 import { activeSizeRows, calculateRecommendedSize, parseFitMeasurement, sizeRange, validateMasterSize, type MasterSizeItem } from '../data/sizeGuide';
 
-export default function AdminSizesManager({ isAr = true }: { isAr?: boolean }) {
+export default function AdminSizesManager({ isAr = true, onDirtyChange }: { isAr?: boolean; onDirtyChange?: (dirty: boolean) => void }) {
   const { masterSizes, updateMasterSize, addMasterSize, deleteMasterSize, toggleMasterSize, reorderMasterSizes, resetMasterSizesToDefault } = useSiteControls();
   const [search, setSearch] = useState('');
   const [draft, setDraft] = useState<MasterSizeItem | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { onDirtyChange?.(!!draft || busy); return () => onDirtyChange?.(false); }, [draft, busy, onDirtyChange]);
+  useEffect(() => {
+    if (!draft && !busy) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [draft, busy]);
   const [confirmAction, setConfirmAction] = useState<MasterSizeItem | 'reset' | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [height, setHeight] = useState('');
@@ -29,29 +38,39 @@ export default function AdminSizesManager({ isAr = true }: { isAr?: boolean }) {
     setError('');
     setDraft(row ? { ...row } : { id: '', size: '', height: '', weight: '', minHeight: 160, maxHeight: 185, minWeight: 55, maxWeight: 80, enabled: true });
   };
-  const save = () => {
-    if (!draft) return;
+  const perform = async (action: () => Promise<boolean>) => {
+    if (busy) return false;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      if (!await action()) throw new Error('save');
+      setNotice(t(isSupabaseConfigured ? 'تم الحفظ بالسحابة.' : 'تم الحفظ محلياً فقط.', isSupabaseConfigured ? 'Saved to cloud.' : 'Saved locally only.'));
+      return true;
+    } catch { setError(t('تعذّر الحفظ. المسودة باقية؛ راجع الاتصال وصلاحية حساب الإدارة.', 'Save failed. Your draft remains; check connection and admin permissions.')); return false; }
+    finally { setBusy(false); }
+  };
+  const save = async () => {
+    if (!draft || busy) return;
     const issue = validateMasterSize(draft, masterSizes);
     if (issue) {
       setError(issue === 'name' ? t('اكتب رمز المقاس.', 'Enter a size label.') : issue === 'duplicate' ? t('رمز المقاس موجود مسبقاً.', 'This size label already exists.') : t('أدخل حدوداً صحيحة: الطول 120–220 سم والوزن 30–200 كغم، والأدنى لا يتجاوز الأعلى.', 'Use valid ranges: height 120–220 cm, weight 30–200 kg, minimum no greater than maximum.'));
       return;
     }
     const next = { ...draft, size: draft.size.trim().toUpperCase(), height: sizeRange(draft, 'height'), weight: sizeRange(draft, 'weight') };
-    if (draft.id) updateMasterSize(draft.id, next);
-    else { const { id, ...item } = next; addMasterSize(item); }
+    const { id, ...item } = next;
+    if (!await perform(() => draft.id ? updateMasterSize(draft.id, next) : addMasterSize(item))) return;
     setDraft(null);
-    setNotice(t('تم تطبيق المقاس في هذه الجلسة. المزامنة السحابية تعمل بالخلفية.', 'Size applied in this session. Cloud sync runs in the background.'));
   };
   const move = (index: number, delta: number) => {
     const next = [...masterSizes];
     [next[index], next[index + delta]] = [next[index + delta], next[index]];
-    reorderMasterSizes(next);
+    void perform(() => reorderMasterSizes(next));
   };
   const bounds = [
     ['minHeight', 'أدنى طول (سم)', 'Min height (cm)'], ['maxHeight', 'أعلى طول (سم)', 'Max height (cm)'],
     ['minWeight', 'أدنى وزن (كغم)', 'Min weight (kg)'], ['maxWeight', 'أعلى وزن (كغم)', 'Max weight (kg)'],
   ] as const;
-  return <div className="sizes-manager min-w-0 space-y-5">
+  return <fieldset disabled={busy} className="sizes-manager min-w-0 space-y-5">
+    {error && !draft && <p role="alert" className="text-sm text-rose-300">{error}</p>}
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div><h2 className="text-xl font-bold text-white">{t('المقاسات ونطاقات القياس', 'Sizes & measurement ranges')}</h2><p className="mt-2 text-sm text-slate-400">{t('الأرقام نفسها تُستخدم في الجدول وحاسبة المتجر. التعديلات تطبّق عند الحفظ.', 'The table and calculator use the same numbers. Edits apply when saved.')}</p></div>
       <Button onClick={() => openEditor()} leftIcon={<Plus className="h-4 w-4" />} className="min-h-11">{t('إضافة مقاس', 'Add size')}</Button>
@@ -65,7 +84,7 @@ export default function AdminSizesManager({ isAr = true }: { isAr?: boolean }) {
     <div className="flex flex-wrap gap-3 items-end">
       <div className="min-w-0 flex-1 basis-52"><Input label={t('بحث المقاسات', 'Search sizes')} icon={Search} value={search} onChange={e => setSearch(e.target.value)} className="min-h-11" /></div>
       <Button variant="secondary" className="min-h-11" aria-pressed={showPreview} onClick={() => setShowPreview(!showPreview)}>{t(showPreview ? 'إخفاء المعاينة' : 'معاينة جدول الزبون', showPreview ? 'Hide preview' : 'Preview customer chart')}</Button>
-      <Button variant="secondary" className="min-h-11" disabled={masterSizes.length < 2} onClick={() => { reorderMasterSizes([...masterSizes].sort((a, b) => a.minWeight - b.minWeight || a.minHeight - b.minHeight || a.size.localeCompare(b.size))); setNotice(t('تم ترتيب العرض حسب أدنى وزن ثم أدنى طول.', 'Display sorted by minimum weight, then minimum height.')); }}>{t('ترتيب حسب القياسات', 'Sort by measurements')}</Button>
+      <Button variant="secondary" className="min-h-11" disabled={masterSizes.length < 2} onClick={() => { void perform(() => reorderMasterSizes([...masterSizes].sort((a, b) => a.minWeight - b.minWeight || a.minHeight - b.minHeight || a.size.localeCompare(b.size)))); }}>{t('ترتيب حسب القياسات', 'Sort by measurements')}</Button>
     </div>
     {showPreview && <div className="overflow-x-auto rounded-xl border border-slate-700" role="region" aria-label={t('معاينة جدول المقاسات', 'Size chart preview')} tabIndex={0}><table className="w-full text-sm text-slate-200"><caption className="p-3 text-start text-slate-400">{t('المقاسات المفعّلة فقط · سم وكغم', 'Enabled sizes only · cm and kg')}</caption><thead><tr>{[t('المقاس', 'Size'), t('الطول', 'Height'), t('الوزن', 'Weight')].map(label => <th scope="col" key={label} className="p-3 text-start">{label}</th>)}</tr></thead><tbody>{active.map(row => <tr key={row.id} className="border-t border-slate-800"><th scope="row" className="p-3 text-start">{row.size}</th><td className="p-3 whitespace-nowrap"><bdi dir="ltr">{sizeRange(row, 'height', isAr)}</bdi></td><td className="p-3 whitespace-nowrap"><bdi dir="ltr">{sizeRange(row, 'weight', isAr)}</bdi></td></tr>)}</tbody></table>{!active.length && <p className="p-4 text-slate-400">{t('لا توجد مقاسات مفعّلة.', 'No enabled sizes.')}</p>}</div>}
     <section className="rounded-xl border border-slate-700 p-4 space-y-3" aria-label={t('فحص الحاسبة', 'Calculator check')}>
@@ -79,8 +98,8 @@ export default function AdminSizesManager({ isAr = true }: { isAr?: boolean }) {
       {(isAr ? row.note_ar : row.note_en) && <p className="text-sm text-slate-400 break-words">{isAr ? row.note_ar : row.note_en}</p>}
       <div className="grid grid-cols-3 gap-2"><Button variant="secondary" className="min-h-11 px-2" aria-label={t(`تعديل ${row.size}`, `Edit ${row.size}`)} onClick={() => openEditor(row)} leftIcon={<Pencil className="h-4 w-4" />}>{t('تعديل', 'Edit')}</Button><Button variant="secondary" className="min-h-11 px-2" aria-label={t(row.enabled ? `إخفاء ${row.size}` : `تفعيل ${row.size}`, row.enabled ? `Hide ${row.size}` : `Enable ${row.size}`)} aria-pressed={row.enabled} onClick={() => { toggleMasterSize(row.id); setNotice(t('تم تغيير الظهور في هذه الجلسة.', 'Visibility changed in this session.')); }}>{t(row.enabled ? 'إخفاء' : 'تفعيل', row.enabled ? 'Hide' : 'Enable')}</Button><Button variant="secondary" className="min-h-11 px-2 text-rose-300" aria-label={t(`حذف ${row.size}`, `Delete ${row.size}`)} onClick={() => setConfirmAction(row)} leftIcon={<Trash2 className="h-4 w-4" />}>{t('حذف', 'Delete')}</Button></div>
     </article>; })}{!filtered.length && <p role="status" className="py-8 text-center text-slate-400">{t('لا توجد مقاسات مطابقة.', 'No matching sizes.')}</p>}</div>
-    <div className="border-t border-slate-800 pt-4 space-y-2"><Button variant="secondary" className="min-h-11" leftIcon={<RotateCcw className="h-4 w-4" />} onClick={() => setConfirmAction('reset')}>{t('استعادة المقاسات الافتراضية', 'Restore default sizes')}</Button><p className="text-xs leading-5 text-slate-500">{t('دليل عام للمتجر؛ إخفاء المقاس هنا لا يغيّر مخزون المنتجات. الحفظ السحابي بالخلفية ولا يُؤكّد من هذه الشاشة.', 'This is a store-wide guide; hiding a size does not change product stock. Background cloud saving is not confirmed by this screen.')}</p></div>
-    <Sheet isOpen={!!draft} onClose={() => setDraft(null)} title={t(draft?.id ? 'تعديل المقاس' : 'إضافة مقاس', draft?.id ? 'Edit size' : 'Add size')} footer={<div className="space-y-3">{error && <p role="alert" className="text-sm text-rose-300">{error}</p>}<div className="flex gap-2"><Button className="min-h-11" onClick={save}>{t('حفظ المقاس', 'Save size')}</Button><Button variant="secondary" className="min-h-11" onClick={() => setDraft(null)}>{t('إلغاء', 'Cancel')}</Button></div></div>}>
+    <div className="border-t border-slate-800 pt-4 space-y-2"><Button variant="secondary" className="min-h-11" leftIcon={<RotateCcw className="h-4 w-4" />} onClick={() => setConfirmAction('reset')}>{t('استعادة المقاسات الافتراضية', 'Restore default sizes')}</Button><p className="text-xs leading-5 text-slate-500">{t('دليل عام للمتجر؛ إخفاء المقاس هنا لا يغيّر مخزون المنتجات. التعديلات تنشر بعد تأكيد الحفظ.', 'This is a store-wide guide; hiding a size does not change product stock. Changes publish only after a successful save.')}</p></div>
+    <Sheet isOpen={!!draft} onClose={() => { if (!busy) setDraft(null); }} title={t(draft?.id ? 'تعديل المقاس' : 'إضافة مقاس', draft?.id ? 'Edit size' : 'Add size')} footer={<div className="space-y-3">{error && <p role="alert" className="text-sm text-rose-300">{error}</p>}<div className="flex gap-2"><Button className="min-h-11" onClick={save}>{t('حفظ المقاس', 'Save size')}</Button><Button variant="secondary" className="min-h-11" onClick={() => setDraft(null)}>{t('إلغاء', 'Cancel')}</Button></div></div>}>
       {draft && <form className="space-y-5" onSubmit={e => { e.preventDefault(); save(); }}>
         <Input label={t('رمز المقاس', 'Size label')} maxLength={30} value={draft.size} onChange={e => setDraft({ ...draft, size: e.target.value })} className="min-h-11" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{bounds.map(([key, ar, en]) => <Input key={key} label={t(ar, en)} dir="ltr" type="number" min={key.includes('Height') ? 120 : 30} max={key.includes('Height') ? 220 : 200} step="any" value={Number.isFinite(draft[key]) ? draft[key] : ''} onChange={e => setDraft({ ...draft, [key]: e.target.value === '' ? NaN : Number(e.target.value) })} className="min-h-11" />)}</div>
@@ -90,6 +109,6 @@ export default function AdminSizesManager({ isAr = true }: { isAr?: boolean }) {
         <button type="submit" className="sr-only" tabIndex={-1}>{t('حفظ', 'Save')}</button>
       </form>}
     </Sheet>
-    <Sheet isOpen={!!confirmAction} onClose={() => setConfirmAction(null)} title={t('تأكيد تغيير دليل المقاسات', 'Confirm size guide change')} footer={<div className="flex gap-2"><Button variant="danger" className="min-h-11" onClick={() => { if (confirmAction === 'reset') resetMasterSizesToDefault(); else if (confirmAction) deleteMasterSize(confirmAction.id); setConfirmAction(null); setNotice(t('تم تطبيق التغيير في هذه الجلسة.', 'Change applied in this session.')); }}>{t('تأكيد', 'Confirm')}</Button><Button variant="secondary" className="min-h-11" onClick={() => setConfirmAction(null)}>{t('إلغاء', 'Cancel')}</Button></div>}><p className="text-slate-300 leading-7">{confirmAction === 'reset' ? t('هذا يستبدل دليل المقاسات الحالي بالقيم الافتراضية. لا يغيّر مخزون المنتجات.', 'This replaces the current guide with defaults. Product stock stays unchanged.') : t(`حذف المقاس ${confirmAction?.size || ''} من الدليل؟ يمكنك إخفاؤه بدلاً من الحذف.`, `Delete ${confirmAction && confirmAction.size || ''} from the guide? You can hide it instead.`)}</p></Sheet>
-  </div>;
+    <Sheet isOpen={!!confirmAction} onClose={() => { if (!busy) setConfirmAction(null); }} title={t('تأكيد تغيير دليل المقاسات', 'Confirm size guide change')} footer={<div className="flex gap-2"><Button variant="danger" className="min-h-11" onClick={async () => { if (await perform(() => confirmAction === 'reset' ? resetMasterSizesToDefault() : deleteMasterSize((confirmAction as MasterSizeItem).id))) setConfirmAction(null); }}>{t('تأكيد', 'Confirm')}</Button><Button variant="secondary" className="min-h-11" onClick={() => setConfirmAction(null)}>{t('إلغاء', 'Cancel')}</Button></div>}><p className="text-slate-300 leading-7">{confirmAction === 'reset' ? t('هذا يستبدل دليل المقاسات الحالي بالقيم الافتراضية. لا يغيّر مخزون المنتجات.', 'This replaces the current guide with defaults. Product stock stays unchanged.') : t(`حذف المقاس ${confirmAction?.size || ''} من الدليل؟ يمكنك إخفاؤه بدلاً من الحذف.`, `Delete ${confirmAction && confirmAction.size || ''} from the guide? You can hide it instead.`)}</p></Sheet>
+  </fieldset>;
 }

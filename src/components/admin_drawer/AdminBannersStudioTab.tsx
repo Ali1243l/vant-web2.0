@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import type { TrendItem } from '../../types';
 import {
   Sparkles,
   Image as ImageIcon,
@@ -24,17 +25,30 @@ export const AdminBannersStudioTab: React.FC<AdminBannersStudioTabProps> = ({ is
     controls,
     toggleVisibility,
     updateControl,
-    trendItems,
-    updateTrendItem,
-    resetTrendsToDefault,
+    trendItems: publishedTrends,
+    updateTrendItem: persistTrendItem,
+    resetTrendsToDefault: persistResetTrends,
   } = useSiteControls();
 
   const [isUploadingHeroBg, setIsUploadingHeroBg] = useState(false);
   const [uploadHeroBgSuccess, setUploadHeroBgSuccess] = useState(false);
   const [uploadingTrendId, setUploadingTrendId] = useState<string | null>(null);
+  const [trendDrafts, setTrendDrafts] = useState<Record<string, Partial<TrendItem>>>({});
+  const [savingTrends, setSavingTrends] = useState(false);
+  const [trendNotice, setTrendNotice] = useState('');
+  const trendItems = publishedTrends.map(row => ({ ...row, ...trendDrafts[row.id] }));
+  const updateTrendItem = (id: string, patch: Partial<TrendItem>) => setTrendDrafts(prev => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+  const resetTrendsToDefault = async () => { if (await persistResetTrends()) setTrendDrafts({}); else setTrendNotice(isAr ? 'تعذّر الحفظ؛ المسودة باقية.' : 'Save failed; your draft remains.'); };
+  useEffect(() => {
+    if (!Object.keys(trendDrafts).length) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [trendDrafts]);
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <fieldset disabled={savingTrends} className="min-w-0 space-y-6 max-w-4xl mx-auto">
+      <div className="sticky top-0 z-20 rounded-xl bg-slate-900 border border-slate-700 p-3 flex flex-wrap gap-3 items-center"><button type="button" disabled={savingTrends || !Object.keys(trendDrafts).length} className="min-h-11 rounded-lg bg-blue-600 px-4 text-sm" onClick={async () => { setSavingTrends(true); setTrendNotice(''); try { for (const [id, patch] of Object.entries(trendDrafts)) if (!await persistTrendItem(id, patch)) throw new Error('save'); setTrendDrafts({}); setTrendNotice(isAr ? 'تم حفظ البطاقات.' : 'Cards saved.'); } catch { setTrendNotice(isAr ? 'تعذّر الحفظ؛ المسودة باقية لإعادة المحاولة.' : 'Save failed; your draft remains for retry.'); } finally { setSavingTrends(false); } }}>{isAr ? 'حفظ بطاقات الموسم' : 'Save seasonal cards'}</button><p role="status" className="text-sm text-slate-300">{trendNotice}</p></div>
                   <div className="pb-2 border-b border-white/10 flex items-center justify-between">
                     <div>
                       <h2 className="text-lg font-bold text-white flex items-center gap-2">
@@ -551,7 +565,7 @@ export const AdminBannersStudioTab: React.FC<AdminBannersStudioTabProps> = ({ is
 
       {/* Card 3: Multi-Number WhatsApp Concierge & Phone Manager */}
       <AdminWhatsAppManager isAr={isAr} />
-    </div>
+    </fieldset>
   );
 };
 

@@ -1,5 +1,5 @@
-import { Sheet } from './Sheet';
-import { Button } from './ui';
+import { Button, Modal } from './ui';
+import { isConfigSavePending } from '../lib/storage';
 import React, { useEffect, useState, lazy, Suspense } from 'react';
 import './admin.css';
 import { AdminProvider, useAdminBridge } from './useAdminBridge';
@@ -36,6 +36,8 @@ function MainLayout({ onClose }: AdminAppProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isGlobalProductSheetOpen, setIsGlobalProductSheetOpen] = useState(false);
   const [productSaved, setProductSaved] = useState(false);
+  const [configSaving, setConfigSaving] = useState(isConfigSavePending);
+  useEffect(() => { const update = () => setConfigSaving(isConfigSavePending()); window.addEventListener('vant-config-saving', update); return () => window.removeEventListener('vant-config-saving', update); }, []);
   useEffect(() => {
     if (!productSaved) return;
     const timer = setTimeout(() => setProductSaved(false), 3500);
@@ -52,7 +54,7 @@ function MainLayout({ onClose }: AdminAppProps) {
     ? [{ id: 'banners', ar: 'البانر وبطاقات الموسم', en: 'Banner & seasonal cards' }, { id: 'welcome_modal', ar: 'نافذة الترحيب', en: 'Welcome popup' }]
     : [];
   return (
-    <div className="admin-workspace min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none">
+    <div data-admin-ready className="admin-workspace min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none">
       {/* Lock Screen Component */}
       <LockScreen />
       <ToastNotification message={productSaved ? { text: isAr ? 'تم حفظ المنتج.' : 'Product saved.' } : null} onClose={() => setProductSaved(false)} position="bottom-start" />
@@ -67,7 +69,7 @@ function MainLayout({ onClose }: AdminAppProps) {
         onSaved={() => setProductSaved(true)}
       /></Suspense>}
 
-      <Sheet isOpen={pendingView !== null} onClose={cancelViewChange} title={isAr ? 'مسودة غير محفوظة' : 'Unsaved draft'} footer={<div className="flex flex-wrap gap-2"><Button type="button" className="min-h-11" onClick={cancelViewChange}>{isAr ? 'البقاء والتعديل' : 'Keep editing'}</Button><Button type="button" variant="secondary" className="min-h-11" onClick={confirmViewChange}>{isAr ? 'المتابعة بدون حفظ' : 'Leave without saving'}</Button></div>}><p className="text-sm leading-7 text-slate-300">{isAr ? 'عندك تعديلات غير محفوظة. ابقَ بالصفحة لحفظها أو إلغائها؛ المتابعة تلغي المسودة فقط.' : 'You have unsaved changes. Stay to save or discard them; leaving discards only this draft.'}</p></Sheet>
+      <Modal isOpen={pendingView !== null} onClose={cancelViewChange} maxWidth="md" title={isAr ? 'عندك تعديلات غير محفوظة' : 'Unsaved changes'}><p className="text-sm leading-7 text-slate-300">{configSaving ? (isAr ? 'الحفظ جاري. انتظر تأكيده قبل المغادرة.' : 'Saving. Wait for confirmation before leaving.') : (isAr ? 'تريد تبقى حتى تحفظ تعديلاتك، لو تغادر وتلغي المسودة؟' : 'Stay to save your changes, or leave and discard this draft?')}</p><div className="mt-5 flex flex-wrap gap-2"><Button type="button" className="min-h-11 flex-1" onClick={cancelViewChange}>{isAr ? 'أبقى وأكمل' : 'Keep editing'}</Button><Button type="button" variant="secondary" disabled={configSaving} className="min-h-11 flex-1" onClick={confirmViewChange}>{isAr ? 'أغادر بدون حفظ' : 'Leave without saving'}</Button></div></Modal>
 
       {/* Desktop App Layout */}
       <div className="flex flex-1 min-h-screen">

@@ -327,26 +327,26 @@ export interface SiteControlsContextType {
 
   // Trend Cards Studio
   trendItems: TrendItem[];
-  updateTrendItem: (id: string, updates: Partial<TrendItem>) => void;
-  resetTrendsToDefault: () => void;
+  updateTrendItem: (id: string, updates: Partial<TrendItem>) => Promise<boolean>;
+  resetTrendsToDefault: () => Promise<boolean>;
 
   // Social & Platforms Management (60+ Presets & Custom)
   socialLinks: FooterSocialLink[];
-  updateSocialLink: (id: string, updates: Partial<FooterSocialLink>) => void;
-  addSocialLink: (link: FooterSocialLink) => void;
-  removeSocialLink: (id: string) => void;
-  toggleSocialLinkActive: (id: string) => void;
-  reorderSocialLinks: (reordered: FooterSocialLink[]) => void;
-  resetSocialLinksToDefault: () => void;
+  updateSocialLink: (id: string, updates: Partial<FooterSocialLink>) => Promise<boolean>;
+  addSocialLink: (link: FooterSocialLink) => Promise<boolean>;
+  removeSocialLink: (id: string) => Promise<boolean>;
+  toggleSocialLinkActive: (id: string) => Promise<boolean>;
+  reorderSocialLinks: (reordered: FooterSocialLink[]) => Promise<boolean>;
+  resetSocialLinksToDefault: () => Promise<boolean>;
 
   // Master Size Guide & Measurements Management
   masterSizes: MasterSizeItem[];
-  updateMasterSize: (id: string, updates: Partial<MasterSizeItem>) => void;
-  addMasterSize: (item: Omit<MasterSizeItem, 'id'> & { id?: string }) => void;
-  deleteMasterSize: (id: string) => void;
-  toggleMasterSize: (id: string) => void;
-  reorderMasterSizes: (reordered: MasterSizeItem[]) => void;
-  resetMasterSizesToDefault: () => void;
+  updateMasterSize: (id: string, updates: Partial<MasterSizeItem>) => Promise<boolean>;
+  addMasterSize: (item: Omit<MasterSizeItem, 'id'> & { id?: string }) => Promise<boolean>;
+  deleteMasterSize: (id: string) => Promise<boolean>;
+  toggleMasterSize: (id: string) => Promise<boolean>;
+  reorderMasterSizes: (reordered: MasterSizeItem[]) => Promise<boolean>;
+  resetMasterSizesToDefault: () => Promise<boolean>;
 
   // Admin Auth & State
   isAdminOpen: boolean;
@@ -371,4 +371,3 @@ export interface SiteControlsContextType {
   isCloudSynced: boolean;
   syncAllToSupabaseCloud: () => Promise<boolean>;
 }
-

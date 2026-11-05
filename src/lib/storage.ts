@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 import { normalizeOrders } from './orderModel';
 import { imageBlobDataUrl, imageUploadPath, smartConvertImage } from './imageConversion';
 import { replaceOptimizedImages } from './imageOptimizationModel';
+import { externalizeConfigImages } from './configImages';
 
 export interface UploadedMediaItem {
   url: string;
@@ -239,12 +240,23 @@ export async function uploadDataUrlToSupabase(
  * Persists site configuration, banner images, and trend cards directly into Supabase Storage
  * Using a non-destructive deep-merge so no section is ever overwritten or lost!
  */
-export async function saveSiteConfigToSupabase(config: Partial<CloudSiteConfig>, requireFresh = false): Promise<boolean> {
+let configSaveQueue: Promise<unknown> = Promise.resolve();
+let pendingConfigSaves = 0;
+export const isConfigSavePending = () => pendingConfigSaves > 0;
+const announceConfigSave = () => { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('vant-config-saving')); };
+export function saveSiteConfigToSupabase(config: Partial<CloudSiteConfig>, requireFresh = false): Promise<boolean> {
+  const snapshot = structuredClone(config);
+  pendingConfigSaves++; announceConfigSave();
+  const operation = configSaveQueue.then(() => persistSiteConfig(snapshot, requireFresh)).finally(() => { pendingConfigSaves--; announceConfigSave(); });
+  configSaveQueue = operation.catch(() => {});
+  return operation;
+}
+async function persistSiteConfig(config: Partial<CloudSiteConfig>, requireFresh: boolean): Promise<boolean> {
   if (!supabase) return false;
   try {
     // Saves bypass the polling shortcut; legacy callers can still fall back while offline.
     const existing = await fetchSiteConfigFromSupabase(false) || (requireFresh ? null : cachedCloudConfig);
-    if (requireFresh && !existing) return false;
+    if (!existing) return false;
 
     const bannerBg =
       config.banner_hero_bg ||
@@ -288,7 +300,8 @@ export async function saveSiteConfigToSupabase(config: Partial<CloudSiteConfig>,
       }
     }
 
-    const payload = JSON.stringify(merged);
+    const published = await externalizeConfigImages(merged, source => uploadDataUrlToSupabase(source, 'interface'));
+    const payload = JSON.stringify(published);
     const blob = new Blob([payload], { type: 'application/json' });
     const { error } = await supabase.storage.from('product-images').upload('config/site_settings.json', blob, {
       contentType: 'application/json',
@@ -297,7 +310,7 @@ export async function saveSiteConfigToSupabase(config: Partial<CloudSiteConfig>,
     });
 
     if (!error) {
-      cachedCloudConfig = merged;
+      cachedCloudConfig = published;
       cloudConfigModified = null;
       console.log('✓ Site configuration, display image & banners permanently synced to Supabase Cloud');
       return true;
@@ -319,6 +332,16 @@ let cloudConfigModified: string | null = null;
 export async function fetchSiteConfigFromSupabase(allowCached = true): Promise<CloudSiteConfig | null> {
   if (!supabase) return allowCached ? cachedCloudConfig : null;
   try {
+    if (!allowCached) {
+      // The authenticated object route avoids merging a stale public CDN copy into a save.
+      const { data, error } = await supabase.storage.from('product-images').download('config/site_settings.json', { cacheNonce: String(Date.now()) });
+      if (error || !data) return null;
+      const json = JSON.parse(await data.text());
+      if (!json || typeof json !== 'object' || Array.isArray(json)) return null;
+      cachedCloudConfig = json as CloudSiteConfig;
+      cloudConfigModified = null;
+      return cachedCloudConfig;
+    }
     const { data: pubData } = supabase.storage.from('product-images').getPublicUrl('config/site_settings.json');
     if (pubData?.publicUrl) {
       // Check metadata without downloading embedded media on every live-sync tick.

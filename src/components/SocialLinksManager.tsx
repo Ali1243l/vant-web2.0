@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { isSupabaseConfigured } from '../lib/supabase';
 import {
   Globe,
   Plus,
@@ -23,6 +24,7 @@ import { PRESET_SOCIAL_PLATFORMS, type FooterSocialLink, type SocialPlatformItem
 import SocialIconRenderer from './SocialIconRenderer';
 
 interface Props {
+  onDirtyChange?: (dirty: boolean) => void;
   isAr?: boolean;
 }
 
@@ -62,7 +64,7 @@ const AVAILABLE_ICONS = [
   'Book',
 ];
 
-export default function SocialLinksManager({ isAr = true }: Props) {
+export default function SocialLinksManager({ isAr = true, onDirtyChange }: Props) {
   const {
     socialLinks,
     updateSocialLink,
@@ -77,6 +79,28 @@ export default function SocialLinksManager({ isAr = true }: Props) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
+  const [linkDraft, setLinkDraft] = useState({ handle: '', href: '' });
+  const [busy, setBusy] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [notice, setNotice] = useState('');
+  const dirty = !!editingLinkId || isCustomModalOpen || busy;
+  useEffect(() => { onDirtyChange?.(dirty); return () => onDirtyChange?.(false); }, [dirty, onDirtyChange]);
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
+  const perform = async (action: () => Promise<boolean>) => {
+    if (busy) return false;
+    setBusy(true); setSaveError(''); setNotice('');
+    try {
+      if (!await action()) throw new Error('save');
+      setNotice(isAr ? (isSupabaseConfigured ? 'تم الحفظ بالسحابة.' : 'تم الحفظ محلياً فقط.') : (isSupabaseConfigured ? 'Saved to cloud.' : 'Saved locally only.'));
+      return true;
+    } catch { setSaveError(isAr ? 'تعذّر الحفظ. تعديلاتك باقية؛ راجع الرابط وصلاحية حساب الإدارة ثم حاول مجدداً.' : 'Save failed. Your edits remain; check the link and admin permissions, then retry.'); return false; }
+    finally { setBusy(false); }
+  };
 
   // Custom link form state
   const [customName, setCustomName] = useState('');
@@ -116,11 +140,11 @@ export default function SocialLinksManager({ isAr = true }: Props) {
       displayOrder: socialLinks.length + 1,
     };
 
-    addSocialLink(newLink);
+    void perform(() => addSocialLink(newLink));
   };
 
   // Handle saving new custom link
-  const handleSaveCustomLink = (e: React.FormEvent) => {
+  const handleSaveCustomLink = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customName.trim() || !customHref.trim()) return;
 
@@ -134,7 +158,7 @@ export default function SocialLinksManager({ isAr = true }: Props) {
       displayOrder: socialLinks.length + 1,
     };
 
-    addSocialLink(newLink);
+    if (!await perform(() => addSocialLink(newLink))) return;
     setIsCustomModalOpen(false);
     setCustomName('');
     setCustomHandle('');
@@ -150,11 +174,13 @@ export default function SocialLinksManager({ isAr = true }: Props) {
     const reordered = [...socialLinks];
     const [moved] = reordered.splice(index, 1);
     reordered.splice(targetIndex, 0, moved);
-    reorderSocialLinks(reordered);
+    void perform(() => reorderSocialLinks(reordered));
   };
 
   return (
-    <div className="space-y-6">
+    <fieldset disabled={busy} className="min-w-0 space-y-6">
+      {saveError && <p role="alert" className="text-sm text-rose-300">{saveError}</p>}
+      {notice && <p role="status" className="text-sm text-emerald-300">{notice}</p>}
       {/* Top Header & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
         <div>
@@ -185,7 +211,7 @@ export default function SocialLinksManager({ isAr = true }: Props) {
             type="button"
             onClick={() => {
               if (confirm(isAr ? 'هل تريد استعادة الروابط الافتراضية؟' : 'Reset to default footer links?')) {
-                resetSocialLinksToDefault();
+                void perform(() => resetSocialLinksToDefault());
               }
             }}
             className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.05] hover:bg-white/10 px-3 py-2 text-xs font-semibold text-white/70 hover:text-white transition-all cursor-pointer"
@@ -265,7 +291,7 @@ export default function SocialLinksManager({ isAr = true }: Props) {
                       {/* Toggle Visibility */}
                       <button
                         type="button"
-                        onClick={() => toggleSocialLinkActive(link.id)}
+                        onClick={() => { void perform(() => toggleSocialLinkActive(link.id)); }}
                         className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
                           link.isActive
                             ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
@@ -303,7 +329,8 @@ export default function SocialLinksManager({ isAr = true }: Props) {
                       {/* Edit Button */}
                       <button
                         type="button"
-                        onClick={() => setEditingLinkId(isEditing ? null : link.id)}
+                        onClick={() => { setLinkDraft({ handle: link.handle, href: link.href }); setEditingLinkId(isEditing ? null : link.id); setSaveError(''); }}
+                        disabled={!!editingLinkId && !isEditing}
                         className="p-1.5 rounded-lg border border-white/10 bg-white/[0.05] text-white/70 hover:text-white hover:bg-white/10 cursor-pointer"
                         title={isAr ? 'تعديل المعرف أو الرابط' : 'Edit'}
                       >
@@ -313,7 +340,7 @@ export default function SocialLinksManager({ isAr = true }: Props) {
                       {/* Delete */}
                       <button
                         type="button"
-                        onClick={() => removeSocialLink(link.id)}
+                        onClick={() => { void perform(() => removeSocialLink(link.id)); }}
                         className="p-1.5 rounded-lg border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 cursor-pointer"
                         title={isAr ? 'حذف الرابط' : 'Delete'}
                       >
@@ -329,8 +356,9 @@ export default function SocialLinksManager({ isAr = true }: Props) {
                         <label className="text-[10px] text-white/60 block mb-0.5">{isAr ? 'المعرف الظاهر (Handle):' : 'Display Handle:'}</label>
                         <input
                           type="text"
-                          value={link.handle}
-                          onChange={(e) => updateSocialLink(link.id, { handle: e.target.value })}
+                          value={linkDraft.handle}
+                          aria-label={isAr ? 'المعرف الظاهر' : 'Display handle'}
+                          onChange={(e) => setLinkDraft({ ...linkDraft, handle: e.target.value })}
                           className="h-8 w-full rounded-lg border border-white/15 bg-black/50 px-2 text-xs text-white outline-none"
                         />
                       </div>
@@ -338,11 +366,13 @@ export default function SocialLinksManager({ isAr = true }: Props) {
                         <label className="text-[10px] text-white/60 block mb-0.5">{isAr ? 'الرابط المباشر (URL):' : 'Direct URL:'}</label>
                         <input
                           type="text"
-                          value={link.href}
-                          onChange={(e) => updateSocialLink(link.id, { href: e.target.value })}
+                          value={linkDraft.href}
+                          aria-label={isAr ? 'الرابط المباشر' : 'Direct URL'}
+                          onChange={(e) => setLinkDraft({ ...linkDraft, href: e.target.value })}
                           className="h-8 w-full rounded-lg border border-white/15 bg-black/50 px-2 text-xs text-white outline-none direction-ltr"
                         />
                       </div>
+                      <div className="sm:col-span-2 flex flex-wrap gap-2"><button type="button" className="min-h-11 rounded-lg bg-blue-600 px-4 text-sm font-bold" onClick={async () => { if (await perform(() => updateSocialLink(link.id, linkDraft))) setEditingLinkId(null); }}>{isAr ? 'حفظ الرابط' : 'Save link'}</button><button type="button" className="min-h-11 px-4 text-sm" onClick={() => setEditingLinkId(null)}>{isAr ? 'إلغاء' : 'Cancel'}</button></div>
                     </div>
                   )}
                 </div>
@@ -468,6 +498,7 @@ export default function SocialLinksManager({ isAr = true }: Props) {
             </div>
 
             <form onSubmit={handleSaveCustomLink} className="space-y-3.5">
+              {saveError && <p role="alert" className="text-sm text-rose-300">{saveError}</p>}
               <div>
                 <label className="text-xs font-semibold text-white/70 block mb-1">
                   {isAr ? 'اسم المنصة / الموقع' : 'Platform Name'} *
@@ -558,6 +589,6 @@ export default function SocialLinksManager({ isAr = true }: Props) {
           </div>
         </div>
       )}
-    </div>
+    </fieldset>
   );
 }

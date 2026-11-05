@@ -4,7 +4,7 @@ import SocialLinksManager from '../components/SocialLinksManager';
 import { Globe, Share2 } from 'lucide-react';
 
 export const AdminSocialView: React.FC = () => {
-  const { lang } = useAdminBridge();
+  const { lang, setHasUnsavedChanges } = useAdminBridge();
   const isAr = lang === 'ar';
 
   return (
@@ -38,7 +38,7 @@ export const AdminSocialView: React.FC = () => {
 
       {/* Main Social Links Manager Component */}
       <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
-        <SocialLinksManager isAr={isAr} />
+        <SocialLinksManager isAr={isAr} onDirtyChange={setHasUnsavedChanges} />
       </div>
     </div>
   );

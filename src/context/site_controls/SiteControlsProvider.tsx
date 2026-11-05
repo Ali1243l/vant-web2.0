@@ -95,7 +95,7 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
     toggleMasterSize,
     reorderMasterSizes,
     resetMasterSizesToDefault,
-  } = useExtrasState(currency, DEFAULT_SITE_CONTROLS);
+  } = useExtrasState();
 
   const {
     controls,
