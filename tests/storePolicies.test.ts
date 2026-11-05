@@ -37,12 +37,12 @@ test('shareable policy links only open known pages and tolerate other URL parame
 });
 
 test('compact footer labels preserve previously edited titles and separately saved labels', () => {
-  assert.equal(policyFooterLabel('orders', defaultPolicies.orders, 'ar'), 'شروط الشراء');
+  assert.equal(policyFooterLabel('orders', defaultPolicies.orders, 'ar'), 'الشروط');
   const custom = { ...defaultPolicies.orders, ar: { ...defaultPolicies.orders.ar, title: 'شروط فانت المعدّلة' } };
   assert.equal(policyFooterLabel('orders', custom, 'ar'), 'شروط فانت المعدّلة');
   custom.ar = { ...custom.ar, label: 'الشراء' } as typeof custom.ar;
   const saved = readPolicies({ orders: custom });
   assert.equal(policyFooterLabel('orders', saved.orders, 'ar'), 'الشراء');
-  assert.equal(policyFooterLabel('orders', saved.orders, 'en'), 'Order terms');
+  assert.equal(policyFooterLabel('orders', saved.orders, 'en'), 'Terms');
   assert.equal(validPolicyPage({ ...custom, ar: { ...custom.ar, label: 'x'.repeat(65) } }), false);
 });

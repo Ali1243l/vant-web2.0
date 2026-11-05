@@ -54,9 +54,9 @@ export function policyFromSearch(search: string): PolicyId | null {
 }
 
 const footerLabels: Record<PolicyId, [string, string]> = {
-  about: ['عن فانت', 'About VANT'], orders: ['شروط الشراء', 'Order terms'], delivery: ['التوصيل', 'Delivery'],
-  returns: ['الاستبدال والضمان', 'Returns & warranty'], privacy: ['الخصوصية', 'Privacy'],
-  storage: ['التخزين والتحليلات', 'Storage & analytics'], contact: ['تواصل معنا', 'Contact'],
+  about: ['عن فانت', 'About'], orders: ['الشروط', 'Terms'], delivery: ['التوصيل', 'Delivery'],
+  returns: ['الاستبدال', 'Returns'], privacy: ['الخصوصية', 'Privacy'],
+  storage: ['التخزين', 'Storage'], contact: ['تواصل معنا', 'Contact'],
 };
 export function policyFooterLabel(id: PolicyId, page: PolicyPage, lang: 'ar' | 'en'): string {
   return page[lang].label?.trim() || (page[lang].title === defaultPolicies[id][lang].title ? footerLabels[id][lang === 'ar' ? 0 : 1] : page[lang].title);

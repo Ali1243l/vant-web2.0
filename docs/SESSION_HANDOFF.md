@@ -1,5 +1,9 @@
 # Checkpoint — 2026-11-05
 
+## Latest continuation: footer links limited to two rows (2026-11-05)
+- User explicitly rejected the tall two-column footer and requested smaller links side by side, at most two rows. Replaced grouped headings/lists with a compact 12-column mobile grid: four links then three, 36px-high targets and 11px text. Desktop uses a horizontal flex row. All seven links remain, with real hrefs, full accessible names/tooltips, and optional admin labels preserved. Default labels are shorter (About/Terms/Delivery/Returns/Privacy/Storage/Contact); long custom text is truncated visually rather than adding rows, while policy titles/content remain complete.
+- 175 tests, TypeScript and production build pass. Local browser measured exactly two link rows and an 80px nav height without horizontal overflow at 320px, Arabic and English; also reviewed at 390px, opened/closed policy links and restored scroll. Screenshot `footer-two-rows.jpg` in artifact directory. Viewport reset. No real-device test or content/backend changes in this continuation.
+
 ## Latest continuation: compact mobile policies and seasonal artwork (2026-11-05)
 - User asked to continue, improve policy/footer sizing on phones and give every theme distinctive artwork/motion. Applied `animation-performance` skill. No production theme selection, prices, copy, image crop or real cloud settings were changed during checks.
 - Footer now groups seven real policy links into two aligned columns with short default labels, 13px text and preserved 44px touch targets. Full page titles remain independent. Optional bilingual `label` fields (max 64) are editable in Admin → Settings → Pages & policies. Old saved titles remain effective when no label exists; defaults receive compact labels. Policy reader uses 20px mobile title, 14px/28px body and shorter toolbar. Admin page selection is a compact select instead of seven wrapping buttons. Existing save/draft behavior is preserved.

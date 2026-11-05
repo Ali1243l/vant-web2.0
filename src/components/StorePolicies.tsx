@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useSiteControls } from '../context/SiteControlsContext';
-import { policyFooterLabel, policyFromSearch, readPolicies, type PolicyPage, type PolicyId } from '../data/storePolicies';
+import { policyIds, policyFooterLabel, policyFromSearch, readPolicies, type PolicyPage } from '../data/storePolicies';
 import { useModalFocus } from '../hooks/useModalFocus';
 import { useScrollLock } from '../hooks/useScrollLock';
 import type { Language } from '../types';
@@ -30,8 +30,8 @@ export default function StorePolicies({ lang }: { lang: Language }) {
   useEffect(() => { const pop = () => setId(policyFromSearch(window.location.search)); window.addEventListener('popstate', pop); return () => window.removeEventListener('popstate', pop); }, []);
   useEffect(() => { if (!id) return; const previous = document.title; document.title = `${pages[id][lang].title} | فانت | VANT`; return () => { document.title = previous; }; }, [id, lang, pages[id || 'about'][lang].title]);
   return <>
-    <nav dir={lang === 'ar' ? 'rtl' : 'ltr'} aria-label={lang === 'ar' ? 'معلومات المتجر والسياسات' : 'Store information and policies'} className="mx-auto grid max-w-2xl grid-cols-2 gap-5 border-b border-black/5 dark:border-white/10 pb-5 mb-5 text-start">
-      {([['delivery', 'returns', 'contact'], ['about', 'orders', 'privacy', 'storage']] as PolicyId[][]).map((group, index) => <div key={index}><p className="mb-2 text-xs font-semibold text-slate-900 dark:text-slate-100">{lang === 'ar' ? (index === 0 ? 'خدمة الزبائن' : 'فانت والسياسات') : (index === 0 ? 'Customer care' : 'VANT & policies')}</p><ul className="space-y-0.5">{group.map(key => <li key={key}><a href={`?policy=${key}`} onClick={event => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); window.history.pushState({}, '', `?policy=${key}`); setId(key); }} className="inline-flex min-h-11 items-center py-2 text-[13px] leading-5 text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500">{policyFooterLabel(key, pages[key], lang)}</a></li>)}</ul></div>)}
+    <nav dir={lang === 'ar' ? 'rtl' : 'ltr'} aria-label={lang === 'ar' ? 'معلومات المتجر والسياسات' : 'Store information and policies'} className="mx-auto grid max-w-3xl grid-cols-12 gap-x-1 border-b border-black/5 dark:border-white/10 pb-2 mb-3 sm:flex sm:flex-wrap sm:justify-center">
+      {policyIds.map((key, index) => <a key={key} href={`?policy=${key}`} title={pages[key][lang].title} aria-label={pages[key][lang].title} onClick={event => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); window.history.pushState({}, '', `?policy=${key}`); setId(key); }} className={`${index < 4 ? 'col-span-3' : 'col-span-4'} flex min-w-0 min-h-9 items-center justify-center rounded px-1 sm:px-3 text-[11px] leading-4 sm:text-xs text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500`}><span className="truncate">{policyFooterLabel(key, pages[key], lang)}</span></a>)}
     </nav>
     {id && createPortal(<div className="fixed inset-0 z-[10010] bg-white dark:bg-[#0c0e12]" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <div ref={panel} role="dialog" aria-modal="true" aria-label={pages[id][lang].title} tabIndex={-1} className="h-[100dvh] flex flex-col outline-none">
