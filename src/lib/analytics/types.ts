@@ -4,6 +4,7 @@ export interface AnalyticsEvent {
   id: string;
   type:
     | 'page_view'
+    | 'visitor_region'
     | 'product_view'
     | 'wishlist_toggle'
     | 'size_select'

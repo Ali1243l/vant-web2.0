@@ -1,6 +1,7 @@
 import type { AnalyticsEvent } from '../../lib/analytics/types';
 import type { AggregatedAnalytics, CustomerSession, HesitationIncident, SizeDemandItem } from '../lib/analytics';
 import { DAY_MS, orderTime, orderAmount, ordersInWindow, type AnalyticsWindow } from './analyticsCalculations.ts';
+import { normalizeApproximateRegion } from '../../lib/approximateRegion.ts';
 
 export function filterErrorLogs(events: AnalyticsEvent[], query: string): AnalyticsEvent[] {
   const term = query.trim().toLowerCase();
@@ -52,14 +53,14 @@ export function computeDashboardAnalytics(products: any[], orders: any[], source
   }
   const events = [...unique.values()].sort((a, b) => a.timestamp - b.timestamp);
   const sessions = new Map<string, AnalyticsEvent[]>();
-  events.filter(event => event.type !== 'system_error').forEach(event => sessions.set(event.sessionId, [...(sessions.get(event.sessionId) || []), event]));
+  events.filter(event => event.type !== 'system_error' && event.type !== 'visitor_region').forEach(event => sessions.set(event.sessionId, [...(sessions.get(event.sessionId) || []), event]));
   const recordedOrders = ordersInWindow(orders, window, now);
   const delivered = recordedOrders.filter(order => order.status === 'delivered');
   const revenue = delivered.reduce((sum, order) => sum + orderAmount(order), 0);
   const customerSessions: CustomerSession[] = [];
   const hesitationIncidents: HesitationIncident[] = [];
   const visitSessions = new Set(events.filter(event => event.type === 'page_view').map(event => event.sessionId));
-  const visitors = new Set(events.map(event => event.data?.visitorId).filter(Boolean));
+  const visitors = new Set(events.filter(event => event.type !== 'visitor_region').map(event => event.data?.visitorId).filter(Boolean));
   const linkedConversions = new Set(delivered.map(order => order.sessionId).filter(id => visitSessions.has(id)));
   for (const [id, rows] of sessions) {
     const views = rows.filter(event => event.type === 'product_view');
@@ -83,6 +84,7 @@ export function computeDashboardAnalytics(products: any[], orders: any[], source
       lastActive: idleMinutes < 1 ? 'نشط الآن' : `منذ ${idleMinutes} دقيقة`,
       totalSpentIQD: linked.reduce((sum, order) => sum + orderAmount(order), 0),
       preferredCategory: rows.find(event => event.type === 'category_filter')?.data?.category || '—',
+      geo: normalizeApproximateRegion(events.find(event => event.sessionId === id && event.type === 'visitor_region')?.data?.geo),
     });
     if (hesitant) {
       const target = [...rows].reverse().find(event => event.data?.productId);

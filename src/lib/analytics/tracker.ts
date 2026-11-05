@@ -1,5 +1,6 @@
 import { supabase } from '../supabase';
 import { mergeCloudEvents } from './mergeCloudEvents';
+import { getApproximateRegion } from '../approximateRegion';
 import {
   AnalyticsEvent,
   STORAGE_KEY,
@@ -62,6 +63,15 @@ export function getVisitorSessionId(): string {
 
 export function getVisitCount(): number {
   return manageVisitorSession().visitCount;
+}
+
+let regionSession = '';
+export async function trackVisitorRegion() {
+  const sessionId = getVisitorSessionId();
+  if (regionSession === sessionId) return;
+  regionSession = sessionId;
+  const geo = await getApproximateRegion();
+  if (geo.country && getVisitorSessionId() === sessionId) trackEvent('visitor_region', { geo, locationSource: 'approximate_ip' });
 }
 
 // Get all recorded telemetry events from local ring buffer

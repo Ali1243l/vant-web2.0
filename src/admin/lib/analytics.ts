@@ -1,6 +1,7 @@
 import { syncFromSupabaseCloud, trackSystemError, getStoredEvents, resetAnalyticsData } from '../../lib/analytics';
 import { computeDashboardAnalytics, type RFMCustomer } from '../analytics/dashboardModel';
 import { periodBounds, type AnalyticsWindow } from '../analytics/analyticsCalculations';
+import type { ApproximateRegion } from '../../lib/approximateRegion';
 export { syncFromSupabaseCloud, trackSystemError, getStoredEvents, resetAnalyticsData };
 
 export type HesitationStage = 'sizing' | 'checkout' | 'cart';
@@ -14,6 +15,7 @@ export interface CustomerSession {
   id: string; customerName: string; email: string; phone: string; persona: PersonaType;
   engagementScore: number; viewCount: number; cartCount: number;
   lastActive: string; totalSpentIQD: number; preferredCategory: string;
+  geo?: ApproximateRegion;
 }
 export interface SizeDemandItem {
   id: string; productName: string; size: string; requestedVelocity: number;

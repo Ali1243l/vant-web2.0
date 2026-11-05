@@ -13,7 +13,7 @@ import BackToTop from './components/BackToTop';
 import SplashLoader from './components/SplashLoader';
 import MaintenanceScreen from './components/MaintenanceScreen';
 import { SiteControlsProvider, useSiteControls } from './context/SiteControlsContext';
-import { trackEvent } from './lib/analytics';
+import { trackEvent, trackVisitorRegion } from './lib/analytics';
 import { useProducts } from './hooks/useProducts';
 import { useWishlist } from './hooks/useWishlist';
 import { productMatchesQuery } from './lib/search';
@@ -168,7 +168,10 @@ function MainApp() {
 
   // Track initial page view telemetry
   useEffect(() => {
-    if (!new URLSearchParams(window.location.search).has('admin')) trackEvent('page_view', { path: window.location.pathname });
+    if (!new URLSearchParams(window.location.search).has('admin')) {
+      trackEvent('page_view', { path: window.location.pathname });
+      void trackVisitorRegion();
+    }
   }, []);
 
   // Active User Engagement Duration Telemetry Tracker (logs every 30s of active user attention)

@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Target } from 'lucide-react';
 import { Card } from '../ui';
 import { formatCurrency } from '../format';
+import { approximateRegionLabel } from '../../lib/approximateRegion';
 import type { CustomerSession } from '../lib/analytics';
 import type { RFMCustomer } from './dashboardModel';
 
@@ -133,6 +134,7 @@ export const PersonasTab: React.FC<Props> = ({ customerSessions, rfmCustomers, i
                       <td className="py-3.5 px-4">
                         <div className="font-semibold text-white text-sm">{session.customerName}</div>
                         <div className="text-[11px] text-slate-400 font-mono mt-0.5">{session.phone}</div>
+                        <div className="text-[11px] text-slate-400 mt-1">{isAr ? 'الموقع التقريبي: ' : 'Approx. location: '}{approximateRegionLabel(session.geo, isAr ? 'ar' : 'en')}</div>
                       </td>
 
                       {/* Persona Tag */}
