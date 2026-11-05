@@ -20,18 +20,18 @@ export function useModalFocus(open: boolean, panel: RefObject<HTMLElement | null
     const root = panel.current;
     const active = () => layers[layers.length - 1] === layer;
     const elements = () => [...root.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]'), ...document.querySelectorAll<HTMLElement>('[data-toast-notification] button:not(:disabled)')].filter(el => el.getClientRects().length && !el.closest('[inert], [aria-hidden="true"]'));
-    const focus = () => (elements()[0] || root).focus();
+    const focus = () => (elements()[0] || root).focus({ preventScroll: true });
     const keydown = (event: KeyboardEvent) => {
       if (!active()) return;
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); escape.current(); }
       if (event.key !== 'Tab') return;
       const items = elements(), first = items[0], last = items[items.length - 1];
-      if (!first) { event.preventDefault(); root.focus(); }
+      if (!first) { event.preventDefault(); root.focus({ preventScroll: true }); }
       else if (!root.contains(document.activeElement) || (!event.shiftKey && document.activeElement === last)) { event.preventDefault(); first.focus(); }
       else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
     };
     const focusin = (event: FocusEvent) => { if (active() && !root.contains(event.target as Node) && !(event.target as Element)?.closest('[data-toast-notification]')) focus(); };
-    (initialFocus?.current || elements()[0] || root).focus();
+    (initialFocus?.current || elements()[0] || root).focus({ preventScroll: true });
     document.addEventListener('keydown', keydown, true);
     document.addEventListener('focusin', focusin);
     return () => {
@@ -41,7 +41,7 @@ export function useModalFocus(open: boolean, panel: RefObject<HTMLElement | null
       document.removeEventListener('focusin', focusin);
       const underneath = layers[layers.length - 1];
       // React restores DOM focus during commit; return to the trigger afterwards.
-      if (wasActive) queueMicrotask(() => { if (layers[layers.length - 1] === underneath && previous?.isConnected) previous.focus(); });
+      if (wasActive) queueMicrotask(() => { if (layers[layers.length - 1] === underneath && previous?.isConnected) previous.focus({ preventScroll: true }); });
     };
   }, [open, panel, initialFocus]);
 }

@@ -15,6 +15,7 @@ import MaintenanceScreen from './components/MaintenanceScreen';
 import { SiteControlsProvider, useSiteControls } from './context/SiteControlsContext';
 import { trackEvent, trackVisitorRegion } from './lib/analytics';
 import { useProducts } from './hooks/useProducts';
+import { useInitialImagesReady } from './hooks/useInitialImagesReady';
 import { useWishlist } from './hooks/useWishlist';
 import { productMatchesQuery } from './lib/search';
 import { Heart, Loader2, Check, X, Sparkles, Gift, Percent, Tag, ArrowUpDown, LayoutGrid, Grid2X2 } from 'lucide-react';
@@ -405,6 +406,7 @@ function MainApp() {
   const closeDrawer = useCallback(() => setSelected(null), []);
 
   const showSplash = !hasFinishedSplash || isPreviewSplash;
+  const initialImagesReady = useInitialImagesReady(!hasFinishedSplash, loading || isInitialSplashLoading, visible.slice(0, 4).map(product => product.id).join(','));
   const showMaintenance = siteSettings.maintenance_mode && !isAdminUnlocked && !isPreviewMaintenance;
 
   return (
@@ -412,7 +414,7 @@ function MainApp() {
       {/* Root Cinematic Splash / Preloader Screen (Shows once on launch or when tested via Admin) */}
       {showSplash && (
         <SplashLoader
-          isLoading={isInitialSplashLoading || loading}
+          isLoading={isInitialSplashLoading || loading || !initialImagesReady}
           loadingTextEn={siteSettings.loading_text_en}
           loadingTextAr={siteSettings.loading_text_ar}
           motif={siteSettings.splash_motif}

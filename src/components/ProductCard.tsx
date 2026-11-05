@@ -50,6 +50,7 @@ export default React.memo(function ProductCard({
   const [imageResult, setImageResult] = useState<{ src: string; failed: boolean } | null>(null);
   const imageRef = React.useRef<HTMLImageElement>(null);
   const [isHovered, setIsHovered] = useState(false);
+  const [hasHovered, setHasHovered] = useState(false);
 
   // Algorithmic color resolution & SKU derivation
   const variantInfo = useMemo(
@@ -116,6 +117,7 @@ export default React.memo(function ProductCard({
   const handleMouseEnter = () => {
     if (typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches) {
       setIsHovered(true);
+      setHasHovered(true);
     }
   };
 
@@ -191,6 +193,7 @@ export default React.memo(function ProductCard({
             <div className="relative h-full w-full overflow-hidden">
               {/* Primary Image with seamless opacity cross-fade on lazy load finish & smooth hover transition */}
               <img
+                data-catalog-primary
                 ref={imageRef}
                 src={primaryImage.trim()}
                 style={catalogImageStyle(product.catalog_image)}
@@ -198,7 +201,8 @@ export default React.memo(function ProductCard({
                 width={width ?? undefined}
                 height={height ?? undefined}
                 {...catalogImageProps(primaryImage.trim(), imageSizes)}
-                loading={index < 2 ? "eager" : "lazy"}
+                loading={index < 4 ? "eager" : "lazy"}
+                fetchPriority={index < 2 ? 'high' : 'auto'}
                 decoding="async"
                 referrerPolicy="no-referrer"
                 onLoad={() => setImageResult({ src: primaryImage, failed: false })}
@@ -215,7 +219,7 @@ export default React.memo(function ProductCard({
               />
 
               {/* Secondary Image on Hover (Luxury Crossfade Transition) */}
-              {cardHoverControl.visible && Boolean(secondaryImage?.trim()) ? (
+              {hasHovered && cardHoverControl.visible && Boolean(secondaryImage?.trim()) ? (
                 <img
                   src={secondaryImage!.trim()}
                   style={catalogImageStyle(product.catalog_image)}

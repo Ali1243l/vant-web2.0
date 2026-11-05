@@ -25,6 +25,7 @@ export default function SplashLoader({ isLoading, loadingTextEn = 'Preparing the
   const reduced = useReducedMotion();
   const [visible, setVisible] = useState(true);
   const [elapsed, setElapsed] = useState(false);
+  const [deadlineElapsed, setDeadlineElapsed] = useState(false);
   const [replay, setReplay] = useState(0);
   const panel = useRef<HTMLDivElement>(null);
   const callbacks = useRef({ onClosePreview, onFinished });
@@ -37,8 +38,13 @@ export default function SplashLoader({ isLoading, loadingTextEn = 'Preparing the
     return () => window.clearTimeout(timer);
   }, [isPreview, replay]);
   useEffect(() => {
-    if (splashCanFinish(isPreview, isLoading, elapsed)) setVisible(false);
-  }, [isPreview, isLoading, elapsed]);
+    if (isPreview) return;
+    const deadline = window.setTimeout(() => setDeadlineElapsed(true), 4500);
+    return () => window.clearTimeout(deadline);
+  }, [isPreview]);
+  useEffect(() => {
+    if (splashCanFinish(isPreview, isLoading, elapsed, deadlineElapsed)) setVisible(false);
+  }, [isPreview, isLoading, elapsed, deadlineElapsed]);
   useScrollLock(visible);
   useEffect(() => {
     if (!isPreview || !visible) return;

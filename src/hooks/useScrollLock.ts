@@ -158,7 +158,7 @@ function lockViewportScroll() {
     }
 
     html.style.overflow = 'hidden';
-    body.style.overflow = 'hidden';
+    // A second scroll container on body makes the sticky storefront header jump away.
     html.style.overscrollBehavior = 'none';
     body.style.overscrollBehavior = 'none';
 
