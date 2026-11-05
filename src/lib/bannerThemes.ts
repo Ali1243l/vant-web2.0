@@ -1,10 +1,10 @@
-import { HERO_APPEARANCE_CONTROL, parseHeroAppearance, type HeroAppearance, type HeroMotif } from './heroAppearance.ts';
+import { HERO_APPEARANCE_CONTROL, parseHeroAppearance, type HeroAppearance, type HeroMotif, type HeroScene } from './heroAppearance.ts';
 import type { BannerEdits } from './bannerEditor';
 import { parseStoreTheme, type StoreTheme } from './storefrontTheme.ts';
 
 export type ThemeCategory = 'seasons' | 'occasions' | 'offers';
 export interface BannerTheme {
-  id: string;
+  id: Exclude<HeroScene, 'none'>;
   category: ThemeCategory;
   nameAr: string;
   nameEn: string;
@@ -34,7 +34,7 @@ export const BANNER_THEMES: readonly BannerTheme[] = [
 ];
 
 export function themeAppearance(theme: BannerTheme, current?: string): HeroAppearance {
-  return { ...parseHeroAppearance(current), motif: theme.motif, accentColor: theme.accent, lightColor: theme.light, darkColor: theme.dark, motifOpacity: 55, fadeEnabled: true, direction: 'caption', mobileDirection: 'bottom', start: 0, middle: 42, end: 100, startOpacity: 98, middleOpacity: 90, endOpacity: 50, mobileStartOpacity: 98, mobileMiddleOpacity: 94, mobileEndOpacity: 78 };
+  return { ...parseHeroAppearance(current), scene: theme.id, motif: theme.motif, accentColor: theme.accent, lightColor: theme.light, darkColor: theme.dark, motifOpacity: 55, fadeEnabled: true, direction: 'caption', mobileDirection: 'bottom', start: 0, middle: 42, end: 100, startOpacity: 98, middleOpacity: 90, endOpacity: 50, mobileStartOpacity: 98, mobileMiddleOpacity: 94, mobileEndOpacity: 78 };
 }
 
 export function bannerThemeEdits(theme: BannerTheme, current: string | undefined, includeCopy: boolean): BannerEdits {

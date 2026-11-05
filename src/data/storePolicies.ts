@@ -1,6 +1,6 @@
 export const policyIds = ['about', 'orders', 'delivery', 'returns', 'privacy', 'storage', 'contact'] as const;
 export type PolicyId = typeof policyIds[number];
-export interface PolicyPage { ar: { title: string; body: string }; en: { title: string; body: string }; updated: string }
+export interface PolicyPage { ar: { title: string; body: string; label?: string }; en: { title: string; body: string; label?: string }; updated: string }
 export type PolicyPages = Record<PolicyId, PolicyPage>;
 
 export const defaultPolicies: PolicyPages = {
@@ -39,7 +39,7 @@ export function validPolicyPage(value: unknown): value is PolicyPage {
   const page = value as PolicyPage;
   return ['ar', 'en'].every(lang => {
     const copy = page[lang as 'ar' | 'en'];
-    return typeof copy?.title === 'string' && copy.title.trim().length > 0 && copy.title.length <= 140 && typeof copy.body === 'string' && copy.body.trim().length > 0 && copy.body.length <= 24000;
+    return typeof copy?.title === 'string' && copy.title.trim().length > 0 && copy.title.length <= 140 && typeof copy.body === 'string' && copy.body.trim().length > 0 && copy.body.length <= 24000 && (copy.label === undefined || (typeof copy.label === 'string' && copy.label.length <= 64));
   }) && typeof page.updated === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(page.updated) && Number.isFinite(Date.parse(page.updated + 'T00:00:00Z')) && new Date(page.updated + 'T00:00:00Z').toISOString().slice(0, 10) === page.updated;
 }
 
@@ -51,4 +51,13 @@ export function readPolicies(value: unknown): PolicyPages {
 export function policyFromSearch(search: string): PolicyId | null {
   const id = new URLSearchParams(search).get('policy');
   return policyIds.includes(id as PolicyId) ? id as PolicyId : null;
+}
+
+const footerLabels: Record<PolicyId, [string, string]> = {
+  about: ['عن فانت', 'About VANT'], orders: ['شروط الشراء', 'Order terms'], delivery: ['التوصيل', 'Delivery'],
+  returns: ['الاستبدال والضمان', 'Returns & warranty'], privacy: ['الخصوصية', 'Privacy'],
+  storage: ['التخزين والتحليلات', 'Storage & analytics'], contact: ['تواصل معنا', 'Contact'],
+};
+export function policyFooterLabel(id: PolicyId, page: PolicyPage, lang: 'ar' | 'en'): string {
+  return page[lang].label?.trim() || (page[lang].title === defaultPolicies[id][lang].title ? footerLabels[id][lang === 'ar' ? 0 : 1] : page[lang].title);
 }

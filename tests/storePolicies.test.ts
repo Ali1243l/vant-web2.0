@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { policyIds, defaultPolicies, readPolicies, validPolicyPage, policyFromSearch } from '../src/data/storePolicies.ts';
+import { policyIds, defaultPolicies, readPolicies, validPolicyPage, policyFromSearch, policyFooterLabel } from '../src/data/storePolicies.ts';
 
 test('all published policies have matching bilingual content and preserve owner-approved dates and amounts', () => {
   for (const id of policyIds) {
@@ -34,4 +34,15 @@ test('shareable policy links only open known pages and tolerate other URL parame
   assert.equal(policyFromSearch('?policy=returns'), 'returns');
   assert.equal(policyFromSearch('?lang=en&policy=privacy'), 'privacy');
   for (const query of ['', '?policy=__proto__', '?policy=<script>', '?policy=not-a-page']) assert.equal(policyFromSearch(query), null);
+});
+
+test('compact footer labels preserve previously edited titles and separately saved labels', () => {
+  assert.equal(policyFooterLabel('orders', defaultPolicies.orders, 'ar'), 'شروط الشراء');
+  const custom = { ...defaultPolicies.orders, ar: { ...defaultPolicies.orders.ar, title: 'شروط فانت المعدّلة' } };
+  assert.equal(policyFooterLabel('orders', custom, 'ar'), 'شروط فانت المعدّلة');
+  custom.ar = { ...custom.ar, label: 'الشراء' } as typeof custom.ar;
+  const saved = readPolicies({ orders: custom });
+  assert.equal(policyFooterLabel('orders', saved.orders, 'ar'), 'الشراء');
+  assert.equal(policyFooterLabel('orders', saved.orders, 'en'), 'Order terms');
+  assert.equal(validPolicyPage({ ...custom, ar: { ...custom.ar, label: 'x'.repeat(65) } }), false);
 });

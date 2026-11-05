@@ -13,6 +13,7 @@ test('all twelve themes survive shared validation and contain complete bilingual
     const controls = Object.fromEntries(Object.keys(edits).map(id => [id, { id, visible: false, enabled: true }]));
     const saved = buildBannerChanges(controls as any, [], edits, {});
     const appearance = themeAppearance(theme);
+    assert.equal(appearance.scene, theme.id);
     assert.deepEqual(parseHeroAppearance(saved.controls[HERO_APPEARANCE_CONTROL].actionValue), appearance);
     for (const [id, patch] of Object.entries(edits)) {
       if (id !== HERO_APPEARANCE_CONTROL) { assert.ok(patch.label_ar?.trim()); assert.ok(patch.label_en?.trim()); }
@@ -24,6 +25,21 @@ test('all twelve themes survive shared validation and contain complete bilingual
       assert.ok(!JSON.stringify(variables).includes('NaN'));
     }
   }
+});
+
+test('all seasonal scene identities and the motion-off choice survive saved presets', () => {
+  const scenes = BANNER_THEMES.map(theme => {
+    const appearance = themeAppearance(theme, JSON.stringify({ motionEnabled: false, positionX: 21 }));
+    const restored = parseHeroAppearance(JSON.stringify(appearance));
+    assert.equal(restored.scene, theme.id);
+    assert.equal(restored.motionEnabled, false);
+    assert.equal(restored.positionX, 21);
+    return restored.scene;
+  });
+  assert.equal(new Set(scenes).size, 12);
+  assert.equal(parseHeroAppearance(JSON.stringify({ motif: 'snow' })).scene, 'winter');
+  assert.equal(parseHeroAppearance(JSON.stringify({ motif: 'sale', scene: '<script>', motionEnabled: 'false' })).scene, 'weekend');
+  assert.equal(parseHeroAppearance(JSON.stringify({ motif: 'sale', motionEnabled: 'false' })).motionEnabled, true);
 });
 
 test('style-only selection preserves copy, image, visibility, crop and unrelated appearance settings', () => {

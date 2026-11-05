@@ -22,6 +22,7 @@ import type { Product, Language, Theme } from './types';
 
 import { scrollStorefrontTo } from './lib/pageScroll';
 import { STORE_THEME_CONTROL, parseStoreTheme, storeThemeVariables } from './lib/storefrontTheme';
+import { HERO_APPEARANCE_CONTROL, parseHeroAppearance } from './lib/heroAppearance';
 import { BANNER_TARGET_CONTROL, parseBannerTarget, matchesBannerTarget, bannerPageRequestKey, type BannerTarget } from './lib/bannerTarget';
 import './storefront-theme.css';
 import { controlActive } from './lib/siteControlModel';
@@ -96,16 +97,18 @@ function MainApp() {
   const [bannerSelection, setBannerSelection] = useState<BannerTarget | null>(null);
   const lastBannerPageAttempt = useRef<string | null>(null);
   const storeThemeRaw = getControl(STORE_THEME_CONTROL).actionValue;
+  const seasonalAppearance = getControl(HERO_APPEARANCE_CONTROL).actionValue;
   useEffect(() => {
     const root = document.documentElement;
     const settings = parseStoreTheme(storeThemeRaw);
     const variables = storeThemeVariables(settings, theme);
     if (settings.enabled) {
       root.setAttribute('data-storefront-theme', 'active');
+      root.setAttribute('data-store-season', parseHeroAppearance(seasonalAppearance).scene);
       for (const [key, value] of Object.entries(variables)) root.style.setProperty(key, value);
     }
-    return () => { root.removeAttribute('data-storefront-theme'); for (const key of Object.keys(variables)) root.style.removeProperty(key); };
-  }, [storeThemeRaw, theme]);
+    return () => { root.removeAttribute('data-storefront-theme'); root.removeAttribute('data-store-season'); for (const key of Object.keys(variables)) root.style.removeProperty(key); };
+  }, [storeThemeRaw, theme, seasonalAppearance]);
   const [selected, setSelected] = useState<Product | null>(null);
   const openedItemLink = useRef<string | null>(null);
   useEffect(() => {

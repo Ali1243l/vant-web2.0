@@ -20,3 +20,14 @@
 [data-storefront-theme] [data-store-panel] .product-sheet-header, [data-storefront-theme] [data-store-panel] .product-sheet-footer { background: var(--store-surface); color: var(--store-text); border-color: var(--store-border); }
 [data-storefront-theme] [data-store-newsletter] :where(h2,p) { color: var(--store-text); }
 [data-storefront-theme] [data-store-panel] button[aria-pressed="true"] { background: var(--store-accent); color: var(--store-on-accent); border-color: var(--store-accent); }
+html[data-store-season] { --season-edge:linear-gradient(90deg,transparent,var(--store-accent),transparent); }
+html[data-store-season=winter] { --season-edge:repeating-linear-gradient(110deg,transparent 0 14px,var(--store-accent) 15px 17px,transparent 18px 32px); }
+html[data-store-season=spring] { --season-edge:radial-gradient(ellipse at center,var(--store-accent) 0 20%,transparent 25%); }
+html[data-store-season=summer] { --season-edge:repeating-linear-gradient(90deg,transparent 0 28px,var(--store-accent) 29px 31px,transparent 32px 40px); }
+html[data-store-season=autumn] { --season-edge:repeating-linear-gradient(135deg,transparent 0 20px,var(--store-accent) 21px 25px,transparent 26px 40px); }
+html[data-store-season=ramadan] { --season-edge:radial-gradient(ellipse at bottom,transparent 50%,var(--store-accent) 55% 65%,transparent 70%); }
+html[data-store-season=holiday] { --season-edge:radial-gradient(ellipse at top,transparent 40%,var(--store-accent) 45% 55%,transparent 60%); }
+html[data-store-season=school] { --season-edge:repeating-linear-gradient(90deg,var(--store-accent) 0 2px,transparent 3px 18px); }
+html[data-store-season=weekend],html[data-store-season=eid] { --season-edge:repeating-linear-gradient(90deg,var(--store-accent) 0 8px,transparent 9px 18px); }
+html[data-store-season=black-friday] { --season-edge:repeating-linear-gradient(90deg,var(--store-accent) 0 2px,transparent 3px 5px,var(--store-accent) 6px 11px,transparent 12px 18px); }
+html[data-storefront-theme=active]:not([data-store-season=none]) [data-store-footer] { background-image:var(--season-edge); background-size:80px 2px; background-repeat:repeat-x; }

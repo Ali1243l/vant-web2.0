@@ -2,8 +2,15 @@ export const HERO_APPEARANCE_CONTROL = 'banner_hero_appearance';
 export type FadeDirection = 'caption' | 'left' | 'right' | 'top' | 'bottom' | 'custom';
 export const HERO_MOTIFS = ['none', 'snow', 'sun', 'bloom', 'leaf', 'celebration', 'crescent', 'gift', 'sale', 'school'] as const;
 export type HeroMotif = typeof HERO_MOTIFS[number];
+export const HERO_SCENES = ['none', 'winter', 'spring', 'summer', 'autumn', 'new-year', 'ramadan', 'eid', 'holiday', 'school', 'weekend', 'black-friday', 'season-end'] as const;
+export type HeroScene = typeof HERO_SCENES[number];
+export function sceneForMotif(motif: HeroMotif): HeroScene {
+  return ({ none: 'none', snow: 'winter', bloom: 'spring', sun: 'summer', leaf: 'autumn', celebration: 'new-year', crescent: 'ramadan', gift: 'eid', sale: 'weekend', school: 'school' } as const)[motif];
+}
 
 export interface HeroAppearance {
+  scene: HeroScene;
+  motionEnabled: boolean;
   motif: HeroMotif;
   accentColor: string;
   motifOpacity: number;
@@ -37,7 +44,7 @@ export interface HeroAppearance {
 }
 
 export const DEFAULT_HERO_APPEARANCE: HeroAppearance = {
-  motif: 'none', accentColor: '#3b82f6', motifOpacity: 55,
+  scene: 'none', motionEnabled: true, motif: 'none', accentColor: '#3b82f6', motifOpacity: 55,
   fadeEnabled: true, direction: 'caption', mobileDirection: 'bottom',
   angle: 90, mobileAngle: 0, start: 0, middle: 42, end: 100,
   startOpacity: 96, middleOpacity: 78, endOpacity: 6,
@@ -77,6 +84,9 @@ export function parseHeroAppearance(raw?: string): HeroAppearance {
   }
   if (typeof input.fadeEnabled === 'boolean') result.fadeEnabled = input.fadeEnabled;
   if (HERO_MOTIFS.includes(input.motif as HeroMotif)) result.motif = input.motif as HeroMotif;
+  // shortcut: legacy presets without scene IDs use their motif's default; reselect the preset for its specific scene.
+  result.scene = HERO_SCENES.includes(input.scene as HeroScene) ? input.scene as HeroScene : sceneForMotif(result.motif);
+  if (typeof input.motionEnabled === 'boolean') result.motionEnabled = input.motionEnabled;
   result.middle = Math.max(result.start, result.middle);
   result.end = Math.max(result.middle, result.end);
   return result;
