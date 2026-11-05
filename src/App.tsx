@@ -466,8 +466,8 @@ function MainApp() {
         >
       {storeSeason && <StoreSeasonAtmosphere settings={storeSeason} paused={isAdminOpen || Boolean(selected) || isCartOpen || showSplash} />}
       {/* Luxury Ambient Lighting Glow Orbs */}
-      <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 h-[520px] w-[850px] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(0,74,215,0.06),transparent_70%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.08),transparent_70%)] blur-3xl animate-luxury-glow" />
-      <div className="pointer-events-none absolute top-[40%] ltr:-right-48 rtl:-left-48 h-[400px] w-[400px] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.03),transparent_70%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.04),transparent_70%)] blur-3xl" />
+      {!storeSeason && <><div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 h-[520px] w-[850px] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(0,74,215,0.06),transparent_70%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.08),transparent_70%)] blur-3xl animate-luxury-glow" />
+      <div className="pointer-events-none absolute top-[40%] ltr:-right-48 rtl:-left-48 h-[400px] w-[400px] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.03),transparent_70%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.04),transparent_70%)] blur-3xl" /></>}
 
       {/* 1-Click Coupon Activation Toast from Email Link */}
       <AnimatePresence>

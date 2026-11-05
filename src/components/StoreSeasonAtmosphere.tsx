@@ -40,7 +40,7 @@ export default function StoreSeasonAtmosphere({ settings, paused = false }: { se
   useEffect(() => { const update = () => setAwake(!document.hidden); document.addEventListener('visibilitychange', update); return () => document.removeEventListener('visibilitychange', update); }, []);
   if (settings.scene === 'none' || settings.motif === 'none') return null;
   const designs = seasonalVariants(settings.scene, 16);
-  return <div aria-hidden="true" data-store-atmosphere={settings.scene} data-motion={settings.motionEnabled && awake && !paused ? 'running' : 'paused'} className="store-atmosphere" style={{ color: settings.scene === 'winter' ? '#dff5ff' : settings.accentColor, '--atmosphere-opacity': Math.max(.12, Math.min(.36, settings.motifOpacity / 100)) } as CSSProperties}>
+  return <div aria-hidden="true" data-store-atmosphere={settings.scene} data-motion={settings.motionEnabled && awake && !paused ? 'running' : 'paused'} className="store-atmosphere" style={{ '--season-accent': settings.accentColor, '--atmosphere-opacity': Math.max(.12, Math.min(.36, settings.motifOpacity / 100)) } as CSSProperties}>
     <div className="store-atmosphere-glow" />
     {designs.map((variant, i) => <span key={i} className="store-atmosphere-particle" style={{ left: `${(i * 61 + 7) % 97}%`, top: `${(i * 43) % 93}%`, '--drift': `${(i % 2 ? 1 : -1) * (12 + variant * 4)}px`, '--turn': `${(i % 2 ? -1 : 1) * (25 + variant * 13)}deg`, '--duration': `${15 + (i * 7) % 16}s`, '--delay': `${-((i * 11) % 29)}s`, '--size': `${12 + (i * 7) % 17}px` } as CSSProperties}><SeasonalGlyph scene={settings.scene} variant={variant} /></span>)}
   </div>;

@@ -301,7 +301,7 @@ export default React.memo(function ProductCard({
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-20px" }}
           transition={{ duration: 0.5, delay: 0.15, ease: "easeOut" }}
-          className="mt-2.5 sm:mt-3 md:mt-3.5 px-1 sm:px-1.5 md:px-2 pb-1.5 flex flex-1 flex-col gap-1.5 sm:gap-2 rtl:text-right ltr:text-left"
+          data-store-card-meta className="mt-2.5 sm:mt-3 md:mt-3.5 px-1 sm:px-1.5 md:px-2 pb-1.5 flex flex-1 flex-col gap-1.5 sm:gap-2 rtl:text-right ltr:text-left"
         >
           {/* 1. Category name - Subtle, smaller, refined grayish color */}
           {cardCategoryControl.visible && (

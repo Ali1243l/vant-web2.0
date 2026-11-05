@@ -34,7 +34,7 @@ export default function SeasonalArtwork({ settings, isAr }: { settings: HeroAppe
   }, [settings.motionEnabled, settings.scene]);
   if (settings.scene === 'none' || settings.motif === 'none') return null;
   const Icon = icons[settings.scene];
-  return <div ref={root} aria-hidden="true" data-seasonal-scene={settings.scene} data-motion={settings.motionEnabled ? (visible ? 'running' : 'paused') : 'off'} className="seasonal-art" style={{ [isAr ? 'left' : 'right']: 0, color: settings.accentColor, '--season-opacity': settings.motifOpacity / 100 } as CSSProperties}>
+  return <div ref={root} aria-hidden="true" data-seasonal-scene={settings.scene} data-motion={settings.motionEnabled ? (visible ? 'running' : 'paused') : 'off'} className="seasonal-art" style={{ [isAr ? 'left' : 'right']: 0, '--season-accent': settings.accentColor, '--season-opacity': settings.motifOpacity / 100 } as CSSProperties}>
     <div className="seasonal-halo" />
     <svg className="seasonal-lines" viewBox="0 0 290 290" fill="none" stroke="currentColor" strokeWidth="1.4" focusable="false"><path d={paths[settings.scene][0]} /><path className="seasonal-secondary" d={paths[settings.scene][1]} /></svg>
     <div className="seasonal-emblem"><Icon strokeWidth={0.9} /></div>
