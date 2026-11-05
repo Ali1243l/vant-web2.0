@@ -1,3 +1,4 @@
+import { normalizeEmailImageUrl } from '../lib/emailImage';
 import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -45,15 +46,7 @@ interface Props {
 }
 
 // Helper to guarantee absolute HTTPS image URLs for Supabase and external CDNs
-const normalizeImageUrl = (raw: string): string => {
-  const clean = (raw || "").trim();
-  if (!clean) return "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?fm=jpg&fit=crop&w=1200&q=85";
-  if (clean.startsWith("http://") || clean.startsWith("https://") || clean.startsWith("data:")) {
-    return clean;
-  }
-  const cleanPath = clean.replace(/^\/+/, "").replace(/^product-images\//, "");
-  return `https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/${cleanPath}`;
-};
+const normalizeImageUrl = (raw: string): string => normalizeEmailImageUrl(raw || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?fm=jpg&fit=crop&w=1200&q=85');
 
 export default function AdminNewsletterManager({
   isOpen = true,

@@ -1,4 +1,5 @@
 import { escapeHtml, httpUrl } from '../lib/adminAudience';
+import { normalizeEmailImageUrl } from '../lib/emailImage';
 import React from 'react';
 
 export interface EmailCampaignData {
@@ -50,8 +51,8 @@ export const defaultCampaignData: EmailCampaignData = {
 export function generateEmailHtml(input: EmailCampaignData): string {
   const data = Object.fromEntries(Object.entries(input).map(([key, value]) => [key, typeof value === 'string' ? escapeHtml(value) : value])) as unknown as EmailCampaignData;
   data.ctaUrl = escapeHtml(httpUrl(input.ctaUrl));
-  data.heroImage = escapeHtml(httpUrl(input.heroImage));
-  data.items = input.items?.map(item => ({ ...item, name: escapeHtml(item.name), price: escapeHtml(item.price), originalPrice: escapeHtml(item.originalPrice), badge: escapeHtml(item.badge), image: escapeHtml(httpUrl(item.image)) }));
+  data.heroImage = escapeHtml(normalizeEmailImageUrl(input.heroImage));
+  data.items = input.items?.map(item => ({ ...item, name: escapeHtml(item.name), price: escapeHtml(item.price), originalPrice: escapeHtml(item.originalPrice), badge: escapeHtml(item.badge), image: escapeHtml(normalizeEmailImageUrl(item.image)) }));
   const isFlash = data.templateType === 'flash_sale';
   const isLaunch = data.templateType === 'launch';
   const isClearance = data.templateType === 'clearance';
@@ -261,7 +262,7 @@ export const WelcomeEmailTemplate: React.FC<WelcomeEmailTemplateProps> = ({
         {data.heroImage && (
           <div className="w-full relative bg-slate-950 overflow-hidden max-h-64 sm:max-h-72">
             <img
-              src={data.heroImage}
+              src={normalizeEmailImageUrl(data.heroImage)}
               alt={data.headline}
               className="w-full h-full object-cover"
               onError={(e) => {
@@ -351,7 +352,7 @@ export const WelcomeEmailTemplate: React.FC<WelcomeEmailTemplateProps> = ({
                     {item.image?.trim() ? (
                       <div className="aspect-square w-full rounded-lg overflow-hidden bg-slate-900 mb-2">
                         <img
-                          src={item.image.trim()}
+                          src={normalizeEmailImageUrl(item.image)}
                           alt={item.name}
                           className="w-full h-full object-cover"
                         />

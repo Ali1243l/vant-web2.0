@@ -1,3 +1,5 @@
+import { normalizeEmailImageUrl } from './emailImage';
+
 export interface CampaignTemplateConfig {
   id: string;
   type: 'welcome' | 'drop' | 'flash_sale' | 'loyalty' | 'restock' | 'custom';
@@ -163,29 +165,8 @@ export function buildUniversalVantEmailHtml(params: EmailRenderParams): string {
   // Clean hero image (never send base64 data URI, ensure absolute public URL and Google Image Proxy compatibility)
   const rawHeroImage = (params.heroImage || params.imageUrl || params.heroImageUrl || '').trim();
   const defaultFallbackImage = 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?fm=jpg&fit=crop&w=1200&q=85';
-  let heroImage = '';
+  const heroImage = normalizeEmailImageUrl(rawHeroImage || defaultFallbackImage);
 
-  if (rawHeroImage.startsWith('http://') || rawHeroImage.startsWith('https://')) {
-    heroImage = rawHeroImage;
-  } else if (rawHeroImage && !rawHeroImage.startsWith('data:')) {
-    const cleanPath = rawHeroImage.replace(/^\/+/, '').replace(/^product-images\//, '');
-    heroImage = `https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/${cleanPath}`;
-  } else {
-    heroImage = defaultFallbackImage;
-  }
-
-  if (!heroImage) {
-    heroImage = defaultFallbackImage;
-  }
-
-  // If Unsplash URL, ensure it returns JPG instead of AVIF for Google Image Proxy
-  if (heroImage.includes('unsplash.com')) {
-    heroImage = heroImage.replace('auto=format', 'fm=jpg');
-    if (!heroImage.includes('fm=jpg') && !heroImage.includes('fm=jpeg')) {
-      heroImage += (heroImage.includes('?') ? '&' : '?') + 'fm=jpg&q=85';
-    }
-  }
-  
   const ctaText = params.ctaText || 'تصفح قائمة عروض الخصم واستفد من الكوبون';
   const baseCtaUrl = (params.ctaUrl || DEFAULT_STORE_URL).trim();
   

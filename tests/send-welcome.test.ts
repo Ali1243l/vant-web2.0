@@ -68,3 +68,29 @@ test('provider rejection is a failure; acceptance is a confirmed send', async ()
     else process.env.RESEND_API_KEY = originalKey;
   }
 });
+
+test('custom template image repair reaches the provider; temporary images prevent delivery', async () => {
+  const originalKey = process.env.RESEND_API_KEY;
+  process.env.RESEND_API_KEY = 're_test_not_a_real_key';
+  const base = 'https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/';
+  let delivered: any;
+  const fetchMock = mock.method(globalThis, 'fetch', async (_url: unknown, options: RequestInit) => {
+    delivered = JSON.parse(options.body as string);
+    return new Response(JSON.stringify({ id: 'image-fixture' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  });
+  try {
+    const result = await request('POST', { email: 'test@example.com', html: `<img src="${base}${base}newsletter-banners/photo.jpg?a=1&amp;b=2">` });
+    assert.equal(result.statusCode, 200);
+    assert.equal(delivered.html, `<img src="${base}newsletter-banners/photo.jpg?a=1&amp;b=2">`);
+    for (const src of ['blob:https://example.test/temporary', 'data:image/png;base64,AA==', 'http://localhost/photo.jpg']) {
+      const rejected = await request('POST', { email: 'test@example.com', html: `<img src="${src}">` });
+      assert.equal(rejected.statusCode, 422);
+      assert.equal(rejected.payload.emailSent, false);
+    }
+    assert.equal(fetchMock.mock.callCount(), 1);
+  } finally {
+    fetchMock.mock.restore();
+    if (originalKey === undefined) delete process.env.RESEND_API_KEY;
+    else process.env.RESEND_API_KEY = originalKey;
+  }
+});

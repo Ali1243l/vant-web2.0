@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { EmailImageError, normalizeEmailImageUrl, normalizeEmailHtmlImages } from '../src/lib/emailImage.ts';
 
 export const config = {
   runtime: 'nodejs',
@@ -54,30 +55,9 @@ export default async function handler(req: any, res: any) {
       'يسعدنا انضمامك إلى القائمة الحصرية لعشاق الخياطة الراقية والتصاميم المعمارية الفاخرة. استمتع بتجربة تسوق استثنائية مع كود الخصم الخاص بطلبك.';
     const badgeText = body.badgeText || 'VIP PRIVILEGE ACCESS';
     
-    // Clean hero image (never send base64 data URI to email clients, ensure absolute Supabase public URL and Google Image Proxy compatibility)
     const rawHeroImage = (body.heroImage || body.imageUrl || body.heroImageUrl || body.image || body.welcomeImage || '').trim();
     const defaultFallbackImage = 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?fm=jpg&fit=crop&w=1200&q=85';
-    let heroImage = '';
-
-    if (rawHeroImage.startsWith('http://') || rawHeroImage.startsWith('https://')) {
-      heroImage = rawHeroImage;
-    } else if (rawHeroImage && !rawHeroImage.startsWith('data:')) {
-      const cleanPath = rawHeroImage.replace(/^\/+/, '').replace(/^product-images\//, '');
-      heroImage = `https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/${cleanPath}`;
-    } else {
-      heroImage = defaultFallbackImage;
-    }
-
-    if (!heroImage) {
-      heroImage = defaultFallbackImage;
-    }
-
-    if (heroImage.includes('unsplash.com')) {
-      heroImage = heroImage.replace('auto=format', 'fm=jpg');
-      if (!heroImage.includes('fm=jpg') && !heroImage.includes('fm=jpeg')) {
-        heroImage += (heroImage.includes('?') ? '&' : '?') + 'fm=jpg&q=85';
-      }
-    }
+    const heroImage = normalizeEmailImageUrl(rawHeroImage || defaultFallbackImage);
 
     const ctaText = body.ctaText || 'تصفح قائمة عروض الخصم واستفد من الكوبون';
     const baseCtaUrl = (body.ctaUrl || body.storeUrl || DEFAULT_STORE_URL).trim();
@@ -300,11 +280,7 @@ export default async function handler(req: any, res: any) {
 </body>
 </html>`;
 
-    // Ensure all <img> tags in htmlContent strictly have absolute https:// URLs (prevents Gmail from stripping src)
     let finalHtml = htmlContent;
-    finalHtml = finalHtml.replace(/src=["']product-images\/([^"']+)["']/g, 'src="https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/$1"');
-    finalHtml = finalHtml.replace(/src=["']newsletter-banners\/([^"']+)["']/g, 'src="https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/newsletter-banners/$1"');
-    finalHtml = finalHtml.replace(/src=["']catalog\/([^"']+)["']/g, 'src="https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/catalog/$1"');
 
     if (!resendApiKey) {
       return res.status(503).json({
@@ -315,6 +291,7 @@ export default async function handler(req: any, res: any) {
     }
 
     const resend = new Resend(resendApiKey);
+    finalHtml = normalizeEmailHtmlImages(finalHtml);
 
     const { data, error } = await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL || 'VANT Archive <onboarding@resend.dev>',
@@ -334,6 +311,7 @@ export default async function handler(req: any, res: any) {
       data,
     });
   } catch (error: any) {
+    if (error instanceof EmailImageError) return res.status(422).json({ success: false, emailSent: false, error: error.message });
     console.error('Error in /api/send-welcome:', error);
     return res.status(500).json({
       success: false,

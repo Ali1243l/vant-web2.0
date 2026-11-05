@@ -1,5 +1,14 @@
 # Checkpoint — 2026-11-05
 
+## Latest continuation: missing email images (2026-11-05)
+- Reproduced an actual uploader bug: `uploadCampaignImageFile` prepended the public Supabase bucket URL to an already absolute URL returned by shared storage. The resulting image URL returned HTTP 400 / JSON (88 bytes); the correct URL for the same existing image returned HTTP 200 / image/webp (166,422 bytes). Read-only requests; no files or database records changed.
+- Shared `src/lib/emailImage.ts` repairs repeated owned-bucket prefixes and known relative image paths, preserves HTTPS query parameters, rejects temporary/local/non-HTTPS sources, and normalizes quoted `<img src>` values in final email HTML. It is source validation for our generated templates, not a general HTML sanitizer or a remote image reachability/codec check.
+- Campaign uploader now preserves the absolute public URL and throws on upload failure instead of substituting a free-CDN/stock image. Both campaign builders, old template previews and the API use the shared repair. Stored templates are repaired when rendered/sent; no destructive bulk rewrite was performed.
+- API final-HTML validation covers supplied custom HTML too, returning 422 without provider delivery on invalid image sources. The existing missing-server-key 503 check remains intact. No CID attachment mechanism, dependencies, credentials or email-service activation was added.
+- Verification: regression failed before the uploader fix; **165 tests + TypeScript + production build pass** after the fix. Provider calls are mocked in tests; the custom HTML test asserts repaired source reaches the outbound payload and invalid local/data/blob sources never invoke delivery.
+- Actual recipient delivery remains unverified: the earlier live attempt returned 503 because `RESEND_API_KEY` was missing. No actual email was sent during this continuation. External-image preferences/client compatibility can still affect display. Endpoint authorization, rate limiting, consent/idempotency and real inbox checks remain pending before enabling production email.
+- Preserve the user's staged `.rooignore`; release only the email-image files/tests and this handoff to main.
+
 User requested a bounded work session and an explicit handoff before usage runs out. The agent cannot read the usage percentage. Do not claim a 4% threshold was observed.
 
 ## Latest continuation: save acknowledgements and notification layering (2026-11-05)

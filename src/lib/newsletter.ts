@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
-import { uploadImageToSupabase } from './storage';
+import { uploadImageToSupabase, resolveStoredImages } from './storage';
+import { normalizeEmailImageUrl } from './emailImage';
 import {
   DEFAULT_CAMPAIGN_TEMPLATES,
   DEFAULT_STORE_URL,
@@ -506,27 +507,10 @@ export async function dispatchCampaignEmail(params: {
   const subject = params.subject || tpl?.subject || `Welcome to VANT // Access Granted (${couponCode})`;
   const badgeText = params.badgeText || tpl?.badgeText || 'CONFIDENTIAL // VIP ACCESS';
   // Resolve absolute hero image URL (convert any relative Supabase storage paths using getPublicUrl)
-  let rawHero = (params.heroImage || params.imageUrl || params.heroImageUrl || tpl?.heroImage || '').trim();
+  const rawHero = (params.heroImage || params.imageUrl || params.heroImageUrl || tpl?.heroImage || '').trim();
   const defaultFallbackImage = 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?fm=jpg&fit=crop&w=1200&q=85';
-  let heroImage = defaultFallbackImage;
-
-  if (rawHero) {
-    if (rawHero.startsWith('http://') || rawHero.startsWith('https://')) {
-      heroImage = rawHero;
-    } else if (!rawHero.startsWith('data:')) {
-      const cleanPath = rawHero.replace(/^\/+/, '').replace(/^product-images\//, '');
-      if (supabase) {
-        const { data } = supabase.storage.from('product-images').getPublicUrl(cleanPath);
-        if (data?.publicUrl && (data.publicUrl.startsWith('http://') || data.publicUrl.startsWith('https://'))) {
-          heroImage = data.publicUrl;
-        } else {
-          heroImage = `https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/${cleanPath}`;
-        }
-      } else {
-        heroImage = `https://gjjsdnyfhhbacuciqwbq.supabase.co/storage/v1/object/public/product-images/${cleanPath}`;
-      }
-    }
-  }
+  const heroImage = normalizeEmailImageUrl(resolveStoredImages(rawHero || defaultFallbackImage));
+  if (!heroImage) return { success: false, emailSent: false, subject, body: 'رابط الصورة غير صالح للبريد؛ ارفع الصورة من جديد.' };
 
   const ctaText = params.ctaText || tpl?.ctaText || 'EXPLORE COLLECTION // تصفح التشكيلة';
   const ctaUrl = params.ctaUrl || tpl?.ctaUrl || storeUrl;
@@ -649,7 +633,6 @@ export async function dispatchWelcomeEmailCopy(
  */
 export async function uploadCampaignImageFile(file: File): Promise<string> {
   try {
-    // 1. If file is larger than 1MB or from mobile camera, compress it first using canvas
     let fileToUpload: File | Blob = file;
     if (typeof window !== 'undefined' && file.size > 300 * 1024) {
       try {
@@ -674,27 +657,12 @@ export async function uploadCampaignImageFile(file: File): Promise<string> {
     }
 
     const uploadedUrl = await uploadImageToSupabase(fileToUpload as File, 'newsletter-banners');
-    if (uploadedUrl && !uploadedUrl.startsWith('data:')) {
-      const supabaseUrl =
-        (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) ||
-        'https://gjjsdnyfhhbacuciqwbq.supabase.co';
-      const cleanPath = uploadedUrl.replace(/^\/+/, '');
-      const finalPath = cleanPath.startsWith('product-images') ? cleanPath : `product-images/${cleanPath}`;
-      return `${supabaseUrl}/storage/v1/object/public/${finalPath}`;
-    }
-
-    // 2. If Supabase returned a data: URL or failed, upload to free public CDN
-    const { uploadToFreeCdn } = await import('./storage');
-    const freeCdnUrl = await uploadToFreeCdn(fileToUpload);
-    if (freeCdnUrl && (freeCdnUrl.startsWith('http://') || freeCdnUrl.startsWith('https://'))) {
-      return freeCdnUrl;
-    }
+    const imageUrl = normalizeEmailImageUrl(uploadedUrl);
+    if (imageUrl) return imageUrl;
   } catch (err) {
-    console.warn('Upload image notice:', err);
+    console.warn('Campaign image upload failed:', err instanceof Error ? err.message : 'upload');
   }
-
-  // Fallback: If for any reason all uploads fail, use public reliable CDN URL
-  return 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?fm=jpg&fit=crop&w=1200&q=85';
+  throw new Error('تعذّر تثبيت صورة البريد بالسحابة. الصورة السابقة محفوظة؛ تحقق من اتصالك وحساب الأدمن ثم أعد المحاولة.');
 }
 
 /**
