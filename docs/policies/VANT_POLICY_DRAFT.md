@@ -13,8 +13,9 @@ Draft for review only — not published or ready for use as binding order terms.
 - البريد / Email: [يُحدد لاحقاً / To be provided] — لا يُنشر عنوان مختلق.
 - العنوان والبيانات التجارية / Business address and registration details: لم تُقدّم؛ تُراجع متطلبات الإفصاح والتسجيل قبل النشر. لا يُدّعى وجود متجر فعلي أو تسجيل تجاري.
 - كلفة التوصيل المرجعية / Indicative delivery fee: 5,000 IQD.
-- مدة التوصيل المرجعية / Indicative delivery estimate: 2–4 أيام / days.
-- مدة ضمان الطباعة / Print warranty period: سنة واحدة / One year.
+- مدة التوصيل المرجعية / Indicative delivery estimate: 2–6 أيام تقويمية من تثبيت الطلب / 2–6 calendar days from order confirmation.
+- مدة 2–3 أيام المذكورة للتجهيز أو ما بعده / The additional 2–3-day description: بانتظار توضيح المقصود، ولا تُضاف إلى مدة 2–6 أيام من التثبيت / Awaiting clarification; not added to the 2–6-day window from confirmation.
+- مدة ضمان الطباعة / Print warranty period: سنة واحدة من يوم الاستلام / One year from receipt.
 
 عند التنفيذ تُدار هذه البيانات من إعدادات الإدارة، وتتشاركها الصفحات باللغتين. يختار الموقع النص حسب لغة الواجهة التي اختارها المستخدم. هذه آلية مقترحة ولم تُنفّذ في هذا التحديث.
 
@@ -37,7 +38,9 @@ VANT is an online clothing store serving customers across Iraq through delivery.
 
 تُعرض الأسعار بالدينار العراقي، وتُبيّن أجور التوصيل وأي تخصيص متفق عليه ضمن ملخص الطلب. تُراجع تفاصيل الطلب مع الزبون قبل تثبيته. لا تُطبّق تغييرات الأسعار أو أجور التوصيل لاحقاً على طلب مثبت دون اتفاق جديد مع الزبون. شروط الطلبات الخاصة ومواعيد تجهيزها تُحدّد قبل البدء بها.
 
-[يُستكمل قبل النشر: مدة وطريقة رد العربون، معالجة إلغاء فانت أو تعذر تنفيذ الطلب، ومصير زيادة رصيد آسيا عند الاسترجاع. يلزم تدقيق قابلية تطبيق قيود الإلغاء محلياً.]
+عند الإلغاء المؤهل لاسترجاع العربون، يُرد أصل العربون. إذا دُفع العربون برصيد آسيا، لا تُرد الكلفة الإضافية البالغة 20% التي تُستهلك في عملية التحويل لمزود الخدمة، ولا تُحتسب جزءاً من العربون. مثال: عند دفع 12,000 دينار رصيد لتغطية عربون 10,000 دينار، يكون مبلغ استرجاع أصل العربون 10,000 دينار. يُكشف عن هذا الشرط قبل الدفع؛ ولا يُطبق بما ينتقص من الحقوق الإلزامية أو يحمّل الزبون كلفة خطأ تتحمله فانت، ولا تُقتطع كلفة لم تُدفع فعلياً أو أمكن استردادها من المزود.
+
+[يُستكمل قبل النشر: مدة وطريقة رد العربون، ومعالجة إلغاء فانت أو تعذر تنفيذ الطلب. وصف كلفة المزود يستند إلى إفادة صاحب المتجر، ولم تُراجع تعرفة المشغل أو الإيصالات؛ يجب أن يطابق ما يُعلن الآلية والكلفة الفعليتين. يلزم تدقيق قابلية تطبيق قيود الإلغاء محلياً.]
 
 ### English
 Browsing or adding an item to the cart does not confirm an order. The item, colour, size, quantity, price and delivery arrangements are currently agreed through WhatsApp. The deposit is agreed before acceptance, credited against the order total, and the balance is paid on delivery. The website does not currently process online payments.
@@ -48,27 +51,29 @@ A cancellation and deposit refund may be requested within 24 hours of confirmati
 
 Prices are quoted in Iraqi dinars. Delivery charges and agreed customisation costs are included in the order summary. Details are reviewed with the customer before confirmation. Later price or delivery-fee changes do not alter a confirmed order without a new agreement with the customer. Custom-order specifications and preparation times are agreed before work begins.
 
-[Before publication: confirm refund method and timing, VANT-initiated cancellation/non-fulfilment, and whether the Asia credit surcharge is refunded. Cancellation restrictions require local legal review.]
+For an eligible deposit cancellation, the original deposit is refunded. If paid using Asia mobile credit, the additional 20% consumed in the provider's transfer process is not refunded or treated as part of the deposit. For example, an IQD 12,000 credit transfer covering an IQD 10,000 deposit results in an IQD 10,000 deposit refund. This condition is disclosed before payment and does not reduce mandatory rights or charge customers for faults attributable to VANT. No deduction applies to a charge that was not actually incurred or was recovered from the provider.
+
+[Before publication: confirm refund method and timing and VANT-initiated cancellation/non-fulfilment. The provider-charge description is based on the owner's statement; operator tariffs and receipts were not independently checked. Published charges must match the actual arrangement and cost. Cancellation restrictions require local legal review.]
 
 ## 3. التوصيل / Delivery
 
 ### العربية
-نوفر التوصيل داخل العراق. المدة التقديرية المعتادة 2–4 أيام، والكلفة المرجعية 5,000 دينار عراقي. يُؤكّد موعد التوصيل التقديري والكلفة النهائية للطلب قبل تثبيته. الطلبات الخاصة قد تحتاج وقت تجهيز إضافياً يُتفق عليه مسبقاً.
+نوفر التوصيل داخل العراق. المدة التقديرية المعتادة 2–6 أيام تقويمية من تثبيت الطلب، وتُحسب الأيام بشكل متواصل دون استثناء أيام الأسبوع. الكلفة المرجعية للتوصيل 5,000 دينار عراقي، ويُؤكّد الموعد التقديري والكلفة النهائية للطلب قبل تثبيته. إذا احتاج طلب خاص وقتاً أطول، يُتفق على موعده المختلف مسبقاً.
 
 قد تؤثر العطل أو الأحوال الجوية أو ظروف الطرق أو ظروف خارجة عن إرادتنا على المواعيد. نعتذر عن التأخير ونتواصل لتوضيح المستجدات والترتيبات المتاحة. وصف الموعد بأنه تقديري لا يلغي التزاماتنا تجاه الطلب أو حقوق الزبون القانونية.
 
 يحق للزبون فحص القطعة عند المندوب قبل دفع المبلغ المتبقي. إذا كانت القطعة مختلفة عن الطلب أو ظهر عيب، تواصل معنا لمعالجة الحالة وفق سياسة الاستبدال والضمان.
 
-[يُحدد قبل النشر: هل المدة أيام عمل أم أيام تقويمية، ومن أي مرحلة تُحتسب، ومعالجة التعذّر المستمر للتوصيل أو فقدان الشحنة.]
+[يُحدد قبل النشر: معالجة التعذّر المستمر للتوصيل أو فقدان الشحنة.]
 
 ### English
-Delivery is available within Iraq. The usual estimate is 2–4 days, with an indicative delivery fee of IQD 5,000. The estimated delivery window and final charge are confirmed before the order is confirmed. Custom orders may require additional preparation time agreed in advance.
+Delivery is available within Iraq. The usual estimate is 2–6 calendar days from order confirmation, counting all days of the week. The indicative delivery fee is IQD 5,000. The estimated delivery window and final charge are confirmed before the order is confirmed. If a custom order needs longer, its different schedule is agreed in advance.
 
 Public holidays, weather, road conditions or circumstances outside our control may affect delivery times. We apologise for delays and communicate updates and available arrangements. An estimated delivery window does not remove our order obligations or the customer's statutory rights.
 
 Customers may inspect the item with the courier before paying the outstanding balance. Contact us if the item differs from the order or a defect is found, so that it can be handled under the returns and warranty policy.
 
-[Before publication: specify business or calendar days, when the estimate starts, and arrangements for prolonged non-delivery or lost shipments.]
+[Before publication: agree arrangements for prolonged non-delivery or lost shipments.]
 
 ## 4. الاستبدال والاسترجاع وضمان الطباعة / Returns, exchanges and print warranty
 
@@ -77,22 +82,22 @@ Customers may inspect the item with the courier before paying the outstanding ba
 
 هذه القاعدة لا تشمل إرسال قطعة أو لون أو مقاس مختلف عن المتفق عليه، أو وجود عيب مسؤول عنه فانت، ولا تنتقص من الحقوق القانونية للزبون. توصية حاسبة المقاس تقريبية، ولا تعفي فانت من مسؤولية صحة وصف القطعة أو قياساتها المعلنة.
 
-نوفر ضماناً لمدة سنة على عيوب الطباعة، بما فيها التشقق أو تلف الطباعة الذي يظهر مع الاستعمال والغسل الاعتياديين. لا نشترط الالتزام بتعليمات عناية خاصة لم نوفرها للزبون. لا يشمل الضمان التلف الناتج عن سوء الاستعمال أو التمزيق أو غيره من الضرر الخارجي عندما يكون سبباً للمشكلة محل المطالبة؛ ولا تُرفض مطالبة عن عيب طباعة مستقل لمجرد وجود ضرر آخر غير مرتبط به.
+نوفر ضماناً لمدة سنة من يوم استلام القطعة على عيوب الطباعة، بما فيها التشقق أو تلف الطباعة الذي يظهر مع الاستعمال والغسل الاعتياديين. لا نشترط الالتزام بتعليمات عناية خاصة لم نوفرها للزبون. لا يشمل الضمان التلف الناتج عن سوء الاستعمال أو التمزيق أو غيره من الضرر الخارجي عندما يكون سبباً للمشكلة محل المطالبة؛ ولا تُرفض مطالبة عن عيب طباعة مستقل لمجرد وجود ضرر آخر غير مرتبط به.
 
 إذا ثبت أن الخلل من فانت، تكون المعالجة بالاستبدال، وهو الحل المعتاد، أو رد المبلغ وفق الحالة والحقوق الواجبة. نتكفل بجميع أجور النقل والتكاليف المتعلقة بمعالجة الخطأ الذي نتحمله. لتقديم طلب مراجعة، تواصل عبر القناة المعتمدة مع رقم الطلب أو ما يثبت الشراء، وصور توضح المشكلة. الطلبات الخاصة لا تُستثنى من مسؤوليتنا عن عيوبنا أو مخالفة المواصفات المتفق عليها.
 
-[يُستكمل قبل النشر: بداية السنة ومدة معالجة المطالبة ورد المبلغ. الإصلاح وإعادة الطباعة ليسا الحلين المعتمدين وفق توضيح صاحب المتجر. لا يُضاف شرط سقوط الحق لمجرد فتح العبوة أو غياب فيديو فتحها.]
+[يُستكمل قبل النشر: مدة معالجة المطالبة ورد المبلغ. الإصلاح وإعادة الطباعة ليسا الحلين المعتمدين وفق توضيح صاحب المتجر. لا يُضاف شرط سقوط الحق لمجرد فتح العبوة أو غياب فيديو فتحها.]
 
 ### English
 We do not offer returns or exchanges solely for a change of mind, dislike of the design, or a customer-selected unsuitable size, provided the item matches the agreed order and the information supplied about it was accurate and clear.
 
 This does not cover receiving a different item, colour or size from the agreed order, or a defect for which VANT is responsible. It does not limit statutory consumer rights. Size-calculator suggestions are approximate and do not remove VANT's responsibility for accurate descriptions and stated measurements.
 
-We provide a one-year warranty for printing defects, including cracking or print deterioration during normal use and ordinary washing. We do not require compliance with special care instructions that were not supplied. Damage caused by misuse, tearing or other external harm is excluded where it caused the issue being claimed; unrelated damage does not automatically invalidate an independent printing-defect claim.
+We provide a one-year warranty from receipt of the item for printing defects, including cracking or print deterioration during normal use and ordinary washing. We do not require compliance with special care instructions that were not supplied. Damage caused by misuse, tearing or other external harm is excluded where it caused the issue being claimed; unrelated damage does not automatically invalidate an independent printing-defect claim.
 
 Where VANT is responsible, the usual remedy is replacement, or a refund depending on the case and applicable rights. We cover all transport charges and costs associated with resolving faults for which we are responsible. To request a review, contact us through the verified channel with an order reference or proof of purchase and photos showing the issue. Custom orders remain covered for defects attributable to us and failure to meet agreed specifications.
 
-[Before publication: confirm when the warranty year starts and claim/refund processing times. Repair and reprinting are not the approved remedies. Opening the parcel or lacking an unboxing video is not drafted as an automatic loss of rights.]
+[Before publication: confirm claim/refund processing times. Repair and reprinting are not the approved remedies. Opening the parcel or lacking an unboxing video is not drafted as an automatic loss of rights.]
 
 ## 5. الخصوصية والتواصل التسويقي / Privacy and marketing
 
