@@ -7,6 +7,7 @@ import type { Subscriber } from '../useAdminBridge';
 import { templatePresets } from './presets';
 
 interface SubscriberModalsProps {
+  creating?: boolean;
   // Add Subscriber Modal
   isAddModalOpen: boolean;
   setIsAddModalOpen: (open: boolean) => void;
@@ -46,6 +47,7 @@ interface SubscriberModalsProps {
 }
 
 export const SubscriberModals: React.FC<SubscriberModalsProps> = ({
+  creating = false,
   isAddModalOpen,
   setIsAddModalOpen,
   formName,
@@ -84,7 +86,7 @@ export const SubscriberModals: React.FC<SubscriberModalsProps> = ({
       {/* MODAL 1: ADD SUBSCRIBER */}
       <Modal
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        onClose={() => { if (!creating) setIsAddModalOpen(false); }}
         title={isAr ? 'إضافة عميل أو مشترك جديد' : 'Add New Subscriber'}
         description={
           isAr
@@ -94,6 +96,7 @@ export const SubscriberModals: React.FC<SubscriberModalsProps> = ({
         maxWidth="md"
       >
         <form onSubmit={handleCreate} className="space-y-4">
+          <fieldset disabled={creating} className="space-y-4">
           <Input
             label={isAr ? 'الاسم الكامل' : 'Full Name'}
             placeholder={isAr ? 'محمد الجبوري' : 'Ali Hassan'}
@@ -131,9 +134,10 @@ export const SubscriberModals: React.FC<SubscriberModalsProps> = ({
               {isAr ? 'إلغاء' : 'Cancel'}
             </Button>
             <Button variant="primary" type="submit">
-              {isAr ? 'حفظ العميل' : 'Save Subscriber'}
+              {creating ? (isAr ? 'جارِ الحفظ…' : 'Saving…') : (isAr ? 'حفظ العميل' : 'Save Subscriber')}
             </Button>
           </div>
+          </fieldset>
         </form>
       </Modal>
 

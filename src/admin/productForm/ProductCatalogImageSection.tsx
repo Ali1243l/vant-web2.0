@@ -26,6 +26,6 @@ export function ProductCatalogImageSection({ images, value, onChange, isAr }: { 
         </div><p className="text-center text-xs text-slate-400">{t('نفس الإطار على الهاتف والكمبيوتر', 'Same frame on phone and desktop')}</p>
       </div>
     </div>
-    <p className="text-xs leading-relaxed text-slate-400">{t('إذا تستخدم التخزين السحابي: بعد حفظ المنتج، انشر التخصيصات من الإعدادات ← النسخ الاحتياطي ← مزامنة السحابة.', 'Using cloud storage? After saving the product, publish customizations from Settings → Backup → Sync Cloud.')}</p>
+    <p className="text-xs leading-relaxed text-slate-400">{t('تُحفظ إعدادات صورة البطاقة مع بيانات المنتج عند الضغط على حفظ.', 'Catalog image settings are saved together with the product when you press Save.')}</p>
   </section>;
 }

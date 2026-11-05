@@ -49,6 +49,7 @@ export const LUXURY_COLOR_PRESETS: LuxuryColorPreset[] = [
 ];
 
 export interface ProductFormSheetProps {
+  onSaved?: () => void;
   isOpen: boolean;
   onClose: () => void;
   editingProduct?: Product | null;

@@ -1,0 +1,43 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { build } from 'esbuild';
+import { fileURLToPath } from 'node:url';
+
+test('catalog persistence awaits server acknowledgement, preserves omitted fields and propagates failures', async () => {
+  const built = await build({ entryPoints: [fileURLToPath(new URL('../src/lib/saveCatalogProduct.ts', import.meta.url))], bundle: true, write: false, format: 'esm', platform: 'node', plugins: [{ name: 'uploads', setup(builder) {
+    builder.onResolve({ filter: /^\.\/storage$/ }, () => ({ path: 'storage', namespace: 'fixture' }));
+    builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: 'export const uploadDataUrlToSupabase=async()=>{globalThis.catalogUploadCount++;return "https://example.test/upload.webp";};' }));
+  } }] });
+  const { saveCatalogProduct } = await import('data:text/javascript;base64,' + Buffer.from(built.outputFiles[0].text).toString('base64'));
+  (globalThis as any).catalogUploadCount = 0;
+  const calls: any[] = [];
+  let finish: (value: unknown) => void;
+  const client = { rpc: async (name: string, args: any) => { calls.push({ name, args }); return new Promise(resolve => { finish = resolve; }); } };
+  let completed = false;
+  const saving = saveCatalogProduct(client, 'product-id', { price: 20000, is_offer: false }).then((data: any) => { completed = true; return data; });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(completed, false);
+  assert.equal(calls[0].name, 'save_catalog_product');
+  assert.equal(calls[0].args.p_media, null);
+  assert.deepEqual(calls[0].args.p_fields, { price: 20000, is_exclusive_drop: false });
+  assert.equal(calls[0].args.p_metadata.original_price, null);
+  finish!({ data: { id: 'product-id' }, error: null });
+  await saving;
+  assert.equal(completed, true);
+  client.rpc = async () => ({ data: null, error: { message: 'denied' } });
+  await assert.rejects(saveCatalogProduct(client, 'product-id', { price: 1 }));
+  client.rpc = async () => ({ data: {}, error: null });
+  await assert.rejects(saveCatalogProduct(client, null, { title: 'missing acknowledgement' }));
+  client.rpc = async (name: string, args: any) => { calls.push({ name, args }); return { data: { id: 'new' }, error: null }; };
+  const patch = { title_ar: 'قطعة', images: ['data:image/png;base64,AA=='], image_url: 'data:image/png;base64,AA==' };
+  await saveCatalogProduct(client, null, patch);
+  assert.equal((globalThis as any).catalogUploadCount, 1);
+  assert.deepEqual(calls.at(-1).args.p_media, ['https://example.test/upload.webp']);
+  assert.equal(patch.images[0], 'data:image/png;base64,AA==');
+  await saveCatalogProduct(client, 'product-id', { title: 'English', title_ar: 'عربي', description: 'English description', description_ar: 'وصف', stock: undefined });
+  assert.equal(calls.at(-1).args.p_fields.title, 'English');
+  assert.equal(calls.at(-1).args.p_metadata.title_ar, 'عربي');
+  assert.equal(calls.at(-1).args.p_fields.description, 'English description');
+  assert.equal(calls.at(-1).args.p_metadata.stock, null);
+  delete (globalThis as any).catalogUploadCount;
+});

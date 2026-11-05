@@ -25,8 +25,8 @@ interface ProductOfferModalProps {
       discountPercent?: number;
     },
     applyToAllInCategory?: boolean
-  ) => void | boolean;
-  onRemoveOffer: (productId: string, removeFromAllInCategory?: boolean) => void;
+  ) => void | boolean | Promise<boolean>;
+  onRemoveOffer: (productId: string, removeFromAllInCategory?: boolean) => void | boolean | Promise<void | boolean>;
   onAddNewOfferCampaign: (campaign: Omit<Offer, 'id' | 'usedCount'>) => Promise<'cloud' | 'local'>;
   isAr: boolean;
 }
@@ -63,6 +63,15 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
   const [newCampaignPercent, setNewCampaignPercent] = useState<number>(20);
   const [campaignError, setCampaignError] = useState('');
   const [campaignSaving, setCampaignSaving] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const close = () => { if (!applying && !campaignSaving) onClose(); };
+  const remove = async (id: string, category?: boolean) => {
+    if (applying || campaignSaving) return false;
+    setApplying(true); setCampaignError('');
+    try { return await onRemoveOffer(id, category); }
+    catch { setCampaignError(isAr ? 'تعذّر إلغاء العرض.' : 'Could not remove offer.'); return false; }
+    finally { setApplying(false); }
+  };
 
   // Initialize or reset when product opens
   useEffect(() => {
@@ -136,13 +145,15 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
   };
 
   // Handle applying custom offer
-  const handleApplyCustomOffer = () => {
-    if (!product) return;
+  const handleApplyCustomOffer = async () => {
+    if (!product || applying || campaignSaving) return;
     if (currentFinalSalePrice <= 0 || currentFinalSalePrice >= product.price) {
       return;
     }
 
-    const applied = onApplyOffer(
+    setApplying(true); setCampaignError('');
+    try {
+    const applied = await onApplyOffer(
       product.id,
       {
         isOnOffer: true,
@@ -153,6 +164,9 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
       applyToCategory
     );
     if (applied !== false) onClose();
+    else setCampaignError(isAr ? 'تعذّر حفظ العرض؛ بقيت النافذة مفتوحة لإعادة المحاولة.' : 'Offer save failed; retry without losing your edits.');
+    } catch { setCampaignError(isAr ? 'تعذّر حفظ العرض.' : 'Offer save failed.'); }
+    finally { setApplying(false); }
   };
 
   // Handle creating new campaign on the fly
@@ -179,8 +193,8 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
   };
 
   // Handle applying selected campaign offer
-  const handleApplyCampaignOffer = () => {
-    if (!product || !selectedOfferId) return;
+  const handleApplyCampaignOffer = async () => {
+    if (!product || !selectedOfferId || applying || campaignSaving) return;
 
     const matched = offers.find((o) => o.id === selectedOfferId);
     if (!matched) return;
@@ -188,7 +202,9 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
     const finalPrice = productCampaignPrice(matched, product.price);
     if (finalPrice === null) return;
 
-    const applied = onApplyOffer(
+    setApplying(true); setCampaignError('');
+    try {
+    const applied = await onApplyOffer(
       product.id,
       {
         isOnOffer: true,
@@ -203,6 +219,9 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
       applyToCategory
     );
     if (applied !== false) onClose();
+    else setCampaignError(isAr ? 'تعذّر حفظ العرض؛ بقيت النافذة مفتوحة لإعادة المحاولة.' : 'Offer save failed; retry without losing your edits.');
+    } catch { setCampaignError(isAr ? 'تعذّر حفظ العرض.' : 'Offer save failed.'); }
+    finally { setApplying(false); }
   };
 
   const hasCurrentOffer = Boolean(product.isOnOffer || product.salePrice);
@@ -210,7 +229,7 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={close}
       title={isAr ? 'إدارة التخفيضات والعروض الخاصة' : 'Manage Discount & Promotional Offers'}
       description={
         isAr
@@ -219,7 +238,7 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
       }
       maxWidth="xl"
     >
-      <div className="space-y-5">
+      <fieldset disabled={applying || campaignSaving}><div className="space-y-5">
         {campaignError && <p role="alert" className="text-sm text-rose-300">{campaignError}</p>}
         {/* Product Identity Bar & Bulk Category Switch */}
         <ProductIdentityBar
@@ -229,8 +248,8 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
           categoryCount={categoryCount}
           applyToCategory={applyToCategory}
           setApplyToCategory={setApplyToCategory}
-          onRemoveOffer={onRemoveOffer}
-          onClose={onClose}
+          onRemoveOffer={remove}
+          onClose={close}
         />
 
         {/* Mode Selector Tabs */}
@@ -285,7 +304,7 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
             adjustPriceBy={adjustPriceBy}
             roundToNearestDinar={roundToNearestDinar}
             onApplyCustomOffer={handleApplyCustomOffer}
-            onClose={onClose}
+            onClose={close}
           />
         )}
 
@@ -314,10 +333,11 @@ export const ProductOfferModal: React.FC<ProductOfferModalProps> = ({
             filteredCampaigns={filteredCampaigns}
             handleCreateNewCampaign={handleCreateNewCampaign}
             handleApplyCampaignOffer={handleApplyCampaignOffer}
-            onClose={onClose}
+            onClose={close}
           />
         )}
       </div>
+      </fieldset>
     </Modal>
   );
 };

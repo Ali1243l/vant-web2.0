@@ -19,7 +19,7 @@ export function useModalFocus(open: boolean, panel: RefObject<HTMLElement | null
     const previous = document.activeElement === document.body ? trigger.current : document.activeElement as HTMLElement | null;
     const root = panel.current;
     const active = () => layers[layers.length - 1] === layer;
-    const elements = () => Array.from(root.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]')).filter(el => el.getClientRects().length && !el.closest('[inert], [aria-hidden="true"]'));
+    const elements = () => [...root.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]'), ...document.querySelectorAll<HTMLElement>('[data-toast-notification] button:not(:disabled)')].filter(el => el.getClientRects().length && !el.closest('[inert], [aria-hidden="true"]'));
     const focus = () => (elements()[0] || root).focus();
     const keydown = (event: KeyboardEvent) => {
       if (!active()) return;
@@ -30,7 +30,7 @@ export function useModalFocus(open: boolean, panel: RefObject<HTMLElement | null
       else if (!root.contains(document.activeElement) || (!event.shiftKey && document.activeElement === last)) { event.preventDefault(); first.focus(); }
       else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
     };
-    const focusin = (event: FocusEvent) => { if (active() && !root.contains(event.target as Node)) focus(); };
+    const focusin = (event: FocusEvent) => { if (active() && !root.contains(event.target as Node) && !(event.target as Element)?.closest('[data-toast-notification]')) focus(); };
     (initialFocus?.current || elements()[0] || root).focus();
     document.addEventListener('keydown', keydown, true);
     document.addEventListener('focusin', focusin);

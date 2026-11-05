@@ -71,7 +71,7 @@ export const ProductsManager: React.FC = () => {
   };
 
   // Apply Offer
-  const handleApplyOffer = (
+  const handleApplyOffer = async (
     productId: string,
     updates: {
       isOnOffer: boolean;
@@ -90,27 +90,28 @@ export const ProductsManager: React.FC = () => {
       const campaign = updates.offerCampaign ? offers.find(offer => offer.code === updates.offerCampaign || offer.title === updates.offerCampaign || offer.titleEn === updates.offerCampaign) : undefined;
       if (updates.offerCampaign && !campaign) throw new Error('Campaign no longer exists');
       const plan = catalogOfferPlan(targets, applyToAllInCategory ? updates : { salePrice: updates.salePrice }, campaign);
-      for (const item of plan) updateProduct(item.id, { ...updates, salePrice: item.salePrice });
+      for (const item of plan) if (!await updateProduct(item.id, { ...updates, salePrice: item.salePrice })) throw new Error('save');
       showToast(isAr ? `حُدثت بيانات العرض في الكتالوج (${plan.length} منتج).` : `Catalog offer updated (${plan.length} products).`, 'info');
       return true;
-    } catch { showToast(isAr ? 'لم يُطبق العرض: راجع السعر والخصم لكل منتج.' : 'Offer not applied: check each product price and discount.', 'error'); return false; }
+    } catch { showToast(isAr ? 'لم يكتمل تطبيق العرض. راجع الاتصال والأسعار ثم أعد المحاولة؛ قد تكون بعض منتجات الفئة حُفظت.' : 'Offer update did not complete. Check connectivity and prices; some category products may have saved.', 'error'); return false; }
   };
   // Remove Offer
-  const handleRemoveOffer = (productId: string, removeFromAllInCategory?: boolean) => {
-    if (removeFromAllInCategory && catalog.hasMore) { showToast(isAr ? 'حمّل بقية الكتالوج قبل تعديل فئة كاملة.' : 'Load the rest of the catalog before changing a whole category.', 'error'); return; }
+  const handleRemoveOffer = async (productId: string, removeFromAllInCategory?: boolean) => {
+    if (removeFromAllInCategory && catalog.hasMore) { showToast(isAr ? 'حمّل بقية الكتالوج قبل تعديل فئة كاملة.' : 'Load the rest of the catalog before changing a whole category.', 'error'); return false; }
     const prod = products.find((item) => item.id === productId);
     const prodName = isAr ? prod?.name : prod?.nameEn || prod?.name;
 
     if (removeFromAllInCategory && prod?.category) {
       const categoryProducts = products.filter((p) => p.category === prod.category && (p.isOnOffer || !!p.salePrice));
-      categoryProducts.forEach((p) => {
-        updateProduct(p.id, {
+      for (const p of categoryProducts) {
+        const saved = await updateProduct(p.id, {
           isOnOffer: false,
           salePrice: undefined,
           offerCampaign: undefined,
           offerBadgeText: undefined,
         });
-      });
+        if (!saved) { showToast(isAr ? 'لم يكتمل إلغاء عروض الفئة. أعد المحاولة.' : 'Category offer removal did not complete. Retry.', 'error'); return false; }
+      }
       showToast(
         isAr
           ? `تم إلغاء العروض من جميع منتجات فئة "${prod.category}" (${categoryProducts.length} منتجات).`
@@ -118,12 +119,13 @@ export const ProductsManager: React.FC = () => {
         'info'
       );
     } else {
-      updateProduct(productId, {
+      const saved = await updateProduct(productId, {
         isOnOffer: false,
         salePrice: undefined,
         offerCampaign: undefined,
         offerBadgeText: undefined,
       });
+      if (!saved) { showToast(isAr ? 'تعذّر حفظ إلغاء العرض.' : 'Could not save offer removal.', 'error'); return false; }
       showToast(
         isAr
           ? `تم إلغاء العرض الترويجي وإعادة السعر الأصلي لـ "${prodName}".`
@@ -265,6 +267,7 @@ export const ProductsManager: React.FC = () => {
       <ProductFormSheet
         isOpen={isSheetOpen}
         onClose={() => setIsSheetOpen(false)}
+        onSaved={() => showToast(catalog.isLiveDatabase ? (isAr ? 'تم حفظ المنتج بالسحابة.' : 'Product saved to cloud.') : (isAr ? 'تم حفظ المنتج.' : 'Product saved.'))}
         editingProduct={editingProduct}
         initialProduct={initialProduct}
       />

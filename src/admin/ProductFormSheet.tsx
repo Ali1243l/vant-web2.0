@@ -57,6 +57,7 @@ import { ProductDetailsSection } from "./productForm/ProductDetailsSection";
 export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
   isOpen,
   onClose,
+  onSaved,
   editingProduct,
   initialProduct,
 }) => {
@@ -805,13 +806,13 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
         variants: variantsPayload,
       };
 
-      if (editingProduct) {
-        updateProduct(editingProduct.id, productPayload);
-      } else {
-        addProduct(productPayload);
-      }
+      const saved = editingProduct
+        ? await updateProduct(editingProduct.id, productPayload)
+        : await addProduct(productPayload);
+      if (!saved) throw new Error('Cloud save was not acknowledged');
 
       onClose();
+      onSaved?.();
     } catch (err) {
       console.error('Error during product form submission:', err);
       setFormError(isAr ? 'تعذر إكمال الحفظ. راجع البيانات وحاول ثانية.' : 'Could not complete saving. Check the data and retry.');
@@ -893,6 +894,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
       }
     >
       <form ref={formRef} onSubmit={handleSubmit} className="product-editor space-y-5 text-start pb-6">
+        <fieldset disabled={isSubmitting} className="min-w-0 space-y-5">
         <nav aria-label={isAr ? 'أقسام تعديل المنتج' : 'Product editor sections'} className="sticky top-0 z-20 grid grid-cols-2 sm:grid-cols-4 gap-1 rounded-xl border border-slate-700 bg-slate-900/95 p-2">
           {[
             { id: 'basic', ar: 'البيانات والأسعار', en: 'Details & prices' },
@@ -977,6 +979,7 @@ export const ProductFormSheet: React.FC<ProductFormSheetProps> = ({
           onMagicTranslate={handleMagicTranslate}
         />
         </div>
+        </fieldset>
       </form>
     </Sheet>
   );

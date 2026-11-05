@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { flushSync } from 'react-dom';
+import { createPortal, flushSync } from 'react-dom';
 import {
   Users,
   Download,
@@ -53,6 +53,7 @@ export const SubscribersList: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [subscriberSaving, setSubscriberSaving] = useState(false);
 
   // New Subscriber Form State
   const [formName, setFormName] = useState('');
@@ -141,8 +142,10 @@ export const SubscribersList: React.FC = () => {
   // Create new subscriber
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (subscriberSaving) return;
     if (!formEmail.trim() || !formName.trim()) return;
     if (subscribers.some(row => row.email.toLowerCase() === formEmail.trim().toLowerCase())) { showToast(isAr ? 'البريد مسجّل مسبقاً.' : 'Email already registered.'); return; }
+    setSubscriberSaving(true);
     try {
     await addSubscriber({
       name: formName.trim(),
@@ -160,6 +163,7 @@ export const SubscribersList: React.FC = () => {
 
     showToast(isAr ? 'تم حفظ المشترك.' : 'Subscriber saved.');
     } catch { showToast(isAr ? 'تعذّر حفظ المشترك. راجع الاتصال وحاول ثانية.' : 'Could not save subscriber; retry.'); }
+    finally { setSubscriberSaving(false); }
   };
 
   // HTML Export / Copy
@@ -221,11 +225,11 @@ export const SubscribersList: React.FC = () => {
     <div className="subscribers-manager min-w-0 space-y-5">
       {/* Toast Notification Banner */}
       <AnimatePresence>
-        {toastMessage && (
-          <div role="status" className="fixed bottom-6 inset-x-4 sm:start-auto sm:end-6 z-50 bg-indigo-600 text-white px-4 py-2.5 rounded-xl shadow-2xl border border-indigo-400 text-xs font-semibold flex items-center gap-2">
+        {toastMessage && createPortal(
+          <div role="status" aria-live="polite" aria-atomic="true" data-toast-notification className="fixed bottom-6 inset-x-4 sm:start-auto sm:end-6 z-[100000] bg-indigo-600 text-white px-4 py-2.5 rounded-xl shadow-2xl border border-indigo-400 text-xs font-semibold flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
             <span>{toastMessage}</span>
-          </div>
+          </div>, document.body
         )}
       </AnimatePresence>
 
@@ -481,6 +485,7 @@ export const SubscribersList: React.FC = () => {
 
       {/* Modals */}
       <SubscriberModals
+        creating={subscriberSaving}
         isAddModalOpen={isAddModalOpen}
         setIsAddModalOpen={setIsAddModalOpen}
         formName={formName}

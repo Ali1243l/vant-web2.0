@@ -313,8 +313,8 @@ export interface SiteControlsContextType {
   lastSyncTime: Date | null;
   refreshProducts: () => Promise<void>;
   loadMoreProducts: () => Promise<void>;
-  addProduct: (product: Omit<Product, 'id'> & { id?: string | number }) => Product;
-  updateProduct: (id: string | number, updates: Partial<Product>) => void;
+  addProduct: (product: Omit<Product, 'id'> & { id?: string | number }) => Promise<Product | null>;
+  updateProduct: (id: string | number, updates: Partial<Product>) => Promise<boolean>;
   deleteProduct: (id: string | number) => void;
   toggleProductAvailability: (id: string | number, status?: ProductAvailability) => void;
   resetProductsToDefault: () => void;

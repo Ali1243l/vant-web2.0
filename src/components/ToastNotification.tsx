@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { CheckCircle2, Sparkles, Cloud, X, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from '../admin/motion';
 
@@ -50,15 +51,19 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({
 
   const IconComponent = styleMap.Icon;
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {message && (
         <motion.div
+          role={type === 'error' ? 'alert' : 'status'}
+          aria-live={type === 'error' ? 'assertive' : 'polite'}
+          aria-atomic="true"
+          data-toast-notification
           initial={{ opacity: 0, y: position.startsWith('top') ? -20 : 20, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: position.startsWith('top') ? -20 : 20, scale: 0.95 }}
           transition={{ duration: 0.2 }}
-          className={`fixed ${positionClasses} z-50 flex items-center gap-3 px-4 py-3 rounded-xl border backdrop-blur-md max-w-md ${styleMap.container}`}
+          className={`fixed ${positionClasses} z-[100000] flex items-center gap-3 px-4 py-3 rounded-xl border backdrop-blur-md max-w-[calc(100vw-2.5rem)] sm:max-w-md ${styleMap.container}`}
         >
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${styleMap.iconBg}`}>
             <IconComponent className="w-5 h-5" />
@@ -75,14 +80,14 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 ms-2 cursor-pointer shrink-0 transition-colors"
+            className="min-h-11 min-w-11 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 ms-2 cursor-pointer shrink-0 transition-colors"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
           </button>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>, document.body
   );
 };
 

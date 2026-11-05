@@ -1,6 +1,6 @@
 import { Sheet } from './Sheet';
 import { Button } from './ui';
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import './admin.css';
 import { AdminProvider, useAdminBridge } from './useAdminBridge';
 import { AdminHeader } from './AdminHeader';
@@ -24,6 +24,7 @@ const AdminBannersView = lazy(() => import('./AdminBannersView').then(module => 
 const AdminWelcomeModalView = lazy(() => import('./AdminWelcomeModalView').then(module => ({ default: module.AdminWelcomeModalView })));
 import { WidgetsStudioView } from '../components/admin/widgets/WidgetsStudioView';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import ToastNotification from '../components/ToastNotification';
 
 interface AdminAppProps {
   onClose?: () => void;
@@ -33,6 +34,12 @@ function MainLayout({ onClose }: AdminAppProps) {
   const { activeView, setActiveView, lang, setIsOfferModalOpen, pendingView, cancelViewChange, confirmViewChange } = useAdminBridge();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isGlobalProductSheetOpen, setIsGlobalProductSheetOpen] = useState(false);
+  const [productSaved, setProductSaved] = useState(false);
+  useEffect(() => {
+    if (!productSaved) return;
+    const timer = setTimeout(() => setProductSaved(false), 3500);
+    return () => clearTimeout(timer);
+  }, [productSaved]);
 
   const isAr = lang === 'ar';
 
@@ -47,6 +54,7 @@ function MainLayout({ onClose }: AdminAppProps) {
     <div className="admin-workspace min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none">
       {/* Lock Screen Component */}
       <LockScreen />
+      <ToastNotification message={productSaved ? { text: isAr ? 'تم حفظ المنتج.' : 'Product saved.' } : null} onClose={() => setProductSaved(false)} position="bottom-start" />
 
       {/* Mobile Drawer */}
       <AdminDrawer onClose={onClose} />
@@ -55,6 +63,7 @@ function MainLayout({ onClose }: AdminAppProps) {
       {isGlobalProductSheetOpen && <Suspense fallback={<p role="status">{isAr ? 'جاري فتح المحرر…' : 'Opening editor…'}</p>}><ProductFormSheet
         isOpen={isGlobalProductSheetOpen}
         onClose={() => setIsGlobalProductSheetOpen(false)}
+        onSaved={() => setProductSaved(true)}
       /></Suspense>}
 
       <Sheet isOpen={pendingView !== null} onClose={cancelViewChange} title={isAr ? 'مسودة غير محفوظة' : 'Unsaved draft'} footer={<div className="flex flex-wrap gap-2"><Button type="button" className="min-h-11" onClick={cancelViewChange}>{isAr ? 'البقاء والتعديل' : 'Keep editing'}</Button><Button type="button" variant="secondary" className="min-h-11" onClick={confirmViewChange}>{isAr ? 'المتابعة بدون حفظ' : 'Leave without saving'}</Button></div>}><p className="text-sm leading-7 text-slate-300">{isAr ? 'عندك تعديلات غير محفوظة. ابقَ بالصفحة لحفظها أو إلغائها؛ المتابعة تلغي المسودة فقط.' : 'You have unsaved changes. Stay to save or discard them; leaving discards only this draft.'}</p></Sheet>
@@ -90,7 +99,7 @@ function MainLayout({ onClose }: AdminAppProps) {
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0">
           <AdminHeader
-            onOpenProductSheet={() => setIsGlobalProductSheetOpen(true)}
+            onOpenProductSheet={() => { setProductSaved(false); setIsGlobalProductSheetOpen(true); }}
             onOpenOfferSheet={() => setIsOfferModalOpen(true)}
             onCloseAdmin={onClose}
           />

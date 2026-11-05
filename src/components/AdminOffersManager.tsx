@@ -120,7 +120,7 @@ export default function AdminOffersManager({ isAr, onNavigateToStoreOffers }: Pr
   }, [products, searchQuery, selectedCategory, filterMode]);
 
   // Toggle single product offer status
-  const handleToggleOffer = (product: Product) => {
+  const handleToggleOffer = async (product: Product) => {
     const nextOfferState = !product.is_offer;
     const numPrice = Number(product.price) || 0;
     
@@ -130,12 +130,13 @@ export default function AdminOffersManager({ isAr, onNavigateToStoreOffers }: Pr
       originalPrice = Math.round(numPrice * 1.25);
     }
 
-    updateProduct(product.id, {
+    const saved = await updateProduct(product.id, {
       is_offer: nextOfferState,
       original_price: originalPrice,
       offer_badge_ar: nextOfferState ? 'عرض خاص' : undefined,
       offer_badge_en: nextOfferState ? 'Special Offer' : undefined,
     });
+    if (!saved) { setFeedbackMsg({type: 'error', text: isAr ? 'تعذّر حفظ التغيير بالسحابة.' : 'Cloud save failed.'}); return; }
 
     setFeedbackMsg({
       type: 'success',
@@ -147,20 +148,21 @@ export default function AdminOffersManager({ isAr, onNavigateToStoreOffers }: Pr
   };
 
   // Quick preset discount application to a single product
-  const handleApplySingleDiscount = (product: Product, discountPercentage: number) => {
+  const handleApplySingleDiscount = async (product: Product, discountPercentage: number) => {
     const basePrice = product.original_price && product.original_price > product.price
       ? product.original_price
       : product.price;
 
     const newSalePrice = Math.round(basePrice * (1 - discountPercentage / 100));
 
-    updateProduct(product.id, {
+    const saved = await updateProduct(product.id, {
       is_offer: true,
       original_price: basePrice,
       price: newSalePrice,
       offer_badge_ar: `خصم ${discountPercentage}%`,
       offer_badge_en: `${discountPercentage}% OFF`,
     });
+    if (!saved) { setFeedbackMsg({type: 'error', text: isAr ? 'تعذّر حفظ التغيير بالسحابة.' : 'Cloud save failed.'}); return; }
 
     setFeedbackMsg({
       type: 'success',
@@ -195,17 +197,18 @@ export default function AdminOffersManager({ isAr, onNavigateToStoreOffers }: Pr
 
     setIsApplyingBulk(true);
     try {
-      targetProducts.forEach((p) => {
+      for (const p of targetProducts) {
         const basePrice = p.original_price && p.original_price > p.price ? p.original_price : p.price;
         const newPrice = Math.round(basePrice * (1 - bulkPct / 100));
-        updateProduct(p.id, {
+        const saved = await updateProduct(p.id, {
           is_offer: true,
           original_price: basePrice,
           price: newPrice,
           offer_badge_ar: `خصم ${bulkPct}%`,
           offer_badge_en: `${bulkPct}% OFF`,
         });
-      });
+        if (!saved) { setFeedbackMsg({type: 'error', text: isAr ? 'لم يكتمل حفظ عروض الفئة؛ أعد المحاولة.' : 'Category saves incomplete; retry.'}); return; }
+      }
 
       setFeedbackMsg({
         type: 'success',
@@ -220,24 +223,25 @@ export default function AdminOffersManager({ isAr, onNavigateToStoreOffers }: Pr
   };
 
   // Bulk Clear All Offers
-  const handleClearAllOffers = () => {
+  const handleClearAllOffers = async () => {
     const confirmMsg = isAr
       ? 'هل أنت متأكد من إيقاف وإلغاء كافة العروض في المتجر؟ ستعود كافة القطع لحالتها الطبيعية.'
       : 'Reset all active offers? Pieces will return to regular catalog pricing.';
 
     if (!window.confirm(confirmMsg)) return;
 
-    products.forEach((p) => {
+    for (const p of products) {
       if (p.is_offer) {
-        updateProduct(p.id, {
+        const saved = await updateProduct(p.id, {
           is_offer: false,
           price: p.original_price && p.original_price > p.price ? p.original_price : p.price,
           original_price: undefined,
           offer_badge_ar: undefined,
           offer_badge_en: undefined,
         });
+        if (!saved) { setFeedbackMsg({type: 'error', text: isAr ? 'لم يكتمل إلغاء العروض؛ أعد المحاولة.' : 'Offer removal incomplete; retry.'}); return; }
       }
-    });
+    }
 
     setFeedbackMsg({
       type: 'success',

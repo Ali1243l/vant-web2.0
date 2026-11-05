@@ -32,6 +32,7 @@ const AdminOffersManager = lazy(() => import('./AdminOffersManager'));
 const AdminSizesManager = lazy(() => import('./AdminSizesManager'));
 const NewAdminApp = lazy(() => import('../admin/App'));
 import AdminLockScreen from './admin_drawer/AdminLockScreen';
+import ToastNotification from './ToastNotification';
 import AdminProductFormModal from './admin_drawer/AdminProductFormModal';
 import AdminHeaderBar from './admin_drawer/AdminHeaderBar';
 import AdminProductsManagerTab from './admin_drawer/AdminProductsManagerTab';
@@ -97,6 +98,8 @@ export default function AdminDrawer({ lang = 'ar' }: Props) {
   } = useSiteControls();
 
   const [activeTab, setActiveTab] = useState<TabType>('analytics');
+  const [productSaveError, setProductSaveError] = useState<string | null>(null);
+  const productSaveBusy = useRef(false);
   const [adminMode, setAdminMode] = useState<'new' | 'classic'>(() => {
     try {
       return (localStorage.getItem('vant_admin_interface_mode') as 'new' | 'classic') || 'new';
@@ -405,7 +408,7 @@ export default function AdminDrawer({ lang = 'ar' }: Props) {
     setFormSizes(p.sizes && p.sizes.length > 0 ? p.sizes : ['S', 'M', 'L', 'XL']);
   };
 
-  const handleSaveProductForm = (e: React.FormEvent) => {
+  const handleSaveProductForm = async (e: React.FormEvent) => {
     e.preventDefault();
     const primaryImg = formImageUrl.trim() || formImagesList[0] || '';
     const allImages = formImagesList.length > 0 ? formImagesList : (primaryImg ? [primaryImg] : []);
@@ -435,11 +438,13 @@ export default function AdminDrawer({ lang = 'ar' }: Props) {
       sizes: formSizes.length > 0 ? formSizes : ['M', 'L'],
     };
 
-    if (isAddingNew) {
-      addProduct(productPayload);
-    } else if (editingProduct) {
-      updateProduct(editingProduct.id, productPayload);
-    }
+    if (productSaveBusy.current) return;
+    setProductSaveError(null);
+    productSaveBusy.current = true;
+    try {
+      const saved = isAddingNew ? !!await addProduct(productPayload) : editingProduct ? await updateProduct(editingProduct.id, productPayload) : false;
+      if (!saved) { setProductSaveError(isAr ? 'تعذّر حفظ المنتج؛ بقيت المسودة مفتوحة لإعادة المحاولة.' : 'Save failed; your draft remains open for retry.'); return; }
+    } finally { productSaveBusy.current = false; }
 
     setEditingProduct(null);
     setIsAddingNew(false);
@@ -457,6 +462,7 @@ export default function AdminDrawer({ lang = 'ar' }: Props) {
           transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
           className="fixed inset-0 z-[100] flex flex-col bg-[#08090d] text-[#f3f4f6] overflow-hidden select-none font-sans"
         >
+        <ToastNotification message={productSaveError ? { text: productSaveError, type: 'error' } : null} onClose={() => setProductSaveError(null)} position="bottom-start" />
           {/* Only show top operations command header when authenticated/unlocked */}
         {isAdminUnlocked && adminMode === "classic" && (
           <AdminHeaderBar

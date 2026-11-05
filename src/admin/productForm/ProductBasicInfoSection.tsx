@@ -90,10 +90,12 @@ export const ProductBasicInfoSection: React.FC<Props> = ({
               {isAr ? 'التصنيف / الفئة' : 'Category'}
             </label>
             <select
+              aria-label={isAr ? 'التصنيف / الفئة' : 'Category'}
               value={formData.category}
               onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value }))}
               className="w-full bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-100 text-sm rounded-lg px-3 py-2 h-9.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
             >
+              {!['ملابس وأزياء', 'المعاطف والسترات', 'الأزياء الرسمية', 'التريكو والصوف', 'القمصان والتيشيرت', 'الأحذية', 'الإكسسوارات'].includes(formData.category) && <option value={formData.category}>{formData.category}</option>}
               <option value="ملابس وأزياء">{isAr ? 'ملابس وأزياء عامة' : 'Apparel'}</option>
               <option value="المعاطف والسترات">{isAr ? 'المعاطف والسترات الكشمير' : 'Coats & Outerwear'}</option>
               <option value="الأزياء الرسمية">{isAr ? 'الأزياء الرسمية والبدلات (Bespoke)' : 'Formal & Tailoring'}</option>

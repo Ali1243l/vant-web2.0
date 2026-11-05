@@ -1,8 +1,9 @@
+import { saveCatalogProduct } from '../../lib/saveCatalogProduct';
 import { fetchCatalogPage } from '../../lib/catalogFetch';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Product, ProductAvailability } from '../../types';
 import { supabase } from '../../lib/supabase';
-import { uploadDataUrlToSupabase, resolveStoredImages } from '../../lib/storage';
+import { resolveStoredImages } from '../../lib/storage';
 import {
   PRODUCTS_STORAGE_KEY,
   getStoredEnhancements,
@@ -42,7 +43,7 @@ export function useCatalogProducts() {
     const enhancements = resolveStoredImages(getStoredEnhancements());
     return resolveStoredImages(data || []).map((p) => {
       const pIdStr = String(p.id);
-      const enh = enhancements[pIdStr] || {};
+      const enh = { ...(enhancements[pIdStr] || {}), ...(p.admin_metadata || {}) };
       const statusStr = String(p.status || '').toUpperCase();
       let availability: ProductAvailability = 'in_stock';
       if (statusStr === 'SOLD_OUT' || statusStr === 'OUT_OF_STOCK') {
@@ -70,10 +71,10 @@ export function useCatalogProducts() {
         title: p.title || enh.title_ar || 'قطعة فاخرة',
         title_ar: enh.title_ar || p.title || 'قطعة فاخرة',
         price: typeof p.price === 'number' ? p.price : parseFloat(p.price || 0),
-        original_price: enh.original_price,
+        original_price: typeof enh.original_price === 'number' ? enh.original_price : undefined,
         is_offer: enh.is_offer ?? Boolean(p.is_exclusive_drop),
-        offer_badge_ar: enh.offer_badge_ar,
-        offer_badge_en: enh.offer_badge_en,
+        offer_badge_ar: enh.offer_badge_ar || undefined,
+        offer_badge_en: enh.offer_badge_en || undefined,
         category: p.category || 'Tailoring',
         category_ar: enh.category_ar || p.category || 'الأزياء الرسمية',
         description: p.description || '',
@@ -201,226 +202,38 @@ export function useCatalogProducts() {
   }, [products]);
 
   // CRUD
-  const addProduct = (prodData: Omit<Product, 'id'> & { id?: string | number }): Product => {
-    const tempId = prodData.id || `temp-${Date.now()}`;
-    const newProduct: Product = {
-      ...prodData,
-      id: tempId,
-      availability: prodData.availability || 'in_stock',
-      sizes: prodData.sizes && prodData.sizes.length > 0 ? prodData.sizes : ['S', 'M', 'L', 'XL'],
-      created_at: prodData.created_at || new Date().toISOString(),
-    };
-
-    saveProductEnhancement(tempId, {
-      title_ar: prodData.title_ar,
-      description_ar: prodData.description_ar,
-      category_ar: prodData.category_ar,
-      is_offer: prodData.is_offer,
-      original_price: prodData.original_price,
-      offer_badge_ar: prodData.offer_badge_ar,
-      offer_badge_en: prodData.offer_badge_en,
-      tags: prodData.tags,
-      catalog_image: prodData.catalog_image,
-      image_url: prodData.image_url,
-      images: prodData.images,
-      colors: prodData.colors,
-      variants: prodData.variants,
-      sku: prodData.sku,
-      stock: prodData.stock,
-    });
-
-    setProducts((prev) => [newProduct, ...prev]);
-
-    if (supabase) {
-      (async () => {
-        try {
-          const status =
-            prodData.availability === 'sold_out'
-              ? 'SOLD_OUT'
-              : prodData.availability === 'coming_soon'
-              ? 'COMING_SOON'
-              : prodData.availability === 'limited'
-              ? 'LIMITED'
-              : 'AVAILABLE';
-
-          const { data: inserted, error: insErr } = await supabase
-            .from('products')
-            .insert({
-              title: prodData.title_ar || prodData.title,
-              price: prodData.price,
-              category: prodData.category || 'Tailoring',
-              description: prodData.description_ar || prodData.description || '',
-              material: prodData.material || '',
-              fit_details: prodData.fit_details || '',
-              sizes: prodData.sizes || ['S', 'M', 'L', 'XL'],
-              status,
-              is_exclusive_drop: Boolean(prodData.is_offer),
-            })
-            .select('id')
-            .single();
-
-          if (insErr) {
-            console.error('Error inserting product to Supabase:', insErr.message);
-          } else if (inserted) {
-            saveProductEnhancement(inserted.id, {
-              title_ar: prodData.title_ar,
-      description_ar: prodData.description_ar,
-              category_ar: prodData.category_ar,
-              is_offer: prodData.is_offer,
-              original_price: prodData.original_price,
-              offer_badge_ar: prodData.offer_badge_ar,
-              offer_badge_en: prodData.offer_badge_en,
-              tags: prodData.tags,
-              catalog_image: prodData.catalog_image,
-      image_url: prodData.image_url,
-              images: prodData.images,
-              colors: prodData.colors,
-              variants: prodData.variants,
-      sku: prodData.sku,
-      stock: prodData.stock,
-            });
-
-            const imagesList =
-              Array.isArray(prodData.images) && prodData.images.length > 0
-                ? prodData.images.filter(Boolean)
-                : prodData.image_url
-                ? [prodData.image_url]
-                : [];
-
-            if (imagesList.length > 0) {
-              const safeMediaUrls: string[] = [];
-              for (const u of imagesList) {
-                if (typeof u === 'string' && u.startsWith('data:')) {
-                  const uploaded = await uploadDataUrlToSupabase(u, 'catalog', 'media');
-                  safeMediaUrls.push(uploaded);
-                } else if (typeof u === 'string' && u.trim()) {
-                  safeMediaUrls.push(u.trim());
-                }
-              }
-
-              const mediaRows = safeMediaUrls.map((url, idx) => ({
-                product_id: inserted.id,
-                media_url: url,
-                display_order: idx + 1,
-              }));
-
-              const { error: mediaErr } = await supabase.from('product_media').insert(mediaRows);
-              if (mediaErr) {
-                console.error('Error inserting media rows to Supabase:', mediaErr.message);
-              }
-            }
-            await loadProductsFromSupabase(true);
-          }
-        } catch (e) {
-          console.error('Failed to save product to Supabase:', e);
-        }
-      })();
+  const addProduct = async (prodData: Omit<Product, 'id'> & { id?: string | number }): Promise<Product | null> => {
+    try {
+      let product: Product;
+      if (supabase) {
+        const saved = await saveCatalogProduct(supabase, null, prodData);
+        product = mapSupabaseProducts([saved])[0];
+      } else {
+        product = { ...prodData, id: prodData.id || crypto.randomUUID(), created_at: new Date().toISOString() };
+        saveProductEnhancement(product.id, prodData);
+      }
+      setProducts(prev => [product, ...prev.filter(item => String(item.id) !== String(product.id))]);
+      return product;
+    } catch (error) {
+      console.warn('Product save failed:', error instanceof Error ? error.message : 'save');
+      return null;
     }
-
-    return newProduct;
   };
 
-  const updateProduct = (id: string | number, updates: Partial<Product>) => {
-    saveProductEnhancement(id, {
-      title_ar: updates.title_ar,
-      description_ar: updates.description_ar,
-      category_ar: updates.category_ar,
-      is_offer: updates.is_offer,
-      original_price: updates.original_price,
-      offer_badge_ar: updates.offer_badge_ar,
-      offer_badge_en: updates.offer_badge_en,
-      tags: updates.tags,
-      catalog_image: updates.catalog_image,
-      image_url: updates.image_url,
-      images: updates.images,
-      ...(updates.sku !== undefined ? { sku: updates.sku } : {}),
-      ...(updates.stock !== undefined ? { stock: updates.stock } : {}),
-      ...(updates.colors !== undefined ? { colors: updates.colors } : {}),
-      ...(updates.variants !== undefined ? { variants: updates.variants } : {}),
-    });
-
-    setProducts((prev) =>
-      prev.map((item) => (String(item.id) === String(id) ? { ...item, ...updates } : item))
-    );
-
-    if (supabase) {
-      (async () => {
-        try {
-          const dbUpdates: Record<string, any> = {};
-          if (updates.title !== undefined) dbUpdates.title = updates.title;
-          if (updates.price !== undefined) dbUpdates.price = updates.price;
-          if (updates.category !== undefined) dbUpdates.category = updates.category;
-          if (updates.description !== undefined) dbUpdates.description = updates.description;
-          if (updates.material !== undefined) dbUpdates.material = updates.material;
-          if (updates.sizes !== undefined) dbUpdates.sizes = updates.sizes;
-          if (updates.is_offer !== undefined) dbUpdates.is_exclusive_drop = updates.is_offer;
-          if (updates.availability !== undefined) {
-            dbUpdates.status =
-              updates.availability === 'sold_out'
-                ? 'SOLD_OUT'
-                : updates.availability === 'coming_soon'
-                ? 'COMING_SOON'
-                : updates.availability === 'limited'
-                ? 'LIMITED'
-                : 'AVAILABLE';
-          }
-
-          if (Object.keys(dbUpdates).length > 0) {
-            await supabase.from('products').update(dbUpdates).eq('id', id);
-          }
-
-          const updatedImages =
-            Array.isArray(updates.images) && updates.images.length > 0
-              ? updates.images.filter(Boolean)
-              : updates.image_url
-              ? [updates.image_url]
-              : null;
-
-          if (updatedImages && updatedImages.length > 0) {
-            await supabase.from('product_media').delete().eq('product_id', id);
-            const safeMediaUrls: string[] = [];
-            for (const u of updatedImages) {
-              if (typeof u === 'string' && u.startsWith('data:')) {
-                const uploaded = await uploadDataUrlToSupabase(u, 'catalog', 'media');
-                safeMediaUrls.push(uploaded);
-              } else if (typeof u === 'string' && u.trim()) {
-                safeMediaUrls.push(u.trim());
-              }
-            }
-
-            const mediaRows = safeMediaUrls.map((url, idx) => ({
-              product_id: id,
-              media_url: url,
-              display_order: idx + 1,
-            }));
-
-            await supabase.from('product_media').insert(mediaRows);
-          } else if (updates.image_url) {
-            const { data: media } = await supabase
-              .from('product_media')
-              .select('id')
-              .eq('product_id', id)
-              .order('display_order', { ascending: true })
-              .limit(1);
-
-            if (media && media.length > 0) {
-              await supabase
-                .from('product_media')
-                .update({ media_url: updates.image_url })
-                .eq('id', media[0].id);
-            } else {
-              await supabase.from('product_media').insert({
-                product_id: id,
-                media_url: updates.image_url,
-                display_order: 1,
-              });
-            }
-          }
-          loadProductsFromSupabase(true);
-        } catch (e) {
-          console.error('Failed to update product in Supabase:', e);
-        }
-      })();
+  const updateProduct = async (id: string | number, updates: Partial<Product>): Promise<boolean> => {
+    try {
+      if (supabase) {
+        const saved = await saveCatalogProduct(supabase, id, updates);
+        const product = mapSupabaseProducts([saved])[0];
+        setProducts(prev => prev.map(item => String(item.id) === String(id) ? product : item));
+      } else {
+        saveProductEnhancement(id, updates);
+        setProducts(prev => prev.map(item => String(item.id) === String(id) ? { ...item, ...updates } : item));
+      }
+      return true;
+    } catch (error) {
+      console.warn('Product update failed:', error instanceof Error ? error.message : 'save');
+      return false;
     }
   };
 

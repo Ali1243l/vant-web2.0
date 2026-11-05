@@ -2,6 +2,28 @@
 
 User requested a bounded work session and an explicit handoff before usage runs out. The agent cannot read the usage percentage. Do not claim a 4% threshold was observed.
 
+## Latest continuation: save acknowledgements and notification layering (2026-11-05)
+- Latest user priority: audit Supabase-bound buttons; close finished editors only after acknowledged saves; keep failed drafts open; notifications must be readable above dialogs/blur without changing their established design/position.
+- Product create/edit now uses **one database transaction**: `public.save_catalog_product`, applied via `supabase/migrations/20261105_atomic_catalog_save.sql` / Supabase migration `atomic_catalog_save`.
+- Products now have a public **catalog-only** `admin_metadata` JSONB column for the already-public translations, variant images/prices/sizes, stock, SKU, discounts and catalog image layout. This column is NOT a secret store. Partial updates merge metadata, and null explicitly clears optional values. Reads prefer saved row metadata over old Storage/local enhancements; no historical metadata backfill was performed.
+- RPC is SECURITY INVOKER, checks the existing admin role, has no anon/PUBLIC execution, and preserves existing RLS. Product row + media references + audit events commit/roll back together. Original Storage files are never deleted by saving a product.
+- Shared catalog hook and admin bridge now return real asynchronous save outcomes; product editor waits for acknowledgement, disables inputs while saving, keeps failed drafts intact and closes/notifies only on success. Current product offer apply/remove flows and classic save/offer callers await the result. One-click legacy duplicate/availability handlers still have limited progress feedback.
+- Shared ToastNotification now portals to body above overlays; subscriber notifications receive the same layering repair with their existing design. Modal focus allows the notification dismiss button. Keyboard users can reach it. Product category selector preserves custom/current categories; removed obsolete manual-cloud-sync instructions from catalog image section.
+- Subscriber create now blocks repeated submits and closing while saving; failures retain the draft and the notification stays above the open modal.
+- `tests/saveCatalogProduct.test.ts` checks delayed acknowledgement, error/no-ack failure, omitted media preservation, explicit clearing, image upload deduplication, input non-mutation and Arabic/English copy preservation.
+- `supabase/tests/atomic_catalog_save.sql` passed on real Supabase in a **rolled-back transaction**: create with metadata/media, partial update retaining previous metadata/media, invalid-save rejection without changed rows/audit history, non-admin rejection. Confirmed zero self-check products/events remain.
+- Final routine checks: **161 tests + TypeScript + production build**. Dependency audit: 0 critical/high, 1 existing moderate `qs` issue; previous remediation deferral still applies. No package/lockfile changes. Supabase advisors report no new findings for the save RPC/metadata column.
+- Local UI smoke checks used real components with mocked persistence, not real catalog edits: desktop failure keeps editor and input values; success closes the dialog, removes blur and restores scroll; pending save disables fields; phone width 390 has no overflow; toast is the hit-tested topmost element while the editor remains open. Screenshot artifacts: `toast-over-editor-mobile.png`, `save-failure-preserves-draft.png`, `save-success-closes-editor.png` in the artifact directory below. Temporary harness files removed after checks.
+- Release target is main, commit subject `fix: await catalog saves and surface notifications above dialogs`; check the latest Vercel commit status if release was interrupted.
+
+### Deliberately unchanged / remaining after this continuation
+1. **Product deletion was NOT changed.** Auto-review rejected adding a new production delete RPC as a larger destructive scope than save/UX repair. Rejected SQL was not applied; its file and dependent client edits were removed. Original delete paths remain and still need a separately authorized review. Do not route around the rejection with another deletion mechanism.
+2. `useExtrasState` size/social/trend mutations still optimistically update local state and call Storage saves without awaiting success. Social text edits also save on every change. Next priority is an explicit draft/commit boundary, serialized cloud acknowledgements and failure-preserving forms for those sections. Existing size notices about background sync are not proof of cloud success.
+3. General settings/banners/controls already have awaited save paths; do not close persistent settings pages just because Save succeeded. Finish end-to-end checks for their nested dialogs and field feedback.
+4. Storage JSON history, audit searches/retention and email queue/template/security work below remain.
+5. The user authorized ONE test email to their own address; the attempt returned HTTP 503 `Email service is not configured` (`RESEND_API_KEY` missing). Nothing was sent. Vercel plugin was found available but unconnected. Do not send campaigns or live customer messages. Prepare endpoint protection before enabling provider secrets.
+6. No real owner-session browser save/delete or customer order was used for verification. Browser tests were isolated fixtures; database tests rolled back. No claim that every site button/platform has been checked.
+
 ## Scope and authorization
 - Implement an admin activity log, then improve email templates and automated delivery.
 - Push/deploy main automatically; no actual customer email sending, orders, payment changes, or destructive cleanup.

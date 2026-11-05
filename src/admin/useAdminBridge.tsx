@@ -259,8 +259,8 @@ interface AdminContextType {
 
   // Data State
   products: Product[];
-  addProduct: (product: Omit<Product, 'id' | 'createdAt' | 'salesCount' | 'rating'>) => void;
-  updateProduct: (id: string, product: Partial<Product>) => void;
+  addProduct: (product: Omit<Product, 'id' | 'createdAt' | 'salesCount' | 'rating'>) => Promise<boolean>;
+  updateProduct: (id: string, product: Partial<Product>) => Promise<boolean>;
   deleteProduct: (id: string) => void;
   toggleProductOffer: (id: string) => void;
   
@@ -489,7 +489,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   };
 
-  const addProduct = useCallback((newProd: Omit<Product, 'id' | 'createdAt' | 'salesCount' | 'rating'>) => {
+  const addProduct = useCallback(async (newProd: Omit<Product, 'id' | 'createdAt' | 'salesCount' | 'rating'>) => {
     const enriched = deriveProductMetricsFromVariants(newProd);
     let availability: ProductAvailability = 'in_stock';
     if (enriched.availabilityStatus === 'sold_out') availability = 'sold_out';
@@ -504,7 +504,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ? enriched.images
       : [enriched.imageUrl || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600&q=80'];
 
-    siteControls.addProduct({
+    const saved = await siteControls.addProduct({
       title: enriched.nameEn || enriched.name || 'New Item',
       title_ar: enriched.name,
       price: enriched.salePrice || enriched.price || 0,
@@ -526,9 +526,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       is_offer: enriched.isOnOffer,
       offer_badge_ar: enriched.offerBadgeText || enriched.offerCampaign,
     });
+    return !!saved;
   }, [siteControls]);
 
-  const updateProduct = useCallback((id: string, updated: Partial<Product>) => {
+  const updateProduct = useCallback(async (id: string, updated: Partial<Product>) => {
     updated = deriveProductMetricsFromVariants(updated);
     const patch: Partial<StoreProduct> = {};
     if (updated.hasVariants !== undefined) {
@@ -542,6 +543,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (updated.price !== undefined || Object.hasOwn(updated, 'salePrice') || updated.isOnOffer !== undefined) Object.assign(patch, productPricePatch(current, updated));
     if (updated.sku !== undefined) patch.sku = updated.sku.trim();
     if (updated.stock !== undefined && updated.stockKnown !== false) patch.stock = updated.stock;
+    if (updated.stockKnown === false) patch.stock = undefined;
     if (updated.isOnOffer === false) patch.offer_badge_ar = undefined;
     if (updated.category) {
       patch.category = updated.category;
@@ -564,7 +566,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       patch.offer_badge_ar = updated.offerBadgeText || updated.offerCampaign || '';
     }
 
-    siteControls.updateProduct(id, patch);
+    return siteControls.updateProduct(id, patch);
   }, [siteControls, products]);
 
   const deleteProduct = useCallback((id: string) => {

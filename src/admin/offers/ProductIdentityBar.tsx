@@ -10,7 +10,7 @@ interface ProductIdentityBarProps {
   categoryCount: number;
   applyToCategory: boolean;
   setApplyToCategory: (val: boolean) => void;
-  onRemoveOffer: (productId: string, removeFromAllInCategory?: boolean) => void;
+  onRemoveOffer: (productId: string, removeFromAllInCategory?: boolean) => void | boolean | Promise<void | boolean>;
   onClose: () => void;
 }
 
@@ -87,9 +87,9 @@ export const ProductIdentityBar: React.FC<ProductIdentityBarProps> = ({
           <div className="flex items-center gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800">
             <button
               type="button"
-              onClick={() => {
-                onRemoveOffer(product.id, false);
-                onClose();
+              onClick={async () => {
+                const saved = await onRemoveOffer(product.id, false);
+                if (saved !== false) onClose();
               }}
               className="w-full sm:w-auto px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               title={isAr ? 'إلغاء العرض وإعادة السعر الأصلي' : 'Remove promo and restore price'}
