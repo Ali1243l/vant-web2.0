@@ -28,7 +28,7 @@ export default function AdminPoliciesView() {
     if (!validPolicyPage(next)) { setNotice(isAr ? 'راجع العناوين والنصوص باللغتين وحدود الأحرف.' : 'Check both languages and character limits.'); return; }
     setSaving(true); setNotice('');
     try {
-      if (!await updateSiteSettings({ legal_pages: { ...readPolicies(siteSettings.legal_pages), [id]: next } })) throw new Error('save');
+      if (!await updateSiteSettings({ legal_pages: { ...siteSettings.legal_pages, ...readPolicies(siteSettings.legal_pages), [id]: next } })) throw new Error('save');
       setBase(next); setDraft(next);
       setNotice(supabase ? (isAr ? 'حُفظت الصفحة، وتظهر للزوار عند تحميل الموقع.' : 'Saved. Visitors see this version when loading the site.') : (isAr ? 'حُفظت بهذا المتصفح فقط؛ قاعدة البيانات غير متصلة.' : 'Saved in this browser only; database not connected.'));
     } catch { setNotice(isAr ? 'تعذّر الحفظ. مسودتك باقية؛ حاول مجدداً.' : 'Save failed. Your draft is preserved; retry.'); }

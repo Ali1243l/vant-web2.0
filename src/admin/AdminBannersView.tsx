@@ -91,6 +91,10 @@ export const AdminBannersView: React.FC = () => {
       setNotice(destination === 'cloud' ? t('تم حفظ البانر والبطاقات سحابياً.', 'Banner and cards saved to cloud.') : t('تم تطبيق التغييرات محلياً فقط؛ السحابة غير مهيّأة.', 'Changes applied locally only; cloud is not configured.'));
     } catch (err) {
       const issue = err instanceof Error ? err.message : '';
+      if (/row.level security|access.?denied|unauthorized|not authorized|jwt|permission/i.test(issue)) {
+        setError(t('السحابة رفضت صلاحية الحفظ. المسودة باقية؛ سجّل دخول حساب إدارة المتجر ثم أعد الحفظ. رمز قفل الإدارة وحده ما يكفي.', 'Cloud write permission was denied. Your draft remains; sign in with the store admin account and retry. The admin lock code alone is not a cloud login.'));
+        return;
+      }
       setError(issue === 'contrast' ? t('تباين ألوان الثيم غير كافٍ. راجع النص والخلفيات بالوضعين قبل الحفظ.', 'Theme contrast is too low. Review text and backgrounds in both modes.') : issue === 'target' ? t('حدد قطعة واحدة على الأقل لوجهة البانر، وبحد أقصى 200 قطعة.', 'Select 1–200 pieces for the banner destination.') : issue === 'text' ? t('أكمل النصوص ولا تتجاوز 1000 حرف للحقل.', 'Complete the text fields, up to 1000 characters each.') : issue === 'image' ? t('رابط الصورة غير صالح. استخدم رابط HTTP/HTTPS مباشر أو اختر ملفاً.', 'Invalid image URL. Use a direct HTTP/HTTPS link or select a file.') : t('تعذر الحفظ. المسودة باقية؛ راجع الاتصال والصور وحاول مجدداً.', 'Save failed. Your draft remains; check connection and images and retry.'));
     } finally { setBusy(false); }
   };

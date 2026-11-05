@@ -112,7 +112,7 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
 
   const saveBannerEdits = async (edits: BannerEdits, trendEdits: TrendEdits): Promise<'cloud' | 'local'> => {
     const next = buildBannerChanges(controls, trendItems, edits, trendEdits);
-    if (isSupabaseConfigured && !await saveSiteConfigToSupabase({ controls: next.controls, ...(Object.keys(trendEdits).length ? { trendItems: next.trendItems } : {}) })) throw new Error('save');
+    if (isSupabaseConfigured && !await saveSiteConfigToSupabase({ controls: next.controls, ...(Object.keys(trendEdits).length ? { trendItems: next.trendItems } : {}) }, true)) throw new Error('save');
     const mergedControls = { ...controls, ...next.controls };
     if (!isSupabaseConfigured) {
       storeBannerDraft(localStorage, STORAGE_KEY, mergedControls, next.trendItems);
@@ -261,6 +261,7 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
     let lastKnownTimestamp = '';
 
     const syncFromCloud = async () => {
+      if (document.visibilityState === 'hidden') return;
       try {
         const cloudConfig = await fetchSiteConfigFromSupabase();
         if (cloudConfig && isMounted) {
@@ -280,8 +281,8 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
     // 1. Initial immediate sync
     syncFromCloud();
 
-    // 2. Continuous background sync every 15 seconds
-    const interval = setInterval(syncFromCloud, 15000);
+    // Visible tabs revalidate once a minute; focus still refreshes immediately.
+    const interval = setInterval(syncFromCloud, 60000);
 
     // 3. Sync silently whenever customer/admin focuses window
     let lastFocusSync = 0;

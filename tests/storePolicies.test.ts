@@ -9,8 +9,8 @@ test('all published policies have matching bilingual content and preserve owner-
       assert.ok(!/\[Before publication|\[يُستكمل|مسودة للمراجعة|غير جاهز للنشر/.test(defaultPolicies[id][lang].body));
     }
   }
-  assert.match(defaultPolicies.delivery.en.body, /2–6 calendar days from confirmation/);
-  assert.match(defaultPolicies.delivery.en.body, /2–3 days within that total/);
+  assert.match(defaultPolicies.orders.en.body, /2–6 calendar days from confirmation/);
+  assert.match(defaultPolicies.orders.en.body, /2–3 days within that total/);
   assert.match(defaultPolicies.returns.en.body, /one year from receipt/);
   assert.match(defaultPolicies.returns.en.body, /seven calendar days of VANT receiving/);
   assert.match(defaultPolicies.orders.en.body, /IQD 10,000 deposit requires IQD 12,000/);
@@ -22,7 +22,7 @@ test('saved copy survives reading, malformed pages fall back individually and HT
   const before = JSON.stringify(input);
   const pages = readPolicies(input);
   assert.deepEqual(pages.about, updated);
-  assert.deepEqual(pages.delivery, defaultPolicies.delivery);
+  assert.deepEqual(pages.returns, defaultPolicies.returns);
   assert.deepEqual(Object.keys(pages), [...policyIds]);
   assert.equal(JSON.stringify(input), before);
   for (const updated of ['2026-99-99', '2026-02-30', '', '2026-1-1']) assert.equal(validPolicyPage({ ...defaultPolicies.about, updated }), false);
@@ -33,16 +33,21 @@ test('saved copy survives reading, malformed pages fall back individually and HT
 test('shareable policy links only open known pages and tolerate other URL parameters', () => {
   assert.equal(policyFromSearch('?policy=returns'), 'returns');
   assert.equal(policyFromSearch('?lang=en&policy=privacy'), 'privacy');
+  assert.equal(policyFromSearch('?policy=delivery'), 'orders');
+  assert.equal(policyFromSearch('?policy=contact'), 'about');
+  assert.equal(policyFromSearch('?policy=storage'), 'privacy');
+  assert.match(defaultPolicies.returns.ar.body, /ما دام ما طبعنا القطعة وما شحنّاها/);
+  assert.ok(!/Supabase|Vercel|GPS/.test(defaultPolicies.privacy.en.body));
   for (const query of ['', '?policy=__proto__', '?policy=<script>', '?policy=not-a-page']) assert.equal(policyFromSearch(query), null);
 });
 
 test('compact footer labels preserve previously edited titles and separately saved labels', () => {
-  assert.equal(policyFooterLabel('orders', defaultPolicies.orders, 'ar'), 'الشروط');
+  assert.equal(policyFooterLabel('orders', defaultPolicies.orders, 'ar'), 'الطلب والتوصيل');
   const custom = { ...defaultPolicies.orders, ar: { ...defaultPolicies.orders.ar, title: 'شروط فانت المعدّلة' } };
   assert.equal(policyFooterLabel('orders', custom, 'ar'), 'شروط فانت المعدّلة');
   custom.ar = { ...custom.ar, label: 'الشراء' } as typeof custom.ar;
   const saved = readPolicies({ orders: custom });
   assert.equal(policyFooterLabel('orders', saved.orders, 'ar'), 'الشراء');
-  assert.equal(policyFooterLabel('orders', saved.orders, 'en'), 'Terms');
+  assert.equal(policyFooterLabel('orders', saved.orders, 'en'), 'Orders & delivery');
   assert.equal(validPolicyPage({ ...custom, ar: { ...custom.ar, label: 'x'.repeat(65) } }), false);
 });

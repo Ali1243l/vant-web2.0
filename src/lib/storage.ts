@@ -242,8 +242,8 @@ export async function uploadDataUrlToSupabase(
 export async function saveSiteConfigToSupabase(config: Partial<CloudSiteConfig>, requireFresh = false): Promise<boolean> {
   if (!supabase) return false;
   try {
-    // 1. Fetch current config from Supabase (or fallback to cache) to guarantee zero clobbering
-    const existing = await fetchSiteConfigFromSupabase(!requireFresh);
+    // Saves bypass the polling shortcut; legacy callers can still fall back while offline.
+    const existing = await fetchSiteConfigFromSupabase(false) || (requireFresh ? null : cachedCloudConfig);
     if (requireFresh && !existing) return false;
 
     const bannerBg =
@@ -288,7 +288,7 @@ export async function saveSiteConfigToSupabase(config: Partial<CloudSiteConfig>,
       }
     }
 
-    const payload = JSON.stringify(merged, null, 2);
+    const payload = JSON.stringify(merged);
     const blob = new Blob([payload], { type: 'application/json' });
     const { error } = await supabase.storage.from('product-images').upload('config/site_settings.json', blob, {
       contentType: 'application/json',
@@ -298,6 +298,7 @@ export async function saveSiteConfigToSupabase(config: Partial<CloudSiteConfig>,
 
     if (!error) {
       cachedCloudConfig = merged;
+      cloudConfigModified = null;
       console.log('✓ Site configuration, display image & banners permanently synced to Supabase Cloud');
       return true;
     }
@@ -314,16 +315,25 @@ export async function saveSiteConfigToSupabase(config: Partial<CloudSiteConfig>,
 /**
  * Loads latest site configuration, banner images, and trend cards from Supabase Storage
  */
+let cloudConfigModified: string | null = null;
 export async function fetchSiteConfigFromSupabase(allowCached = true): Promise<CloudSiteConfig | null> {
   if (!supabase) return allowCached ? cachedCloudConfig : null;
   try {
     const { data: pubData } = supabase.storage.from('product-images').getPublicUrl('config/site_settings.json');
     if (pubData?.publicUrl) {
+      // Check metadata without downloading embedded media on every live-sync tick.
+      if (allowCached && cachedCloudConfig && cloudConfigModified) {
+        try {
+          const metadata = await fetch(pubData.publicUrl, { method: 'HEAD', cache: 'no-store' });
+          if (metadata.ok && metadata.headers.get('last-modified') === cloudConfigModified) return cachedCloudConfig;
+        } catch { /* Fall through to the normal read if metadata is unavailable. */ }
+      }
       const response = await fetch(`${pubData.publicUrl}?t=${Date.now()}`, { cache: 'no-store' });
       if (response.ok) {
         const json = await response.json();
         if (json && typeof json === 'object') {
           cachedCloudConfig = json as CloudSiteConfig;
+          cloudConfigModified = response.headers.get('last-modified');
           return json as CloudSiteConfig;
         }
       }
