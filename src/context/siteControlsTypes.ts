@@ -140,6 +140,7 @@ export type NewsletterGradientTheme =
   | 'custom';
 
 export interface SiteSettings {
+  legal_pages?: import('../data/storePolicies').PolicyPages;
   id?: string | number;
   maintenance_mode: boolean;
   loading_text_en: string;

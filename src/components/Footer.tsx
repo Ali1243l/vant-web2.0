@@ -3,6 +3,7 @@ import { useRef } from 'react';
 import type { Language } from '../types';
 import { useSiteControls } from '../context/SiteControlsContext';
 import SocialIconRenderer from './SocialIconRenderer';
+import StorePolicies from './StorePolicies';
 
 interface Props {
   lang: Language;
@@ -69,6 +70,7 @@ export default function Footer({ lang, onAdminTrigger }: Props) {
   return (
     <footer data-store-footer className="mt-auto border-t border-black/5 dark:border-white/10 pt-6 pb-8 text-center text-xs text-[#6b7280] dark:text-[#9ca3af]">
       <div className="mx-auto max-w-[1920px] w-full px-3 sm:px-6 lg:px-8 xl:px-12 2xl:px-16">
+        <StorePolicies lang={lang} />
         {/* Social Accounts Showcase - Ergonomic Capsule Row for Mobile & Desktop (CSS Selector 1) */}
         {socialLinksControl.visible && activeLinks.length > 0 && (
           <div

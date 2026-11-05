@@ -20,6 +20,7 @@ const AdminSocialView = lazy(() => import('./AdminSocialView').then(module => ({
 const AdminControlsView = lazy(() => import('./AdminControlsView').then(module => ({ default: module.AdminControlsView })));
 const AdminBackupView = lazy(() => import('./AdminBackupView').then(module => ({ default: module.AdminBackupView })));
 const AdminSecurityView = lazy(() => import('./AdminSecurityView').then(module => ({ default: module.AdminSecurityView })));
+const AdminPoliciesView = lazy(() => import('./AdminPoliciesView'));
 const AdminBannersView = lazy(() => import('./AdminBannersView').then(module => ({ default: module.AdminBannersView })));
 const AdminWelcomeModalView = lazy(() => import('./AdminWelcomeModalView').then(module => ({ default: module.AdminWelcomeModalView })));
 import { WidgetsStudioView } from '../components/admin/widgets/WidgetsStudioView';
@@ -43,10 +44,10 @@ function MainLayout({ onClose }: AdminAppProps) {
 
   const isAr = lang === 'ar';
 
-  const settingsViews = ['settings', 'social', 'backup', 'security'];
+  const settingsViews = ['settings', 'social', 'backup', 'security', 'policies'];
   const bannerViews = ['banners', 'welcome_modal'];
   const tabs = settingsViews.includes(activeView)
-    ? [{ id: 'settings', ar: 'عام', en: 'General' }, { id: 'social', ar: 'التواصل', en: 'Social links' }, { id: 'backup', ar: 'النسخ الاحتياطي', en: 'Backup' }, { id: 'security', ar: 'الأمان', en: 'Security' }]
+    ? [{ id: 'settings', ar: 'عام', en: 'General' }, { id: 'policies', ar: 'الصفحات والسياسات', en: 'Pages & policies' }, { id: 'social', ar: 'التواصل', en: 'Social links' }, { id: 'backup', ar: 'النسخ الاحتياطي', en: 'Backup' }, { id: 'security', ar: 'الأمان', en: 'Security' }]
     : bannerViews.includes(activeView)
     ? [{ id: 'banners', ar: 'البانر وبطاقات الموسم', en: 'Banner & seasonal cards' }, { id: 'welcome_modal', ar: 'نافذة الترحيب', en: 'Welcome popup' }]
     : [];
@@ -106,7 +107,7 @@ function MainLayout({ onClose }: AdminAppProps) {
 
           <main className="flex-1 p-4 sm:p-6 lg:p-8 xl:p-10 w-full min-w-0 overflow-y-auto">
             <div className="max-w-7xl mx-auto space-y-6">
-              {tabs.length > 0 && <nav aria-label={isAr ? 'أقسام الصفحة' : 'Page sections'} className={`${bannerViews.includes(activeView) ? 'grid grid-cols-2' : 'grid grid-cols-2 sm:grid-cols-4'} gap-2 border-b border-slate-800 pb-3`}>
+              {tabs.length > 0 && <nav aria-label={isAr ? 'أقسام الصفحة' : 'Page sections'} className={`${bannerViews.includes(activeView) ? 'grid grid-cols-2' : 'grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5'} gap-2 border-b border-slate-800 pb-3`}>
                 {tabs.map((tab) => <button key={tab.id} type="button" aria-current={activeView === tab.id ? 'page' : undefined} onClick={() => setActiveView(tab.id as any)} className={`min-h-11 min-w-0 shrink-0 rounded-xl px-3 py-2 text-sm transition-colors ${activeView === tab.id ? 'bg-[#004ad7] text-white' : 'bg-slate-900 text-slate-400 hover:text-white'}`}>{isAr ? tab.ar : tab.en}</button>)}
               </nav>}
               <Suspense fallback={<p role="status" className="p-6 text-slate-300">{isAr ? 'جاري تحميل القسم…' : 'Loading section…'}</p>}>
@@ -123,6 +124,7 @@ function MainLayout({ onClose }: AdminAppProps) {
               {activeView === 'social' && <AdminSocialView />}
               {activeView === 'backup' && <AdminBackupView />}
               {activeView === 'settings' && <SettingsView />}
+              {activeView === 'policies' && <AdminPoliciesView />}
               {activeView === 'security' && <AdminSecurityView />}
               {activeView === 'widgets' && <WidgetsStudioView lang={isAr ? 'ar' : 'en'} />}
               </Suspense>

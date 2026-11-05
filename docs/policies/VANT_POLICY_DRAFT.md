@@ -1,7 +1,7 @@
 # فانت | VANT — مسودة صفحات المتجر
 
-حالة المستند: مسودة للمراجعة فقط — غير منشورة وغير جاهزة لاعتماد الطلبات عليها.
-Draft for review only — not published or ready for use as binding order terms.
+حالة المستند: مرجع الصياغة والمراجعة الداخلية. طلب صاحب المتجر نشر نسخة موجهة للزبون بتاريخ 5 نوفمبر 2026. النصوص المنشورة موجودة في `src/data/storePolicies.ts`، والتعديلات اللاحقة تُدار من الإدارة ← الإعدادات ← الصفحات والسياسات. لا تُنشر الملاحظات الداخلية بين الأقواس أدناه.
+Internal drafting reference. The owner requested publication of customer-facing pages on 5 November 2026. Published defaults are in `src/data/storePolicies.ts`; subsequent edits are managed in Admin → Settings → Pages & policies. Bracketed internal review notes below are not published.
 
 تاريخ إعداد المسودة: 5 نوفمبر 2026. ليس تاريخ نفاذ السياسات.
 
@@ -17,7 +17,7 @@ Draft for review only — not published or ready for use as binding order terms.
 - مدة التوصيل بعد الجاهزية / Delivery after readiness: 2–3 أيام، ضمن الإجمالي المعتاد 2–6 أيام من التثبيت / 2–3 days, within the usual total of 2–6 days from confirmation.
 - مدة ضمان الطباعة / Print warranty period: سنة واحدة من يوم الاستلام / One year from receipt.
 
-عند التنفيذ تُدار هذه البيانات من إعدادات الإدارة، وتتشاركها الصفحات باللغتين. يختار الموقع النص حسب لغة الواجهة التي اختارها المستخدم. هذه آلية مقترحة ولم تُنفّذ في هذا التحديث.
+تُعدّل عناوين الصفحات ونصوصها بالعربية والإنجليزية من الإدارة، بما فيها المعلومات والأسعار والأرقام. يختار الموقع لغة الصفحة حسب لغة الواجهة. لا تتحول الأرقام المؤقتة إلى روابط اتصال.
 
 ## 1. من نحن / About VANT
 

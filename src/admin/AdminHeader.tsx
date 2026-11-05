@@ -95,6 +95,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
     social: { ar: 'روابط المنصات وقنوات التواصل', en: 'Social Media & Footer Links' },
     backup: { ar: 'تصدير البيانات والنسخ الاحتياطي', en: 'Multi-Format Export & Backup Hub' },
     settings: { ar: 'الإعدادات', en: 'Master Site Controls & Settings' },
+    policies: { ar: 'صفحات المتجر والسياسات', en: 'Store pages & policies' },
     security: { ar: 'الأمان ورمز دخول الإدارة', en: 'Security & Access Key' },
     activity: { ar: 'سجل النشاط', en: 'Activity log' },
     widgets: { ar: 'استوديو الأدوات والوحدات المعيارية', en: 'Widgets Studio & UI Tools' },

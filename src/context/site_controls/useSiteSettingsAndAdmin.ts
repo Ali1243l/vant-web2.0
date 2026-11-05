@@ -162,7 +162,8 @@ export function useSiteSettingsAndAdmin() {
           offers_promo_code: rawSettings.offers_promo_code || data.offers_promo_code || DEFAULT_SITE_SETTINGS.offers_promo_code,
           offers_default_discount: rawSettings.offers_default_discount ?? data.offers_default_discount ?? DEFAULT_SITE_SETTINGS.offers_default_discount,
         };
-        setSiteSettings(merged);
+        // Extended policy content comes from cloud config; a later table response must not erase it.
+        setSiteSettings(current => ({ ...merged, legal_pages: current.legal_pages ?? merged.legal_pages }));
         try {
           localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(merged));
         } catch {}

@@ -61,7 +61,7 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
       { id: 'activity', label: 'سجل النشاط', labelEn: 'Activity log', icon: History },
     ]},
   ];
-  const selectedSection = ['social', 'backup', 'security'].includes(activeView) ? 'settings' : activeView === 'welcome_modal' ? 'banners' : activeView;
+  const selectedSection = ['social', 'backup', 'security', 'policies'].includes(activeView) ? 'settings' : activeView === 'welcome_modal' ? 'banners' : activeView;
 
   const handleSelect = (viewId: AdminView) => {
     setActiveView(viewId);
