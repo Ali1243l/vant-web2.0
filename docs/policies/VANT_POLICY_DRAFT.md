@@ -14,7 +14,7 @@ Draft for review only — not published or ready for use as binding order terms.
 - العنوان والبيانات التجارية / Business address and registration details: لم تُقدّم؛ تُراجع متطلبات الإفصاح والتسجيل قبل النشر. لا يُدّعى وجود متجر فعلي أو تسجيل تجاري.
 - كلفة التوصيل المرجعية / Indicative delivery fee: 5,000 IQD.
 - مدة التوصيل المرجعية / Indicative delivery estimate: 2–6 أيام تقويمية من تثبيت الطلب / 2–6 calendar days from order confirmation.
-- مدة 2–3 أيام المذكورة للتجهيز أو ما بعده / The additional 2–3-day description: بانتظار توضيح المقصود، ولا تُضاف إلى مدة 2–6 أيام من التثبيت / Awaiting clarification; not added to the 2–6-day window from confirmation.
+- مدة التوصيل بعد الجاهزية / Delivery after readiness: 2–3 أيام، ضمن الإجمالي المعتاد 2–6 أيام من التثبيت / 2–3 days, within the usual total of 2–6 days from confirmation.
 - مدة ضمان الطباعة / Print warranty period: سنة واحدة من يوم الاستلام / One year from receipt.
 
 عند التنفيذ تُدار هذه البيانات من إعدادات الإدارة، وتتشاركها الصفحات باللغتين. يختار الموقع النص حسب لغة الواجهة التي اختارها المستخدم. هذه آلية مقترحة ولم تُنفّذ في هذا التحديث.
@@ -58,7 +58,7 @@ For an eligible deposit cancellation, the original deposit is refunded. If paid 
 ## 3. التوصيل / Delivery
 
 ### العربية
-نوفر التوصيل داخل العراق. المدة التقديرية المعتادة 2–6 أيام تقويمية من تثبيت الطلب، وتُحسب الأيام بشكل متواصل دون استثناء أيام الأسبوع. الكلفة المرجعية للتوصيل 5,000 دينار عراقي، ويُؤكّد الموعد التقديري والكلفة النهائية للطلب قبل تثبيته. إذا احتاج طلب خاص وقتاً أطول، يُتفق على موعده المختلف مسبقاً.
+نوفر التوصيل داخل العراق. المدة التقديرية المعتادة 2–6 أيام تقويمية من تثبيت الطلب، وتُحسب الأيام بشكل متواصل دون استثناء أيام الأسبوع. يستغرق التوصيل عادةً 2–3 أيام بعد جاهزية القطعة، وهي ضمن الإجمالي المعتاد 2–6 أيام من التثبيت وليست مدة تُضاف إليه. الكلفة المرجعية للتوصيل 5,000 دينار عراقي، ويُؤكّد الموعد التقديري والكلفة النهائية للطلب قبل تثبيته. إذا احتاج طلب خاص وقتاً أطول، يُتفق على موعده المختلف مسبقاً.
 
 قد تؤثر العطل أو الأحوال الجوية أو ظروف الطرق أو ظروف خارجة عن إرادتنا على المواعيد. نعتذر عن التأخير ونتواصل لتوضيح المستجدات والترتيبات المتاحة. وصف الموعد بأنه تقديري لا يلغي التزاماتنا تجاه الطلب أو حقوق الزبون القانونية.
 
@@ -67,7 +67,7 @@ For an eligible deposit cancellation, the original deposit is refunded. If paid 
 [يُحدد قبل النشر: معالجة التعذّر المستمر للتوصيل أو فقدان الشحنة.]
 
 ### English
-Delivery is available within Iraq. The usual estimate is 2–6 calendar days from order confirmation, counting all days of the week. The indicative delivery fee is IQD 5,000. The estimated delivery window and final charge are confirmed before the order is confirmed. If a custom order needs longer, its different schedule is agreed in advance.
+Delivery is available within Iraq. The usual estimate is 2–6 calendar days from order confirmation, counting all days of the week. Delivery normally takes 2–3 days after the item is ready; this is within the usual 2–6-day total from confirmation, not an additional period. The indicative delivery fee is IQD 5,000. The estimated delivery window and final charge are confirmed before the order is confirmed. If a custom order needs longer, its different schedule is agreed in advance.
 
 Public holidays, weather, road conditions or circumstances outside our control may affect delivery times. We apologise for delays and communicate updates and available arrangements. An estimated delivery window does not remove our order obligations or the customer's statutory rights.
 
@@ -86,7 +86,9 @@ Customers may inspect the item with the courier before paying the outstanding ba
 
 إذا ثبت أن الخلل من فانت، تكون المعالجة بالاستبدال، وهو الحل المعتاد، أو رد المبلغ وفق الحالة والحقوق الواجبة. نتكفل بجميع أجور النقل والتكاليف المتعلقة بمعالجة الخطأ الذي نتحمله. لتقديم طلب مراجعة، تواصل عبر القناة المعتمدة مع رقم الطلب أو ما يثبت الشراء، وصور توضح المشكلة. الطلبات الخاصة لا تُستثنى من مسؤوليتنا عن عيوبنا أو مخالفة المواصفات المتفق عليها.
 
-[يُستكمل قبل النشر: مدة معالجة المطالبة ورد المبلغ. الإصلاح وإعادة الطباعة ليسا الحلين المعتمدين وفق توضيح صاحب المتجر. لا يُضاف شرط سقوط الحق لمجرد فتح العبوة أو غياب فيديو فتحها.]
+الاستبدال هو المعالجة المعتادة للعيب المؤهل. إذا اعتُمد رد المبلغ بدلاً من الاستبدال، يتم خلال سبعة أيام تقويمية كحد أقصى من استلام فانت القطعة المرتجعة من شركة التوصيل، وتشمل هذه المدة فحصها، وبوسيلة دفع يُتفق عليها بما يناسب الزبون. هذه المدة خاصة برد المبلغ عن القطع المرتجعة بسبب العيب، وليست تحديداً لمدة إرجاع عربون طلب أُلغي قبل التجهيز. لا يُستعمل تفضيل الاستبدال لرفض رد مبلغ مستحق بموجب الحقوق القانونية.
+
+[يُستكمل قبل النشر: موعد تنفيذ الاستبدال حسب التوفر، ومدة رد العربون للإلغاء قبل التجهيز. الإصلاح وإعادة الطباعة ليسا الحلين المعتمدين وفق توضيح صاحب المتجر. لا يُضاف شرط سقوط الحق لمجرد فتح العبوة أو غياب فيديو فتحها.]
 
 ### English
 We do not offer returns or exchanges solely for a change of mind, dislike of the design, or a customer-selected unsuitable size, provided the item matches the agreed order and the information supplied about it was accurate and clear.
@@ -97,7 +99,9 @@ We provide a one-year warranty from receipt of the item for printing defects, in
 
 Where VANT is responsible, the usual remedy is replacement, or a refund depending on the case and applicable rights. We cover all transport charges and costs associated with resolving faults for which we are responsible. To request a review, contact us through the verified channel with an order reference or proof of purchase and photos showing the issue. Custom orders remain covered for defects attributable to us and failure to meet agreed specifications.
 
-[Before publication: confirm claim/refund processing times. Repair and reprinting are not the approved remedies. Opening the parcel or lacking an unboxing video is not drafted as an automatic loss of rights.]
+Replacement is the usual remedy for an eligible defect. Where a refund is approved instead, it is completed no later than seven calendar days after VANT receives the returned item from the courier, including inspection within that period. The refund method is agreed to suit the customer. This deadline applies to defect-related returned items and does not set the refund period for a deposit cancelled before preparation. A preference for replacement does not override any legally required refund.
+
+[Before publication: confirm replacement times subject to availability and deposit-refund timing for cancellation before preparation. Repair and reprinting are not the approved remedies. Opening the parcel or lacking an unboxing video is not drafted as an automatic loss of rights.]
 
 ## 5. الخصوصية والتواصل التسويقي / Privacy and marketing
 
