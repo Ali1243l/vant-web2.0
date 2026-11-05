@@ -71,16 +71,16 @@ export function generateEmailHtml(input: EmailCampaignData): string {
     table { border-spacing: 0; border-collapse: collapse; }
     td { padding: 0; }
     img { border: 0; max-width: 100%; height: auto; }
-    .wrapper { width: 100%; table-layout: fixed; background-color: #0f172a; padding: 30px 10px; }
-    .main { background-color: #1e293b; margin: 0 auto; width: 100%; max-width: 600px; border-radius: 16px; overflow: hidden; border: 1px solid #334155; }
+    .wrapper { box-sizing: border-box; width: 100%; table-layout: fixed; background-color: #0f172a; padding: 30px 10px; }
+    .main { table-layout: fixed; overflow-wrap: break-word; background-color: #1e293b; margin: 0 auto; width: 100%; max-width: 600px; border-radius: 16px; overflow: hidden; border: 1px solid #334155; }
     .header { padding: 24px 30px; text-align: center; background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border-bottom: 1px solid #334155; }
-    .hero-img { width: 100%; max-height: 280px; object-fit: cover; display: block; }
+    .hero-img { width: 100%; height: auto; display: block; }
     .content { padding: 32px 30px; }
     .badge { display: inline-block; padding: 4px 12px; font-size: 11px; font-weight: bold; border-radius: 9999px; text-transform: uppercase; background-color: ${themeColor}22; color: ${themeColor}; border: 1px solid ${themeColor}44; margin-bottom: 14px; }
     .headline { font-size: 24px; font-weight: 800; color: #ffffff; line-height: 1.3; margin: 0 0 16px 0; }
     .body-p { font-size: 15px; line-height: 1.7; color: #94a3b8; margin: 0 0 24px 0; }
     .coupon-box { background: #0f172a; border: 2px dashed ${themeColor}; border-radius: 12px; padding: 20px; text-align: center; margin: 24px 0; }
-    .coupon-code { font-family: monospace; font-size: 22px; font-weight: 900; letter-spacing: 3px; color: #ffffff; margin: 8px 0; }
+    .coupon-code { overflow-wrap: anywhere; word-break: break-word; font-family: monospace; font-size: 22px; font-weight: 900; letter-spacing: 3px; color: #ffffff; margin: 8px 0; }
     .btn-cta { display: inline-block; background-color: ${themeColor}; color: #ffffff !important; text-decoration: none; font-size: 15px; font-weight: bold; padding: 14px 36px; border-radius: 10px; box-shadow: 0 4px 14px ${themeColor}66; }
     .items-grid { margin-top: 30px; padding-top: 24px; border-top: 1px solid #334155; }
     .footer { padding: 24px 30px; text-align: center; font-size: 12px; color: #64748b; background-color: #0f172a; border-top: 1px solid #334155; }
@@ -88,12 +88,11 @@ export function generateEmailHtml(input: EmailCampaignData): string {
 </head>
 <body>
   <div class="wrapper">
-    <table class="main" align="center">
-      <!-- Preheader (Hidden Preview Text) -->
+    <!-- Preheader (Hidden Preview Text) -->
       <div style="display:none;font-size:1px;color:#333333;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">
         ${data.preheader}
       </div>
-
+    <table class="main" align="center">
       <!-- Header / Store Brand -->
       <tr>
         <td class="header">
@@ -183,7 +182,6 @@ export function generateEmailHtml(input: EmailCampaignData): string {
       <tr>
         <td class="footer">
           <p style="margin: 0 0 8px;">وصلك هذا البريد لأنك مسجل في القائمة البريدية لـ ${data.storeName || 'متجرنا'}.</p>
-          <p style="margin: 0 0 8px;">بغداد، العراق • خدمة العملاء المباشرة: 07700000000</p>
           <p style="margin: 0;">
             <a href="#" style="color: #94a3b8; text-decoration: underline;">إلغاء الاشتراك</a> • 
             <a href="#" style="color: #94a3b8; text-decoration: underline;">سياسة الخصوصية</a>
@@ -205,196 +203,15 @@ export const WelcomeEmailTemplate: React.FC<WelcomeEmailTemplateProps> = ({
   data,
   previewDevice = 'desktop',
 }) => {
-  const isFlash = data.templateType === 'flash_sale';
-  const isLaunch = data.templateType === 'launch';
-  const isClearance = data.templateType === 'clearance';
-  const isNewsletter = data.templateType === 'newsletter';
-
-  const themeBorder = isFlash
-    ? 'border-red-500/40'
-    : isLaunch
-    ? 'border-purple-500/40'
-    : isClearance
-    ? 'border-amber-500/40'
-    : isNewsletter
-    ? 'border-cyan-500/40'
-    : 'border-indigo-500/40';
-
-  const themeBtn = isFlash
-    ? 'bg-red-600 hover:bg-red-500 shadow-red-500/30'
-    : isLaunch
-    ? 'bg-purple-600 hover:bg-purple-500 shadow-purple-500/30'
-    : isClearance
-    ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-500/30'
-    : isNewsletter
-    ? 'bg-cyan-600 hover:bg-cyan-500 shadow-cyan-500/30'
-    : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/30';
-
-  const themeBadge = isFlash
-    ? 'bg-red-500/20 text-red-400 border-red-500/40'
-    : isLaunch
-    ? 'bg-purple-500/20 text-purple-400 border-purple-500/40'
-    : isClearance
-    ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-    : isNewsletter
-    ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'
-    : 'bg-indigo-500/20 text-indigo-400 border-indigo-500/40';
-
   return (
-    <div
-      className={`mx-auto transition-all duration-300 ${
-        previewDevice === 'mobile' ? 'max-w-[375px]' : 'max-w-[620px]'
-      }`}
-    >
-      {/* Container simulating an email body */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl font-sans text-slate-100">
-        {/* Header Bar */}
-        <div className="bg-slate-950/80 px-6 py-4 border-b border-slate-800/80 text-center">
-          <div className="font-extrabold text-base text-white tracking-wide">
-            {data.storeName || 'متجر الرافدين الفاخر'}
-          </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">
-            {data.senderEmail || 'معاينة مسودة · لم يتم الإرسال'}
-          </div>
-        </div>
-
-        {/* Hero Image */}
-        {data.heroImage && (
-          <div className="w-full relative bg-slate-950 overflow-hidden max-h-64 sm:max-h-72">
-            <img
-              src={normalizeEmailImageUrl(data.heroImage)}
-              alt={data.headline}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src =
-                  'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&auto=format&fit=crop&q=80';
-              }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-80" />
-          </div>
-        )}
-
-        {/* Body Content */}
-        <div className="p-6 sm:p-8 space-y-5">
-          {/* Tag / Badge */}
-          <div className="flex items-center justify-between">
-            <span
-              className={`inline-block text-[11px] font-bold px-3 py-1 rounded-full border ${themeBadge}`}
-            >
-              {isFlash
-                ? '⚡ عرض عاجل ومؤقت'
-                : isLaunch
-                ? '✨ إطلاق منتج جديد'
-                : isClearance
-                ? '🔥 تصفية موسمية كبرى'
-                : isNewsletter
-                ? '📰 النشرة البريدية الأسبوعية'
-                : '🎁 هدية ترحيبية حصرية'}
-            </span>
-            {data.expireDate && (
-              <span className="text-[11px] text-slate-400 font-mono">
-                {data.expireDate}
-              </span>
-            )}
-          </div>
-
-          {/* Headline */}
-          <h2 className="text-xl sm:text-2xl font-extrabold text-white leading-tight">
-            {data.headline}
-          </h2>
-
-          {/* Body Text */}
-          <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-line">
-            {data.bodyText}
-          </p>
-
-          {/* Coupon Code Block */}
-          {data.discountCode && (
-            <div
-              className={`p-4 sm:p-5 rounded-xl bg-slate-950/90 border-2 border-dashed ${themeBorder} text-center space-y-1.5`}
-            >
-              <div className="text-xs font-semibold text-slate-400">
-                {data.discountPercent || 'كوبون الخصم الخاص بك'}
-              </div>
-              <div className="font-mono text-2xl font-black text-white tracking-widest selection:bg-indigo-500">
-                {data.discountCode}
-              </div>
-              <div className="text-[11px] text-slate-500">
-                انسخ الكود وطبقه في صفحة الدفع للاستفادة من الخصم
-              </div>
-            </div>
-          )}
-
-          {/* CTA Button */}
-          <div className="text-center pt-2">
-            <a
-              href={httpUrl(data.ctaUrl) || '#'}
-              target="_blank"
-              rel="noreferrer"
-              className={`inline-flex items-center justify-center px-8 py-3.5 text-sm font-bold text-white rounded-xl shadow-lg transition-transform active:scale-95 ${themeBtn}`}
-            >
-              {data.ctaText || 'تسوق التشكيلة الآن'}
-            </a>
-          </div>
-
-          {/* Featured Items Grid if provided */}
-          {data.items && data.items.length > 0 && (
-            <div className="pt-6 border-t border-slate-800/80">
-              <div className="text-xs font-bold text-slate-400 text-center mb-4 uppercase tracking-wider">
-                منتجات مختارة لك
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {data.items.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-slate-950/70 border border-slate-800 rounded-xl p-2.5 text-center flex flex-col justify-between"
-                  >
-                    {item.image?.trim() ? (
-                      <div className="aspect-square w-full rounded-lg overflow-hidden bg-slate-900 mb-2">
-                        <img
-                          src={normalizeEmailImageUrl(item.image)}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ) : null}
-                    <div>
-                      <div className="text-xs font-bold text-white line-clamp-1">
-                        {item.name}
-                      </div>
-                      <div className="text-xs font-bold text-emerald-400 mt-1">
-                        {item.price}
-                      </div>
-                      {item.originalPrice && (
-                        <div className="text-[10px] text-slate-500 line-through">
-                          {item.originalPrice}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Email Footer */}
-        <div className="bg-slate-950 px-6 py-6 border-t border-slate-800 text-center text-[11px] text-slate-500 space-y-2">
-          <p>
-            تصلك هذه الرسالة لاشتراكك في {data.storeName || 'متجرنا'}. نحن نحترم خصوصيتك دوماً.
-          </p>
-          <div className="flex items-center justify-center gap-3 text-slate-400">
-            <span className="hover:underline cursor-pointer">إلغاء الاشتراك</span>
-            <span>•</span>
-            <span className="hover:underline cursor-pointer">المساعدة والدعم</span>
-            <span>•</span>
-            <span className="hover:underline cursor-pointer">زيارة المتجر</span>
-          </div>
-          <p className="text-[10px] text-slate-600">
-            بغداد، جمهورية العراق © {new Date().getFullYear()}
-          </p>
-        </div>
-      </div>
+    <div className={`mx-auto w-full min-w-0 ${previewDevice === 'mobile' ? 'max-w-[375px]' : 'max-w-[620px]'}`}>
+      <iframe
+        title="معاينة محتوى البريد"
+        srcDoc={generateEmailHtml(data)}
+        sandbox=""
+        referrerPolicy="no-referrer"
+        className="block h-[640px] w-full rounded-2xl border border-slate-800 bg-slate-900"
+      />
     </div>
   );
 };
