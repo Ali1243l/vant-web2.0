@@ -17,7 +17,7 @@ export default function SeasonalArtwork({ settings, isAr }: { settings: HeroAppe
     observer.observe(root.current);
     document.addEventListener('visibilitychange', update);
     return () => { observer.disconnect(); document.removeEventListener('visibilitychange', update); };
-  }, [settings.motionEnabled, settings.scene]);
+  }, [settings.motionEnabled, settings.scene, settings.motif]);
   if (settings.scene === 'none' || settings.motif === 'none') return null;
   const Icon = icons[settings.scene];
   return <div ref={root} aria-hidden="true" data-seasonal-scene={settings.scene} data-motion={settings.motionEnabled ? (visible ? 'running' : 'paused') : 'off'} className="seasonal-art" style={{ [isAr ? 'left' : 'right']: 0, '--season-accent': settings.accentColor, '--season-opacity': settings.motifOpacity / 100 } as CSSProperties}>

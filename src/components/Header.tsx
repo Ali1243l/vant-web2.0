@@ -261,32 +261,12 @@ export default function Header({
                       'h-11 w-11'
                     }`}
                     aria-label={lang === 'ar' ? themeControl.label_ar : themeControl.label_en}
+                    aria-pressed={theme === 'dark'}
                   >
-                    <AnimatePresence mode="wait" initial={false}>
-                      {theme === 'dark' ? (
-                        <motion.div
-                          key="sun"
-                          initial={{ rotate: -120, scale: 0.3, opacity: 0 }}
-                          animate={{ rotate: 0, scale: 1, opacity: 1 }}
-                          exit={{ rotate: 120, scale: 0.3, opacity: 0 }}
-                          transition={{ type: 'spring', stiffness: 420, damping: 20 }}
-                          className="flex items-center justify-center text-[#3b82f6]"
-                        >
-                          <Sun className={`stroke-[1.8] transition-all ${scrolled ? 'h-4 w-4' : 'h-4.5 w-4.5'}`} />
-                        </motion.div>
-                      ) : (
-                        <motion.div
-                          key="moon"
-                          initial={{ rotate: 120, scale: 0.3, opacity: 0 }}
-                          animate={{ rotate: 0, scale: 1, opacity: 1 }}
-                          exit={{ rotate: -120, scale: 0.3, opacity: 0 }}
-                          transition={{ type: 'spring', stiffness: 420, damping: 20 }}
-                          className="flex items-center justify-center text-[#15171c]"
-                        >
-                          <Moon className={`stroke-[1.8] transition-all ${scrolled ? 'h-4 w-4' : 'h-4.5 w-4.5'}`} />
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                    <span aria-hidden="true" className="store-appearance-icon relative grid place-items-center" data-appearance={theme}>
+                      <Sun className={`store-appearance-sun stroke-[1.8] ${scrolled ? 'h-4 w-4' : 'h-4.5 w-4.5'}`} />
+                      <Moon className={`store-appearance-moon absolute stroke-[1.8] ${scrolled ? 'h-4 w-4' : 'h-4.5 w-4.5'}`} />
+                    </span>
                   </button>
                 )}
 

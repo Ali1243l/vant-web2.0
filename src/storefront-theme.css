@@ -71,3 +71,9 @@ html[data-storefront-theme][data-store-ui-mode=light]{--store-utility:var(--stor
 html[data-storefront-theme][data-store-ui-mode=dark]{--store-utility:var(--store-utility-dark);--store-utility-text:var(--store-utility-dark-text)}
 html[data-storefront-theme] .store-toolbar-actions button{background-color:var(--store-utility);color:var(--store-utility-text)}
 html[data-storefront-theme] .store-toolbar-actions button:not([data-store-cart-active]) svg{color:var(--store-utility-text)}
+
+/* Both icons share one fixed slot: switching never leaves an empty button. */
+.store-appearance-icon svg{transition:opacity .18s ease,transform .18s ease}
+.store-appearance-icon[data-appearance=dark] .store-appearance-moon,.store-appearance-icon[data-appearance=light] .store-appearance-sun{opacity:0;transform:rotate(-25deg) scale(.8)}
+.store-appearance-icon[data-appearance=dark] .store-appearance-sun,.store-appearance-icon[data-appearance=light] .store-appearance-moon{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){.store-appearance-icon svg{transition:none}}
