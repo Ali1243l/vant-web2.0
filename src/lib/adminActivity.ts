@@ -22,6 +22,8 @@ export interface ActivityEntry {
   changed_fields: string[];
   before_data?: Record<string, unknown> | null;
   after_data?: Record<string, unknown> | null;
+  file_before?: string | null;
+  file_after?: string | null;
 }
 
 export function activityChanges(entry: ActivityEntry) {

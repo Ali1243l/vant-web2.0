@@ -1,3 +1,11 @@
+# Latest checkpoint — 2026-11-07 Baghdad
+
+Security review is documented in docs/SECURITY_REVIEW_20261106.md. Main f7088e5 is deployed; final UI follow-up is being committed. Approved diagnostic hardening, storage activity and access-timestamp filter migrations are applied. The exact two old public snapshots were removed through Storage API and verified absent; database audit records show both deletes. A published safe diagnostic was delivered and marked resolved. Settings save was tested by punctuation change while maintenance OFF, then restored; both updates audited. 199 tests passed before the final UI follow-up; rerun results below supersede older counts. User-staged .rooignore must remain uncommitted.
+
+Limits: Storage activity logs names/metadata, not per-field JSON contents, and may identify the Storage service rather than an admin. Anonymous newsletter cancellation still needs proof-link flow. Physical-device Safari/Android and server availability monitoring remain outside this review. Do not claim all site operations are fully audited or security is 100%.
+
+--- Previous checkpoint history ---
+
 # Checkpoint — 2026-11-05
 
 ## Current continuation — acknowledged admin saves, compact warning, lighter config, seasonal atmosphere

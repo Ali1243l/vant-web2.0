@@ -14,6 +14,18 @@ end $$;
 rollback;
 
 begin;
+do $$
+begin
+  update storage.objects set last_accessed_at=clock_timestamp()
+    where bucket_id='product-images' and name='config/site_settings.json';
+  assert (select count(*)=0 from public.admin_activity where transaction_id=txid_current());
+  update storage.objects set user_metadata=coalesce(user_metadata,'{}'::jsonb) || '{"audit_self_check":true}'::jsonb
+    where bucket_id='product-images' and name='config/site_settings.json';
+  assert (select count(*)=1 from public.admin_activity where transaction_id=txid_current());
+end $$;
+rollback;
+
+begin;
 set local role anon;
 insert into public.logs(event_type,session_id,visitor_id,visit_count,device,data)
 values ('system_error','rollback-self-check','rollback-self-check',1,'desktop','{"kind":"diagnostic"}');
