@@ -19,7 +19,7 @@
 [data-seasonal-scene=winter] {--season-highlight:#e8f7ff}
 .dark .seasonal-art[data-seasonal-scene=winter],[data-hero-preview-theme="dark"] .seasonal-art[data-seasonal-scene=winter]{--season-paper:#e8f7ff}
 [data-seasonal-scene=winter] .seasonal-particle {animation-name:season-snow;animation-duration:16s}
-[data-seasonal-scene=spring] {--season-highlight:#f0bd83}
+[data-seasonal-scene=spring] {--season-highlight:#e8a9b0}
 [data-seasonal-scene=spring] .seasonal-composition {transform-origin:40% 100%;animation-name:season-botanical}
 [data-seasonal-scene=summer] {--season-highlight:#f0ad32}
 [data-seasonal-scene=autumn] {--season-highlight:#cc8b44}
@@ -29,9 +29,10 @@
 [data-seasonal-scene=holiday] .seasonal-composition {animation-name:season-tide;animation-duration:18s}
 [data-seasonal-scene=school] {--season-highlight:#db9a64}
 [data-seasonal-scene=weekend] {--season-highlight:#de8e8b}
-[data-seasonal-scene=black-friday] {--season-highlight:#c84843}
+[data-seasonal-scene=black-friday] {--season-highlight:#d4a087}
 .seasonal-art[data-seasonal-scene=black-friday]{color:#23252b}
-.dark .seasonal-art[data-seasonal-scene=black-friday],[data-hero-preview-theme="dark"] .seasonal-art[data-seasonal-scene=black-friday]{color:#e8dcc4;--season-paper:#18181b}
+.dark .seasonal-art[data-seasonal-scene=black-friday],[data-hero-preview-theme="dark"] .seasonal-art[data-seasonal-scene=black-friday]{color:#dddcd7;--season-paper:#15181e}
+.seasonal-art[data-seasonal-scene=black-friday]{opacity:min(1,calc(var(--season-opacity,.55) * 1.25))}
 [data-hero-preview-theme="light"] .seasonal-art[data-seasonal-scene=black-friday]{color:#23252b;--season-paper:#fffaf0}
 [data-seasonal-scene=black-friday] .seasonal-composition,[data-seasonal-scene=school] .seasonal-composition,[data-seasonal-scene=summer] .seasonal-composition {animation:none}
 [data-seasonal-scene=black-friday] .seasonal-particle,[data-seasonal-scene=school] .seasonal-particle,[data-seasonal-scene=summer] .seasonal-particle,[data-seasonal-scene=holiday] .seasonal-particle,[data-seasonal-scene=season-end] .seasonal-particle {display:none}
@@ -74,6 +75,9 @@
   .seasonal-composition{inset:2% -12%}
   .hero-editorial .seasonal-art{width:128px;height:128px;inset-block:6px auto}
   .hero-editorial:has(.seasonal-art) .hero-caption{padding-top:84px}
+  .hero-editorial .seasonal-art:is([data-seasonal-scene=black-friday],[data-seasonal-scene=holiday]){width:144px;height:144px}
+  .hero-editorial:has(.seasonal-art:is([data-seasonal-scene=black-friday],[data-seasonal-scene=holiday])) .hero-caption{padding-top:108px}
+  :is([data-seasonal-scene=black-friday],[data-seasonal-scene=holiday]) .seasonal-composition{inset:0}
   .hero-editorial:has(.seasonal-art) .hero-dismiss{position:absolute;inset-block-start:0;inset-inline-start:0}
   .seasonal-particle:nth-of-type(n+3){display:none}
 }

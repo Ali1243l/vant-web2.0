@@ -7,25 +7,24 @@ export default function SeasonalIllustration({ scene }: { scene: HeroScene }) {
   let art;
   switch (scene) {
     case 'winter': art = <>
-      <circle cx="156" cy="151" r="101" fill="currentColor" opacity=".12" />
-      <path d="M15 260L86 144L111 182L170 83L282 260Z" fill="currentColor" opacity=".28" />
-      <path d="M170 83L166 233L225 260H282Z M86 144L80 234L128 260H161Z" fill="currentColor" opacity=".16" />
-      <path d="M130 150L170 83L213 151L185 137L170 152L151 136Z M60 187L86 144L111 182L93 174L82 190Z" fill={paper} />
-      <path d="M224 231V188M209 213L224 190L239 213M213 201L224 182L235 201M254 238V208M244 224L254 205L264 224" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-      <path d="M12 258Q64 219 131 248T288 243Q300 267 281 288Q160 305 31 291Q9 285 12 258Z" fill="currentColor" opacity=".45" />
-      <path d="M14 278Q98 238 172 269T286 266Q297 286 273 292Q143 309 34 291Q18 288 14 278Z" fill={paper} />
-      <path d="M57 280Q113 268 153 278M185 286Q219 292 251 283" stroke="currentColor" strokeWidth="1.5" opacity=".35" strokeLinecap="round" />
-      <g data-season-detail="frost" stroke="currentColor" strokeWidth="4" strokeLinecap="round"><path d="M75 35V105M45 52L105 88M45 88L105 52M65 42L75 52L85 42M65 98L75 88L85 98M235 96V136M218 106L252 126M218 126L252 106" /></g>
-      <g fill={paper}><circle cx="212" cy="44" r="4"/><circle cx="37" cy="148" r="3"/><circle cx="257" cy="182" r="5"/></g>
+      <circle cx="154" cy="141" r="101" fill="currentColor" opacity=".05"/>
+      <circle cx="154" cy="141" r="101" fill="none" stroke="currentColor" strokeWidth="1" opacity=".2" strokeDasharray="2 9"/>
+      <g data-season-detail="frost" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+        {[0, 60, 120, 180, 240, 300].map(angle => <path key={angle} transform={`rotate(${angle} 154 141)`} d="M154 141V47M154 75L135 57M154 75L173 57M154 105L127 80M154 105L181 80"/>)}
+      </g>
+      <path d="M154 122L171 132V151L154 161L137 151V132Z" fill={paper} stroke="currentColor" strokeWidth="1.5"/>
+      <path d="M37 278Q158 258 249 210M81 267L65 247M116 258L98 230M151 245L137 222M184 233L176 211M115 258L114 281M151 245L156 270M184 233L196 254" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity=".5"/>
+      <g fill={paper}><circle cx="39" cy="157" r="3"/><circle cx="258" cy="106" r="3"/><circle cx="244" cy="254" r="4"/></g>
     </>; break;
     case 'spring': art = <>
-      <path d="M42 300Q51 160 191 38Q228 185 42 300" fill="currentColor" opacity=".18" />
-      <path d="M76 300Q132 163 214 95M130 205Q54 204 52 145Q109 143 130 205M164 155Q224 153 250 99Q190 91 164 155" fill="currentColor" opacity=".65" />
-      <g data-season-detail="bloom" fill={gold} transform="translate(105 112)"><ellipse rx="20" ry="44"/><ellipse rx="20" ry="44" transform="rotate(60)"/><ellipse rx="20" ry="44" transform="rotate(120)"/><circle r="15" fill={paper}/></g>
-      <g fill="currentColor" transform="translate(225 217) rotate(15)"><ellipse rx="13" ry="29"/><ellipse rx="13" ry="29" transform="rotate(60)"/><ellipse rx="13" ry="29" transform="rotate(120)"/><circle r="9" fill={paper}/></g>
-      <path d="M74 160L123 200M177 143L226 113M92 269Q129 219 154 189" fill="none" stroke={paper} strokeWidth="1.8" opacity=".7" strokeLinecap="round" />
-      <g fill="currentColor" opacity=".65"><circle cx="100" cy="109" r="2.2"/><circle cx="110" cy="114" r="2.2"/><circle cx="104" cy="118" r="1.8"/></g>
-      <path d="M26 240Q140 270 275 241" fill="none" stroke="currentColor" opacity=".3"/>
+      <path d="M40 281Q44 96 215 30Q272 190 40 281Z" fill="currentColor" opacity=".08"/>
+      <path d="M66 288Q127 210 111 92M81 279Q188 235 213 154M93 264Q121 164 183 60" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+      <path d="M104 224Q36 201 52 152Q112 165 104 224M142 207Q199 209 224 178Q174 164 142 207M157 127Q130 77 164 48Q191 84 157 127M87 266Q44 253 27 219Q81 215 87 266" fill="currentColor" opacity=".65"/>
+      <g data-season-detail="bloom" fill={gold} transform="translate(108 92)"><ellipse rx="18" ry="37"/><ellipse rx="18" ry="37" transform="rotate(60)"/><ellipse rx="18" ry="37" transform="rotate(120)"/><circle r="12" fill={paper}/></g>
+      <g fill={paper} stroke="currentColor" strokeWidth="1" transform="translate(213 151)"><ellipse rx="13" ry="27"/><ellipse rx="13" ry="27" transform="rotate(60)"/><ellipse rx="13" ry="27" transform="rotate(120)"/><circle r="8" fill={gold} stroke="none"/></g>
+      <path d="M172 59Q170 34 187 34Q205 38 193 59Q182 73 172 59Z" fill={gold}/>
+      <path d="M58 164L103 219M171 191L199 188M148 91L158 118" stroke={paper} strokeWidth="1.5" opacity=".65"/>
+      <path d="M53 282Q119 298 180 266" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" opacity=".55"/>
     </>; break;
     case 'summer': art = <>
       <circle cx="160" cy="118" r="88" fill="currentColor" opacity=".13"/>
@@ -83,13 +82,17 @@ export default function SeasonalIllustration({ scene }: { scene: HeroScene }) {
       <path d="M52 34L58 50L74 56L58 62L52 78L46 62L30 56L46 50ZM250 58L254 69L265 73L254 77L250 88L246 77L235 73L246 69Z" fill={gold}/>
     </>; break;
     case 'holiday': art = <>
-      <path d="M56 300V143A96 96 0 0 1 248 143V300Z" fill="currentColor" opacity=".15"/>
-      <circle cx="176" cy="106" r="42" fill={gold}/>
-      <path d="M22 194Q49 160 93 192T195 192T282 192V278Q155 310 22 280Z" fill="currentColor" opacity=".45"/>
-      <path d="M22 229Q49 191 98 229T196 229T282 229V278Q155 310 22 280Z" fill={paper}/>
-      <path data-season-detail="tide" d="M27 262Q49 224 98 262T196 262T278 262" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
-      <path d="M111 168L136 134V171ZM141 147L158 171H141Z M109 176H161L153 184H119Z" fill={paper} opacity=".9"/>
-      <path d="M62 90Q77 76 92 90Q107 76 122 90" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+      <rect x="23" y="24" width="254" height="248" rx="70" fill="currentColor" opacity=".08"/>
+      <circle cx="215" cy="79" r="30" fill={gold}/>
+      <path d="M35 155Q81 126 124 151T260 143M35 171Q81 142 124 167T260 159" fill="none" stroke="currentColor" strokeWidth="2" opacity=".4"/>
+      <path d="M90 131V91Q90 77 104 77H131Q145 77 145 91V131M99 129V94H136V129" fill="none" stroke="currentColor" strokeWidth="4"/>
+      <rect x="57" y="121" width="146" height="145" rx="23" fill="currentColor"/>
+      <rect x="66" y="130" width="128" height="126" rx="17" fill={paper} opacity=".65"/>
+      <path d="M89 139V246M113 139V246M137 139V246M161 139V246" stroke="currentColor" strokeWidth="2" opacity=".4"/>
+      <path d="M83 265V278M178 265V278" stroke="currentColor" strokeWidth="9" strokeLinecap="round"/>
+      <path d="M179 152L220 166L213 197L176 184Z" fill={gold}/>
+      <path data-season-detail="tide" d="M212 106Q255 111 262 84Q267 61 243 50" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 6" opacity=".65"/>
+      <path d="M235 39L267 44L243 66L246 49Z" fill={paper} stroke="currentColor" strokeWidth="1.2"/>
     </>; break;
     case 'school': art = <>
       <g transform="rotate(-10 145 155)"><rect x="48" y="53" width="166" height="220" rx="12" fill="currentColor" opacity=".23"/><rect x="63" y="37" width="166" height="220" rx="12" fill={paper}/><path d="M86 37V257" stroke="currentColor" opacity=".45" strokeWidth="3"/><path data-season-detail="rules" d="M107 95H202M107 122H202M107 149H189M107 176H197M107 203H166" stroke="currentColor" strokeWidth="3" opacity=".55"/><path d="M163 37H193V88L178 77L163 88Z" fill={gold}/><path d="M53 75H76M53 109H76M53 143H76M53 177H76M53 211H76" stroke={gold} strokeWidth="3" strokeLinecap="round"/></g>
@@ -100,7 +103,15 @@ export default function SeasonalIllustration({ scene }: { scene: HeroScene }) {
       <path d="M68 30L75 46L91 53L75 60L68 76L61 60L45 53L61 46Z" fill={gold}/>
     </>; break;
     case 'black-friday': art = <>
-      <g transform="rotate(-13 150 150)"><rect x="29" y="33" width="244" height="244" rx="32" fill="currentColor" opacity=".14"/><rect x="43" y="47" width="216" height="216" rx="23" fill="currentColor"/><path d="M57 65H245M57 245H245" stroke={paper} strokeWidth="1" opacity=".25"/><g fill="none" stroke={paper} strokeWidth="16" strokeLinecap="round"><circle cx="111" cy="111" r="23"/><circle cx="190" cy="192" r="23"/><path d="M102 209L198 92"/></g><path data-season-detail="foil" d="M227 46H259V78Z" fill={gold}/><path d="M57 89V225" fill="none" stroke={paper} strokeWidth="1.5" opacity=".3" strokeLinecap="round"/></g>
+      <path d="M60 100L207 83L249 255L94 279Z" fill="currentColor" opacity=".1"/>
+      <path d="M82 100L217 100L237 264H62Z" fill={paper} stroke="currentColor" strokeWidth="2"/>
+      <path d="M217 100L245 118L263 250L237 264Z" fill="currentColor" opacity=".35"/>
+      <path d="M111 111V72Q111 34 150 34Q189 34 189 72V111" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round"/>
+      <path d="M119 107V73Q119 43 150 43Q181 43 181 73V107" fill="none" stroke={gold} strokeWidth="1.5" opacity=".7"/>
+      <path data-season-detail="foil" d="M110 158L150 223L191 158" fill="none" stroke={gold} strokeWidth="9" strokeLinecap="round"/>
+      <path d="M87 248H211M90 121H208" stroke="currentColor" strokeWidth="1" opacity=".3"/>
+      <path d="M211 94L239 119L224 146L201 121Z" fill={gold}/>
+      <circle cx="215" cy="107" r="3" fill={paper}/>
     </>; break;
     case 'season-end': art = <>
       <g transform="rotate(-20 150 150)"><path d="M78 54H204V196L141 253L78 196Z" fill="currentColor" opacity=".2"/><path d="M100 38H226V180L163 237L100 180Z" fill="currentColor"/><circle cx="163" cy="68" r="10" fill={paper}/><path data-season-detail="thread" d="M163 58Q87 -2 69 45Q61 77 103 83" fill="none" stroke={gold} strokeWidth="4"/><path d="M130 113H196M130 133H196M146 160H179" stroke={paper} strokeWidth="3"/><path d="M111 93V176L163 223L215 176V50" fill="none" stroke={paper} strokeWidth="1.5" opacity=".35"/><circle cx="163" cy="68" r="15" fill="none" stroke={gold} strokeWidth="1.5" opacity=".6"/></g>

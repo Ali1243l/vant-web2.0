@@ -3,7 +3,6 @@ import type { Product, Language } from '../types';
 import ProductCard from './ProductCard';
 import SkeletonCard from './SkeletonCard';
 import type { HeroAppearance } from '../lib/heroAppearance';
-import { seasonalVariants } from '../lib/seasonalDistribution';
 
 
 
@@ -35,7 +34,6 @@ export default function MasonryGrid({
   layout = 'grid-4',
 }: Props) {
   const handleOpen = onOpen || onSelect || (() => {});
-  const designs = season ? seasonalVariants(season.scene, products.length) : [];
 
   const gridClasses =
     layout === 'grid-2'
@@ -75,7 +73,6 @@ export default function MasonryGrid({
               product={p}
               index={i}
               season={season}
-              seasonVariant={designs[i]}
               imageSizes={layout === 'grid-2' ? '(max-width: 639px) calc(100vw - 24px), (max-width: 1023px) 50vw, 512px' : undefined}
               lang={lang}
               isWishlisted={isWishlisted ? isWishlisted(p.id) : false}

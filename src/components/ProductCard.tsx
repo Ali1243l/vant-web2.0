@@ -8,14 +8,13 @@ import { Heart, Tag, Check } from 'lucide-react';
 import type { Product, Language } from '../types';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { resolveProductColorVariants } from '../lib/productVariants';
-import { StoreSeasonCard, StoreSnowCrown } from './StoreSeasonAtmosphere';
+import { StoreSeasonCard } from './StoreSeasonAtmosphere';
 import type { HeroAppearance } from '../lib/heroAppearance';
 
 interface Props {
   product: Product;
   index: number;
   season?: HeroAppearance;
-  seasonVariant?: number;
   imageSizes?: string;
   lang: Language;
   isWishlisted?: boolean;
@@ -41,7 +40,6 @@ export default React.memo(function ProductCard({
   index,
   imageSizes,
   season,
-  seasonVariant = 0,
   lang,
   isWishlisted = false,
   onToggleWishlist,
@@ -178,7 +176,6 @@ export default React.memo(function ProductCard({
       onMouseLeave={handleMouseLeave}
     >
       <div className="flex flex-col h-full w-full text-start outline-none">
-        {season && <StoreSnowCrown settings={season} variant={seasonVariant} />}
         {/* Main Image Container with Precision Fixed Aspect Ratio */}
         <div
           data-store-card-image
