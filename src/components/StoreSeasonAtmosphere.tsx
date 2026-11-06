@@ -36,7 +36,8 @@ export function StoreSeasonCard({ settings }: { settings: HeroAppearance }) {
 
 export function StoreSnowCrown({ settings, variant }: { settings: HeroAppearance; variant: number }) {
   if (settings.scene !== 'winter' || settings.motif === 'none' || settings.motifOpacity === 0) return null;
-  return <div className="store-snow-crown" aria-hidden="true" style={{ opacity: settings.motifOpacity / 100, '--crown-left': `${variant % 3 * 5}%`, '--crown-width': `${60 + variant % 4 * 10}%` } as CSSProperties}><img src={snowCaps[variant]} alt="" loading="lazy" decoding="async" fetchPriority="low" /></div>;
+  // Snow needs a denser white than line ornaments; zero still removes it entirely.
+  return <div className="store-snow-crown" aria-hidden="true" style={{ opacity: .6 + settings.motifOpacity / 250, '--crown-left': `${variant % 3 * 2}%`, '--crown-width': `${88 + variant % 3 * 4}%` } as CSSProperties}><img src={snowCaps[variant]} alt="" loading="lazy" decoding="async" fetchPriority="low" /></div>;
 }
 
 export default function StoreSeasonAtmosphere({ settings, paused = false }: { settings: HeroAppearance; paused?: boolean }) {

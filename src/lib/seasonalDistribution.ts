@@ -13,15 +13,4 @@ export function seasonalVariants(scene: string, count: number): number[] {
   return result.slice(0, Math.min(1000, Math.max(0, Math.floor(count))));
 }
 
-export const snowCaps = [
-  "/themes/snow-crown-0-8450d361.svg",
-  "/themes/snow-crown-1-9ca24f7c.svg",
-  "/themes/snow-crown-2-07b186f7.svg",
-  "/themes/snow-crown-3-657a3298.svg",
-  "/themes/snow-crown-4-12f6b534.svg",
-  "/themes/snow-crown-5-532e6861.svg",
-  "/themes/snow-crown-6-3b4e2a05.svg",
-  "/themes/snow-crown-7-438e8c7e.svg",
-  "/themes/snow-crown-8-5264a75f.svg",
-  "/themes/snow-crown-9-2a7e1af9.svg"
-];
+export const snowCaps = ["/themes/snow-drift-0-3374ed99.svg", "/themes/snow-drift-1-edb2de69.svg", "/themes/snow-drift-2-cad0e112.svg", "/themes/snow-drift-3-a60dc1cd.svg", "/themes/snow-drift-4-9763a73b.svg", "/themes/snow-drift-5-2fa567c4.svg", "/themes/snow-drift-6-8018d7c3.svg", "/themes/snow-drift-7-62632ff2.svg", "/themes/snow-drift-8-df8e9406.svg", "/themes/snow-drift-9-72225e80.svg"];

@@ -36,6 +36,6 @@
 /* The photograph stays intact; its perimeter carries the campaign treatment. */
 .store-season-card--black-friday .store-season-edge{inset:5px;border:1px solid #fff6e5;opacity:.65;clip-path:polygon(0 0,32% 0,32% 2%,2% 2%,2% 30%,0 30%,0 0,100% 100%,68% 100%,68% 98%,98% 98%,98% 70%,100% 70%,100% 100%)}
 [data-store-atmosphere=black-friday]::before,[data-store-atmosphere=black-friday]::after,[data-store-atmosphere=black-friday] .store-atmosphere-particle{display:none}
-.store-snow-crown{position:relative;height:12px;flex:none;overflow:hidden;pointer-events:none}
-.store-snow-crown img{position:absolute;bottom:0;left:var(--crown-left);width:var(--crown-width);height:12px;object-fit:fill}
+.store-snow-crown{position:relative;height:14px;flex:none;overflow:hidden;pointer-events:none}
+.store-snow-crown img{position:absolute;bottom:0;left:var(--crown-left);width:var(--crown-width);height:14px;object-fit:fill}
 @media(max-width:639px){.store-atmosphere-particle:nth-of-type(n+9){display:none}.store-atmosphere::before{left:-55%;opacity:.2}.store-atmosphere::after{right:-60%}}

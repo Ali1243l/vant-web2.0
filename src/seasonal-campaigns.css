@@ -1,0 +1,87 @@
+/* Independent campaign compositions; photography, labels and custom palette tokens stay intact. */
+[data-campaign]::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;border-radius:inherit}
+[data-campaign] .hero-caption{isolation:isolate}
+
+/* Winter: a quiet alpine journal, with frost confined to the outside edge. */
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=winter]{border-radius:calc(var(--store-radius,20px) + 8px)}
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=winter]::before{inset:5px;border:1px solid color-mix(in srgb,#d9effa 32%,transparent)}
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=winter] .hero-caption h2{font-weight:650;letter-spacing:-.02em}
+html[data-store-season=winter] [data-store-card-meta]{border-bottom-color:color-mix(in srgb,#9cbfd2 55%,var(--store-border));padding-inline:4px}
+html[data-store-season=winter] [data-store-toolbar]{box-shadow:0 6px 26px #5883a40b}
+
+/* Spring: a botanical folio, with an open petal-shaped edge. */
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=spring]{border-start-start-radius:calc(var(--store-radius,20px) + 28px);border-end-end-radius:calc(var(--store-radius,20px) + 28px)}
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=spring]::before{inset:10px;border-inline-start:2px solid color-mix(in srgb,var(--hero-accent,#6ee7b7) 55%,transparent);border-start-start-radius:40px}
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=spring] .hero-caption h2{font-weight:600;line-height:1.4}
+html[data-store-season=spring] [data-store-card-meta]{border-bottom:1px solid var(--store-border);border-inline-end:2px solid color-mix(in srgb,var(--store-accent) 55%,transparent);padding-inline-end:10px}
+html[data-store-season=spring] [data-store-newsletter]{border-start-start-radius:calc(var(--store-radius) + 22px)}
+
+/* Summer: sunlit resort stripes and generous, clean horizontal rules. */
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=summer]::before{height:6px;background:repeating-linear-gradient(90deg,#e8ac3655 0 28px,transparent 28px 56px)}
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=summer] .hero-caption h2{font-weight:750;letter-spacing:-.035em}
+html[data-store-season=summer] [data-store-card-meta]{border-bottom:3px solid color-mix(in srgb,var(--store-accent) 65%,transparent)}
+html[data-store-season=summer] [data-store-footer]{background-size:100px 3px}
+
+/* Autumn: a warm paper folio with an offset, stitched binding. */
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=autumn]{border-bottom-width:4px;border-bottom-color:color-mix(in srgb,#b97842 45%,transparent)}
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=autumn]::before{inset:9px;border:1px dashed #ae774638}
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=autumn] .hero-caption h2{font-weight:600;letter-spacing:0}
+html[data-store-season=autumn] [data-store-card-meta]{border-bottom-style:dashed;border-bottom-color:color-mix(in srgb,var(--store-accent) 55%,var(--store-border))}
+html[data-store-season=autumn] [data-store-newsletter]{box-shadow:5px 5px 0 color-mix(in srgb,var(--store-accent) 9%,transparent)}
+
+/* New Year: a precise gold invitation, with an inset ceremonial frame. */
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=new-year]::before{inset:7px;border:1px solid #d6b65c66;box-shadow:inset 0 0 0 5px #d6b65c08}
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=new-year] .hero-caption h2{font-weight:800;line-height:1.25}
+html[data-store-season=new-year] [data-store-card-meta]{border-bottom:3px double color-mix(in srgb,var(--store-accent) 55%,var(--store-border))}
+html[data-store-season=new-year] [data-store-primary]{outline:1px solid color-mix(in srgb,var(--store-accent) 40%,transparent);outline-offset:3px}
+
+/* Ramadan: a lantern alcove, not a generic celebration frame. */
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=ramadan]{border-start-start-radius:calc(var(--store-radius,20px) + 46px);border-start-end-radius:calc(var(--store-radius,20px) + 46px)}
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=ramadan]::before{inset:7px;border-block-start:1px solid #ddba6977;border-inline:1px solid #ddba692e}
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=ramadan] .hero-caption h2{font-weight:600;line-height:1.45}
+html[data-store-season=ramadan] [data-store-card-meta]{border-bottom:1px solid #b69b655c;padding-bottom:18px}
+html[data-store-season=ramadan] [data-store-newsletter]{border-top:2px solid color-mix(in srgb,#dba85c 55%,var(--store-border))}
+
+/* Eid: a gift invitation with offset ribbon corners, in champagne tones. */
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=eid]::before{inset:8px;border-inline-start:3px solid #d4ae6d88;border-block-end:3px solid #d4ae6d55;border-end-start-radius:22px}
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=eid] .hero-caption h2{font-weight:750;line-height:1.35}
+html[data-store-season=eid] [data-store-card-meta]{padding-inline:10px;border-inline-start:2px solid color-mix(in srgb,var(--store-accent) 65%,transparent);border-bottom:0}
+html[data-store-season=eid] [data-store-newsletter]{border-bottom:3px double color-mix(in srgb,var(--store-accent) 60%,var(--store-border))}
+
+/* Holiday: an open postcard, with a nautical double baseline. */
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=holiday]{border-end-start-radius:calc(var(--store-radius,20px) + 22px)}
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=holiday]::before{inset:auto 16px 9px;height:5px;border-block:1px solid #4f9aa85c}
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=holiday] .hero-caption h2{font-weight:650;line-height:1.35}
+html[data-store-season=holiday] [data-store-card-meta]{border-bottom:3px double color-mix(in srgb,var(--store-accent) 60%,var(--store-border));padding-bottom:16px}
+html[data-store-season=holiday] [data-store-newsletter]{border-end-end-radius:calc(var(--store-radius) + 24px)}
+
+/* Study: ruled stationery, disciplined edges and a small binding gutter. */
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=school]::before{inset:8px;border-inline-start:5px double #7396c255;border-block-end:1px solid #7396c23d}
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=school] .hero-caption h2{font-weight:700;line-height:1.3;letter-spacing:0}
+html[data-store-season=school] [data-store-card-image]{border-radius:calc(var(--store-radius) * .6)}
+html[data-store-season=school] [data-store-card-meta]{background-image:none;border-bottom:1px solid var(--store-border);border-inline-start:3px double color-mix(in srgb,var(--store-accent) 60%,var(--store-border));padding-inline-start:10px}
+
+/* Weekend: a perforated admission ticket, keeping the clothing unobstructed. */
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=weekend]::before{inset:9px;border-inline:2px dashed #dd939d66;border-radius:0}
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=weekend] .hero-caption h2{font-weight:800;line-height:1.3}
+html[data-store-season=weekend] [data-store-card-meta]{border-bottom:2px dashed color-mix(in srgb,var(--store-accent) 50%,var(--store-border));padding-bottom:18px}
+html[data-store-season=weekend] [data-store-newsletter]{border-inline:2px dashed color-mix(in srgb,var(--store-accent) 40%,var(--store-border))}
+
+/* Friday: a restrained monochrome sale edition, without barcode clutter. */
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=black-friday]::before{inset:8px;border-block:2px solid #b6a88e66;border-radius:0}
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=black-friday] .hero-caption h2{font-weight:850;line-height:1.2;letter-spacing:-.04em}
+html[data-store-season=black-friday] [data-store-primary]{box-shadow:none;border:1px solid color-mix(in srgb,var(--store-text) 40%,transparent)}
+html[data-store-season=black-friday] [data-store-card-meta]{border-bottom:3px solid var(--store-border)}
+
+/* Finale: an archive folder, with a stepped rule and a quiet signature. */
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=season-end]::before{inset:8px;border-inline-end:3px double #a999c866;border-block-start:1px solid #a999c84d;border-start-end-radius:18px}
+:is([data-store-hero],[data-hero-preview-theme])[data-campaign=season-end] .hero-caption h2{font-weight:600;line-height:1.4}
+html[data-store-season=season-end] [data-store-card-meta]{border-bottom:3px double color-mix(in srgb,var(--store-accent) 55%,var(--store-border));padding-inline-start:8px}
+html[data-store-season=season-end] [data-store-footer]{border-top-style:double;border-top-width:3px}
+
+@media(max-width:639px){
+  [data-campaign]::before{inset:6px}
+  :is([data-store-hero],[data-hero-preview-theme])[data-campaign=summer]::before{inset:0;height:4px}
+  :is([data-store-hero],[data-hero-preview-theme])[data-campaign=holiday]::before{inset:auto 12px 6px;height:4px}
+  :is([data-store-hero],[data-hero-preview-theme])[data-campaign=spring],:is([data-store-hero],[data-hero-preview-theme])[data-campaign=ramadan]{border-start-start-radius:calc(var(--store-radius,20px) + 12px);border-start-end-radius:calc(var(--store-radius,20px) + 12px)}
+}

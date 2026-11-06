@@ -176,7 +176,7 @@ export default function WelcomeHeroBanner({
           aria-label={isAr ? 'أصل التشكيلة وتريندات الموسم' : 'Collection Foundation & Featured Trends'}
         >
           {/* Unified Haute-Couture Editorial Showcase Container - Max 70vh Height, Rounded 3xl */}
-          <div data-store-hero className="relative overflow-hidden rounded-3xl border border-black/8 dark:border-white/10 bg-white dark:bg-[#0d0f14] shadow-[0_8px_32px_rgba(0,0,0,0.04)] dark:shadow-[0_16px_48px_rgba(0,0,0,0.5)] flex flex-col justify-between transition-colors duration-300">
+          <div data-store-hero data-campaign={appearance.motif !== 'none' ? appearance.scene : undefined} className="relative overflow-hidden rounded-3xl border border-black/8 dark:border-white/10 bg-white dark:bg-[#0d0f14] shadow-[0_8px_32px_rgba(0,0,0,0.04)] dark:shadow-[0_16px_48px_rgba(0,0,0,0.5)] flex flex-col justify-between transition-colors duration-300">
             <motion.div
               className="w-full flex flex-col justify-between h-full"
             >

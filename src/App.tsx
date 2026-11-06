@@ -28,6 +28,7 @@ import { STORE_THEME_CONTROL, parseStoreTheme, storeThemeVariables, resolveStore
 import { HERO_APPEARANCE_CONTROL, parseHeroAppearance } from './lib/heroAppearance';
 import { BANNER_TARGET_CONTROL, parseBannerTarget, matchesBannerTarget, bannerPageRequestKey, type BannerTarget } from './lib/bannerTarget';
 import './storefront-theme.css';
+import './seasonal-campaigns.css';
 import { controlActive } from './lib/siteControlModel';
 import { resolveStoreLanguage, STORE_TITLES } from './lib/storeLanguage';
 

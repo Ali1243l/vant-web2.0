@@ -42,6 +42,30 @@
 @keyframes season-tide {0%,100%{transform:translate(-3px,1px)}50%{transform:translate(3px,-2px)}}
 @keyframes season-glimmer {0%,100%{opacity:.15;transform:scale(.8)}50%{opacity:.65;transform:scale(1)}}
 @keyframes season-snow {from{transform:translate(0,-65px) rotate(0);opacity:0}15%,80%{opacity:.6}to{transform:translate(20px,240px) rotate(100deg);opacity:0}}
+
+/* Each illustration has its own stage and a restrained, local moving detail. */
+[data-seasonal-scene=winter] .seasonal-composition{inset:12% 2% 0;animation:none}
+[data-seasonal-scene=spring] .seasonal-composition{inset:-6% 4% -2%}
+[data-seasonal-scene=summer] .seasonal-composition{inset:2% 8% 3%}
+[data-seasonal-scene=autumn] .seasonal-composition{inset:0 10% -5%}
+[data-seasonal-scene=new-year] .seasonal-composition{inset:7% 3%;animation:none}
+[data-seasonal-scene=ramadan] .seasonal-composition{inset:0 8%;animation:none}
+[data-seasonal-scene=eid] .seasonal-composition{inset:4% 10%;animation:none}
+[data-seasonal-scene=holiday] .seasonal-composition{inset:8% 4% 0;animation:none}
+[data-seasonal-scene=school] .seasonal-composition{inset:6% 12%}
+[data-seasonal-scene=weekend] .seasonal-composition{inset:12% 2%;animation-duration:22s}
+[data-seasonal-scene=black-friday] .seasonal-composition{inset:10% 12%}
+[data-seasonal-scene=season-end] .seasonal-composition{inset:5% 8%;animation-duration:24s}
+[data-season-detail=frost]{animation:season-detail-light 13s ease-in-out infinite}
+[data-season-detail=sunlight]{animation:season-detail-light 20s ease-in-out infinite}
+[data-season-detail=copper]{animation:season-detail-light 17s ease-in-out infinite}
+[data-season-detail=spark]{transform-box:fill-box;transform-origin:center;animation:season-star 12s ease-in-out infinite}
+[data-season-detail=lanterns]{transform-box:view-box;transform-origin:50% 0;animation:season-lantern 20s ease-in-out infinite}
+[data-season-detail=ribbon]{animation:season-detail-light 15s ease-in-out infinite}
+[data-season-detail=tide]{animation:season-tide 18s ease-in-out infinite}
+[data-season-detail=thread]{animation:season-detail-light 19s ease-in-out infinite}
+@keyframes season-detail-light{0%,100%{opacity:.7}50%{opacity:1}}
+@keyframes season-star{0%,100%{transform:scale(.97);opacity:.75}50%{transform:scale(1);opacity:1}}
 @media(max-width:767px){
   .seasonal-art{width:45%;inset-block:0 30%}
   .seasonal-composition{inset:2% -12%}

@@ -24,7 +24,11 @@ test('photographs stay free of decorative stamps; winter snow is a separate crow
   assert.equal(new Set(crowns.map(crown => crown.match(/src="[^"]+"/)?.[0])).size, 10);
   const artwork = snowCaps.map(path => readFileSync(new URL(`../public${path}`, import.meta.url), 'utf8'));
   assert.equal(new Set(artwork).size, 10);
-  for (const svg of artwork) { assert.match(svg, /viewBox="0 0 384 16"/); assert.doesNotMatch(svg, /<script|<image|foreignObject/); }
+  for (const svg of artwork) {
+    assert.match(svg, /viewBox="0 0 384 16"/);
+    assert.doesNotMatch(svg, /<script|<image|foreignObject|<ellipse/);
+    assert.ok(Buffer.byteLength(svg) < 2000, 'snow crowns stay lightweight');
+  }
   for (const patch of [{ motif: 'none' }, { motifOpacity: 0 }]) assert.equal(renderToStaticMarkup(React.createElement(StoreSnowCrown, { settings: { ...settings, ...patch }, variant: 0 })), '');
 });
 test('campaign illustrations have twelve distinct, self-contained compositions and no invented offer amounts', async () => {
@@ -33,6 +37,7 @@ test('campaign illustrations have twelve distinct, self-contained compositions a
   const drawings = BANNER_THEMES.map(theme => {
     const markup = renderToStaticMarkup(React.createElement(Illustration, { scene: theme.id }));
     assert.match(markup, /viewBox="0 0 300 300"/);
+    assert.match(markup, /data-season-detail="[a-z-]+"/);
     assert.doesNotMatch(markup, /NaN|undefined|<text|<image|href=/);
     return markup.replace(/data-season-illustration="[^"]+"/, '');
   });
