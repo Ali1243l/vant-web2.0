@@ -23,3 +23,6 @@
 ## Limits
 
 Error collection begins after JavaScript initializes. Offline delivery is best effort and capped at 50 entries per device. Browser extensions, disabled storage, closed tabs, manipulated clocks, blocked requests and server failures need independent monitoring. Legacy public snapshots can remain in external caches until expiry. No real order or email was sent.
+
+
+Final published follow-up: d337e8b deployed successfully. After the owner reported a Supabase quota outage, the last production reload could not refresh catalog/activity and displayed explicit unavailable/error messages. No new cloud writes were attempted after that report. Earlier live save/restore and audit verification succeeded; current cloud availability is not confirmed. Recheck live reads after service recovery. Owner reports quota reset on December 1; this date was not independently verified.
