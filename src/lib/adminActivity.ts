@@ -1,4 +1,5 @@
 export const ACTIVITY_TABLES: Record<string, { ar: string; en: string }> = {
+  objects: { ar: 'ملفات المتجر والصور', en: 'Store files and images' },
   products: { ar: 'المنتجات', en: 'Products' },
   product_media: { ar: 'صور المنتجات', en: 'Product media' },
   orders: { ar: 'الطلبات', en: 'Orders' },

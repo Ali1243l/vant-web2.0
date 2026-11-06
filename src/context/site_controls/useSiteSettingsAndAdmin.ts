@@ -6,6 +6,8 @@ import { saveSiteConfigToSupabase } from '../../lib/storage';
 import { safeStorage } from '../../utils/safeStorage';
 import { requireCloudAdmin } from '../../lib/cloudAdminAccess';
 import { matchesAdminPin } from '../../lib/adminPinValidation';
+import { saveSettingsRow } from '../../lib/saveSiteSettings';
+import { trackSystemError } from '../../lib/analytics/tracker';
 import {
   CURRENCY_STORAGE_KEY,
   PIN_STORAGE_KEY,
@@ -173,42 +175,15 @@ export function useSiteSettingsAndAdmin() {
 
       if (supabase) {
         try {
-          const payload = {
-            id: next.id || DEFAULT_SITE_SETTINGS.id,
-            maintenance_mode: next.maintenance_mode,
-            loading_text_en: next.loading_text_en,
-            loading_text_ar: next.loading_text_ar,
-            maintenance_message: next.maintenance_message,
-            maintenance_message_ar: next.maintenance_message_ar,
-            splash_motif: next.splash_motif || 'hanger',
-            welcome_title_ar: next.welcome_title_ar,
-            welcome_title_en: next.welcome_title_en,
-            welcome_message_ar: next.welcome_message_ar,
-            welcome_message_en: next.welcome_message_en,
-            welcome_coupon_code: next.welcome_coupon_code,
-            welcome_discount_percent: next.welcome_discount_percent,
-            welcome_modal_enabled: next.welcome_modal_enabled,
-            welcome_auto_dispatch: next.welcome_auto_dispatch,
-            updated_at: new Date().toISOString(),
-          };
-
-          const { data, error } = await supabase
-            .from('site_settings')
-            .upsert(payload, { onConflict: 'id' })
-            .select()
-            .maybeSingle();
-
-          if (error || !data) throw new Error(error?.message || "No settings acknowledgment");
-          const tableKeys = new Set(Object.keys(payload));
-          const needsConfig = Object.keys(updates).some(key => !tableKeys.has(key));
-          if (needsConfig && !await saveSiteConfigToSupabase({ site_settings: next }, true)) throw new Error('Extended settings save failed');
+          const data = await saveSettingsRow(supabase, next.id || DEFAULT_SITE_SETTINGS.id, next);
+          if (!await saveSiteConfigToSupabase({ site_settings: next }, true)) throw new Error('Settings mirror save was not acknowledged');
           setSiteSettings({ ...next, id: data.id });
           safeStorage.setItemJSON(SETTINGS_STORAGE_KEY, { ...next, id: data.id });
 
-          if (!needsConfig) void saveSiteConfigToSupabase({ site_settings: next }).catch(() => {});
           return true;
         } catch (err) {
           console.warn('Failed to persist site_settings to Supabase:', err);
+          trackSystemError(err instanceof Error ? err.message : 'Settings save failed', err instanceof Error ? err.stack : '', { kind: 'save', operation: 'site-settings-save' });
           return false;
         }
       }

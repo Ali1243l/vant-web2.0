@@ -113,7 +113,7 @@ function MainLayout({ onClose }: AdminAppProps) {
                 {tabs.map((tab) => <button key={tab.id} type="button" aria-current={activeView === tab.id ? 'page' : undefined} onClick={() => setActiveView(tab.id as any)} className={`min-h-11 min-w-0 shrink-0 rounded-xl px-3 py-2 text-sm transition-colors ${activeView === tab.id ? 'bg-[#004ad7] text-white' : 'bg-slate-900 text-slate-400 hover:text-white'}`}>{isAr ? tab.ar : tab.en}</button>)}
               </nav>}
               <Suspense fallback={<p role="status" className="p-6 text-slate-300">{isAr ? 'جاري تحميل القسم…' : 'Loading section…'}</p>}>
-              {activeView === 'dashboard' && <AdminAnalyticsDashboard />}
+              {(activeView === 'dashboard' || activeView === 'diagnostics') && <AdminAnalyticsDashboard initialTab={activeView === 'diagnostics' ? 'system-health' : 'overview'} />}
               {activeView === 'activity' && <AdminActivityView />}
               {activeView === 'orders' && <OrdersManager />}
               {activeView === 'products' && <ProductsManager />}

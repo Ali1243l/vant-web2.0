@@ -5,7 +5,7 @@ import { normalizeApproximateRegion } from '../../lib/approximateRegion.ts';
 
 export function filterErrorLogs(events: AnalyticsEvent[], query: string): AnalyticsEvent[] {
   const term = query.trim().toLowerCase();
-  return events.filter(event => !term || [event.data?.errorMessage, event.data?.url, event.data?.visitorId, event.data?.errorStack].some(value => String(value ?? '').toLowerCase().includes(term)));
+  return events.filter(event => !term || [event.data?.errorMessage, event.data?.url, event.data?.visitorId, event.data?.errorStack, event.data?.browser, event.data?.os, event.data?.release, event.data?.kind, event.data?.operation, event.data?.status].some(value => String(value ?? '').toLowerCase().includes(term)));
 }
 
 export function recordedErrorLogs(events: AnalyticsEvent[], window: AnalyticsWindow, now = Date.now()): AnalyticsEvent[] {

@@ -1,3 +1,4 @@
+import { sanitizeTelemetry } from '../diagnostics.ts';
 import type { AnalyticsEvent } from './types';
 
 // Keep unsynced local observations when the cloud returns an empty or partial page.
@@ -10,7 +11,7 @@ export function mergeCloudEvents(local: AnalyticsEvent[], rows: any[], now = Dat
     if (!row?.id || !type || !Number.isFinite(timestamp) || timestamp > now || (!row.session_id && type !== 'system_error')) continue;
     const data = row.data && typeof row.data === 'object' && !Array.isArray(row.data) ? row.data : {};
     const id = String(data.eventId || row.id);
-    events.set(id, { id, type, timestamp, sessionId: String(row.session_id || ''), device: row.device || 'desktop', data, isCloudLog: true });
+    events.set(id, { id, type, timestamp, sessionId: String(row.session_id || ''), device: row.device || 'desktop', data: sanitizeTelemetry(data), isCloudLog: true });
   }
   return [...events.values()].sort((a, b) => b.timestamp - a.timestamp).slice(0, 2000);
 }

@@ -71,6 +71,7 @@ export default defineConfig(({ mode }) => {
     if (env[name]) process.env[name] = env[name];
   }
   return {
+    define: { 'import.meta.env.VITE_APP_RELEASE': JSON.stringify((env.VERCEL_GIT_COMMIT_SHA || 'local').slice(0, 12)) },
     plugins: [react(), tailwindcss(), localApiPlugin(env)],
     resolve: { alias: { '@': path.resolve(process.cwd(), '.') } },
     server: {

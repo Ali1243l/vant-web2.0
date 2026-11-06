@@ -13,6 +13,7 @@ import {
   Ruler,
   Image as ImageIcon,
   History,
+  ShieldAlert,
 } from 'lucide-react';
 import { useAdminBridge, AdminView } from './useAdminBridge';
 
@@ -58,6 +59,7 @@ export const Nav: React.FC<NavProps> = ({ onItemClick, collapsed = false, onClos
     ]},
     { title: 'الإدارة', titleEn: 'MANAGEMENT', items: [
       { id: 'settings', label: 'الإعدادات', labelEn: 'Settings', icon: Store },
+      { id: 'diagnostics', label: 'سجل الأخطاء', labelEn: 'Error log', icon: ShieldAlert },
       { id: 'activity', label: 'سجل النشاط', labelEn: 'Activity log', icon: History },
     ]},
   ];

@@ -83,6 +83,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const viewTitles: Record<AdminView, { ar: string; en: string }> = {
+    diagnostics: { ar: 'سجل الأخطاء', en: 'Error log' },
     dashboard: { ar: 'نظرة عامة', en: 'Dashboard & Deep Analytics' },
     orders: { ar: 'الطلبات', en: 'Orders' },
     products: { ar: 'المنتجات', en: 'Products' },

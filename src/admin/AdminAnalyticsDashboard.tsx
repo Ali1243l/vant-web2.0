@@ -45,9 +45,10 @@ import { SystemHealthTab } from './analytics/SystemHealthTab';
 import { AnalyticsModals } from './analytics/AnalyticsModals';
 import { recordedErrorLogs } from './analytics/dashboardModel';
 
-export const AdminAnalyticsDashboard: React.FC = () => {
+export const AdminAnalyticsDashboard: React.FC<{ initialTab?: AnalyticsTab }> = ({ initialTab = 'overview' }) => {
   const { lang, products, offers, subscribers, orders = [], setActiveView, isLiveDatabase } = useAdminBridge();
-  const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview');
+  const [activeTab, setActiveTab] = useState<AnalyticsTab>(initialTab);
+  useEffect(() => setActiveTab(initialTab), [initialTab]);
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
   const [widgetDateRange, setWidgetDateRange] = useState<DateRange | undefined>(undefined);
   const [customStartDate, setCustomStartDate] = useState<string>('');

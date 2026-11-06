@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { ShieldAlert, Check, Search } from 'lucide-react';
 import { Card, Button, Input } from '../ui';
 import { filterErrorLogs } from './dashboardModel';
+import ErrorDiagnosticsTools from './ErrorDiagnosticsTools';
+import { updateSystemErrorStatus } from '../../lib/analytics/tracker';
 
 interface Props {
   systemErrorLogs: any[];
@@ -18,6 +20,8 @@ export const SystemHealthTab: React.FC<Props> = ({
   isAr,
 }) => {
   const filteredLogs = filterErrorLogs(systemErrorLogs, searchFilter);
+  const [busyId, setBusyId] = useState('');
+  const [notice, setNotice] = useState('');
   return (
     <motion.div
       key="system-health"
@@ -129,6 +133,8 @@ export const SystemHealthTab: React.FC<Props> = ({
       </div>
 
       {/* Error Telemetry Table */}
+      <ErrorDiagnosticsTools isAr={isAr} />
+      {notice && <p role="status" className="text-sm text-blue-300">{notice}</p>}
       <Card className="bg-slate-900/50 border-slate-800/80 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
           <div>
@@ -184,7 +190,7 @@ export const SystemHealthTab: React.FC<Props> = ({
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
                     <div className="flex items-center gap-2">
                       <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                        SYSTEM_ERROR
+                        {err.data?.kind === 'diagnostic' ? 'SAFE_CHECK' : 'SYSTEM_ERROR'}
                       </span>
                       <span className="text-xs font-mono text-slate-400">
                         {new Date(err.timestamp).toLocaleString(isAr ? 'ar-IQ' : 'en-US')}
@@ -213,6 +219,11 @@ export const SystemHealthTab: React.FC<Props> = ({
                       {err.data.errorStack}
                     </div>
                   )}
+                  <div className="grid gap-2 text-xs text-slate-300 sm:grid-cols-2"><span>{isAr ? 'المتصفح والنظام' : 'Browser / OS'}: {err.data?.browser || '—'} / {err.data?.os || '—'}</span><span>{isAr ? 'قياس الشاشة' : 'Viewport'}: {err.data?.viewport || '—'}</span><span>{isAr ? 'نوع الخطأ والعملية' : 'Kind / operation'}: {err.data?.kind || '—'} / {err.data?.operation || '—'}</span><span>{isAr ? 'إصدار الموقع' : 'Release'}: {err.data?.release || '—'}</span><span>{isAr ? 'الاتصال وقت الخطأ' : 'Connectivity at capture'}: {typeof err.data?.online === 'boolean' ? err.data.online ? 'Online' : 'Offline' : '—'}</span><span>{isAr ? 'المنطقة الزمنية للجهاز' : 'Device time zone'}: {err.data?.timezone || '—'}</span></div>
+                  <p className="text-xs leading-6 text-slate-400">{isAr ? 'مؤشر تشخيصي، مو سبب مؤكد' : 'Diagnostic hint, not a confirmed cause'}: {({ offline: isAr ? 'انقطاع الاتصال' : 'Offline', 'asset-version': isAr ? 'ملف إصدار قديم أو تعذّر تحميله' : 'Stale or unavailable build asset', 'resource-load': isAr ? 'تعذّر تحميل مورد؛ افحص الرابط والاتصال' : 'Resource failed; check URL/connectivity', permission: isAr ? 'رفض صلاحية؛ افحص حساب الإدارة' : 'Permission rejected; check admin session', connection: isAr ? 'تعذّر اتصال أو انتهت مهلته' : 'Connection failed or timed out' } as Record<string,string>)[err.data?.hint] || (isAr ? 'يحتاج مراجعة التفاصيل' : 'Inspect details')}</p>
+                  {!!err.data?.breadcrumbs?.length && <details><summary className="min-h-11 cursor-pointer text-xs text-slate-400">{isAr ? 'آخر خطوات مرصودة قبل الخطأ' : 'Recent observed steps'}</summary><ol className="space-y-1 text-xs text-slate-300">{err.data.breadcrumbs.map((step: any, i: number) => <li key={i}>{new Date(step.at).toLocaleTimeString(isAr ? 'ar-IQ' : 'en-US')} · {step.type} · {step.path}</li>)}</ol></details>}
+                  {err.data?.componentStack && <details><summary className="min-h-11 cursor-pointer text-xs text-slate-400">{isAr ? 'موضع مكوّن الواجهة' : 'UI component location'}</summary><pre className="max-h-36 overflow-auto whitespace-pre-wrap break-all text-xs">{err.data.componentStack}</pre></details>}
+                  <div className="flex flex-wrap gap-2">{(['open', 'investigating', 'resolved'] as const).map(status => <Button key={status} type="button" size="sm" className="min-h-11" variant={err.data?.status === status ? 'primary' : 'secondary'} disabled={!!busyId || err.data?.status === status} onClick={async () => { setBusyId(err.id); const ok = await updateSystemErrorStatus(err.id, status); setNotice(ok ? (isAr ? 'تم تحديث حالة الخطأ.' : 'Error status updated.') : (isAr ? 'تعذّر تأكيد الحفظ؛ الحالة السابقة باقية.' : 'Update not confirmed; previous status kept.')); setBusyId(''); }}>{status === 'open' ? (isAr ? 'مفتوح' : 'Open') : status === 'investigating' ? (isAr ? 'قيد الفحص' : 'Investigating') : (isAr ? 'تمت المعالجة' : 'Resolved')}</Button>)}</div>
                 </div>
               ))}
           </div>

@@ -1,0 +1,16 @@
+# Security and diagnostics review — 2026-11-06
+
+- Applied `diagnostic_access_hardening`: visitor telemetry types, dimensions, identifiers, time and JSON size are bounded. Anonymous execution of `is_admin` and email-only unsubscription is revoked; authenticated administration remains available.
+- Applied `storage_activity`: acknowledged `product-images` object insert/update/delete events use the existing protected activity trigger. File history contains names and metadata, **not JSON file contents**. The eight public-table triggers retain real before/after row values with secret fields redacted.
+- Ran `supabase/tests/diagnostic_access_hardening.sql` on the connected project. Successful audit capture, unchanged-update suppression, before/after data, timestamps and secret redaction passed. Valid anonymous telemetry was accepted; invalid types and oversized JSON were rejected. Everything was rolled back.
+- Anonymous HTTP reads returned no logs, admins, orders or subscribers; activity access was denied. Catalog remained readable. No service-role key was found in the deployed entry script (not an exhaustive secret scan).
+- Error capture now has one listener installation, React fallback, resource/rejection capture, sanitized paths/credentials, bounded breadcrumbs, device/browser/OS/viewport/release/context and an offline delivery queue. A hint is explicitly a hypothesis, not a proven cause. Status changes require a database acknowledgment.
+- Removed new public telemetry snapshot writes. Exact approved legacy file cleanup is exposed under **سجل الأخطاء → إزالة ملفات عامة قديمة**; verify deletion after deployment before claiming it completed.
+- Corrected `site_settings` saves to the actual `id/settings/updated_at` schema. Database and Storage mirror are separate writes, so a mirror failure is reported and may follow an already committed database change.
+- Added a direct **سجل الأخطاء** navigation entry. **سجل النشاط** remains the separate change history. Cloud file records do not provide per-button/theme JSON diffs; local drafts, login attempts and failed writes are outside successful-change history.
+- Local UI checked at 390/1440 widths; generic React failure checked at 320 without horizontal overflow or private sentinel exposure. This is browser emulation, not physical Safari/Android testing.
+- 199 tests and TypeScript passed; production build passed after correcting mixed encoding in two navigation labels. Native production dependency audit reported zero known vulnerabilities.
+
+## Limits
+
+Error collection begins after JavaScript initializes. Offline delivery is best effort and capped at 50 entries per device. Browser extensions, disabled storage, closed tabs, manipulated clocks, blocked requests and server failures need independent monitoring. Legacy public snapshots can remain in external caches until expiry. No real order or email was sent.

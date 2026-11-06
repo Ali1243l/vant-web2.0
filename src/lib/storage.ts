@@ -4,6 +4,7 @@ import { normalizeOrders } from './orderModel';
 import { imageBlobDataUrl, imageUploadPath, smartConvertImage } from './imageConversion';
 import { replaceOptimizedImages } from './imageOptimizationModel';
 import { externalizeConfigImages } from './configImages';
+import { trackSystemError } from './analytics/tracker';
 
 export interface UploadedMediaItem {
   url: string;
@@ -256,7 +257,7 @@ async function persistSiteConfig(config: Partial<CloudSiteConfig>, requireFresh:
   try {
     // Saves bypass the polling shortcut; legacy callers can still fall back while offline.
     const existing = await fetchSiteConfigFromSupabase(false) || (requireFresh ? null : cachedCloudConfig);
-    if (!existing) return false;
+    if (!existing) { trackSystemError('Cloud config fresh read failed', '', { kind: 'save', operation: 'site-config-save' }); return false; }
 
     const bannerBg =
       config.banner_hero_bg ??
@@ -320,6 +321,7 @@ async function persistSiteConfig(config: Partial<CloudSiteConfig>, requireFresh:
     return false;
   } catch (err) {
     console.warn('Failed to save site config to Supabase:', err);
+    trackSystemError(err instanceof Error ? err.message : 'Cloud configuration save failed', err instanceof Error ? err.stack : '', { kind: 'save', operation: 'site-config-save' });
     if (requireFresh) throw err;
     return false;
   }

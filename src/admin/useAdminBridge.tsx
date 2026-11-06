@@ -13,7 +13,7 @@ import { saveOrderChange, type OrderChange } from '../lib/saveOrderChange';
 import { productPricePatch, recordedProductStock } from './products_manager/catalogModel';
 import { readAdminPin } from '../lib/adminPinValidation';
 
-export type AdminView = 'dashboard' | 'orders' | 'products' | 'sizes' | 'offers' | 'banners' | 'subscribers' | 'welcome_modal' | 'controls' | 'social' | 'backup' | 'settings' | 'security' | 'widgets' | 'activity' | 'policies';
+export type AdminView = 'diagnostics' | 'dashboard' | 'orders' | 'products' | 'sizes' | 'offers' | 'banners' | 'subscribers' | 'welcome_modal' | 'controls' | 'social' | 'backup' | 'settings' | 'security' | 'widgets' | 'activity' | 'policies';
 
 export type OrderStatus = 'pending_payment' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 export type OrderType = 'ready_to_wear' | 'bespoke';
