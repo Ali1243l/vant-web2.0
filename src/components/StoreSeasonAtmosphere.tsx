@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import type { HeroAppearance } from '../lib/heroAppearance';
-import { seasonalVariants } from '../lib/seasonalDistribution';
+import { seasonalPositions, seasonalVariants } from '../lib/seasonalDistribution';
 import './StoreSeasonAtmosphere.css';
 import SeasonalBackdrop from './SeasonalBackdrop';
 
@@ -39,10 +39,11 @@ export default function StoreSeasonAtmosphere({ settings, paused = false }: { se
   const [awake, setAwake] = useState(() => !document.hidden);
   useEffect(() => { const update = () => setAwake(!document.hidden); document.addEventListener('visibilitychange', update); return () => document.removeEventListener('visibilitychange', update); }, []);
   if (settings.scene === 'none' || settings.motif === 'none') return null;
-  const designs = seasonalVariants(settings.scene, 12);
+  const positions = seasonalPositions[settings.scene];
+  const designs = seasonalVariants(settings.scene, positions.length);
   return <div aria-hidden="true" data-store-atmosphere={settings.scene} data-motion={settings.motionEnabled && awake && !paused ? 'running' : 'paused'} className="store-atmosphere" style={{ '--season-accent': settings.accentColor, '--atmosphere-opacity': Math.min(.36, settings.motifOpacity / 100) } as CSSProperties}>
     <div className="store-atmosphere-glow" />
     <SeasonalBackdrop scene={settings.scene} />
-    {designs.map((variant, i) => <span key={i} className="store-atmosphere-particle" style={{ left: `${(i * 61 + 7) % 97}%`, top: `${(i * 43) % 93}%`, '--drift': `${(i % 2 ? 1 : -1) * (12 + variant * 4)}px`, '--turn': `${(i % 2 ? -1 : 1) * (25 + variant * 13)}deg`, '--duration': `${15 + (i * 7) % 16}s`, '--delay': `${-((i * 11) % 29)}s`, '--size': `${12 + (i * 7) % 17}px` } as CSSProperties}><SeasonalGlyph scene={settings.scene} variant={variant} /></span>)}
+    {designs.map((variant, i) => <span key={i} className="store-atmosphere-particle" style={{ left: `${positions[i][0]}%`, top: `${positions[i][1]}%`, '--drift': `${(i % 2 ? 1 : -1) * (12 + variant * 4)}px`, '--turn': `${(i % 2 ? -1 : 1) * (25 + variant * 13)}deg`, '--duration': `${15 + (i * 7) % 16}s`, '--delay': `${-((i * 11) % 29)}s`, '--size': `${12 + (i * 7) % 17}px` } as CSSProperties}><SeasonalGlyph scene={settings.scene} variant={variant} /></span>)}
   </div>;
 }
