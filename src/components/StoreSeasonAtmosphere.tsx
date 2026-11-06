@@ -20,19 +20,23 @@ function SeasonalGlyph({ scene, variant: v }: { scene: HeroAppearance['scene']; 
     case 'holiday': art = <><path d={`M1 ${13 + v % 3}Q5 8 9 13T17 13T25 13M1 19Q5 ${14 + v % 3} 9 19T17 19T25 19`} /><path d={`M5 7A${7 + v % 4} 7 0 0 1 19 7`} /></>; break;
     case 'school': art = <><path d={`M4 3H${15 + v % 3}L21 8V22H4ZM8 3V22M11 10H${16 + v % 3}M11 14H18M11 18H${14 + v % 4}`} /></>; break;
     case 'weekend': art = <><path d={`M2 ${5 + v % 3}H22V10Q${17 - v * .2} 12 22 14V20H2V14Q7 12 2 10Z M${15 + v % 3} 7V9M${15 + v % 3} 11V13M${15 + v % 3} 15V18`} /></>; break;
-    case 'black-friday': art = <>{Array.from({ length: 5 + v % 4 }, (_, i) => <path key={i} strokeWidth={1 + (i + v) % 2} d={`M${3 + i * (2 + v * .03)} ${4 + (i + v) % 3}V${20 - v * .15}`} />)}<path d="M1 7V2H6M18 2H23V7M23 17V22H18M6 22H1V17" /></>; break;
+    case 'black-friday': art = <g transform={`rotate(${v * 3 - 12} 12 12)`}><circle cx="7" cy="7" r={2.5 + v * .08} /><circle cx="17" cy="17" r={2.5 + v * .08} /><path d={`M${6 - v * .1} 19L${18 + v * .1} 5`} strokeWidth="2" /></g>; break;
     case 'season-end': art = <><path d={`M3 ${13 + v % 3}L${13 + v % 3} 3H21V11L11 22Z M${16 - v * .15} 7H${17 + v * .15}M7 14L${12 + v % 3} 9M9 17L16 10`} /></>; break;
     default: return null;
   }
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" focusable="false">{art}</svg>;
 }
 
-export function StoreSeasonCard({ settings, variant }: { settings: HeroAppearance; variant: number }) {
-  if (settings.scene === 'none' || settings.motif === 'none') return null;
-  return <div aria-hidden="true" className={`store-season-card store-season-card--${settings.scene}`} data-design={variant} style={{ '--season-accent': settings.accentColor, '--cap-left': `${variant % 3 * 10}%`, '--cap-width': `${52 + variant % 4 * 16}%`, '--glyph-size': `${20 + variant % 3 * 4}px`, '--glyph-turn': `${variant * 9 - 28}deg` } as CSSProperties}>
-    {settings.scene === 'winter' ? <svg className="store-snow-cap" viewBox="0 0 200 30" preserveAspectRatio="none" focusable="false"><path d={snowCaps[variant]} /></svg> : <span className="store-season-edge" />}
-    <span className="store-season-card-glyph"><SeasonalGlyph scene={settings.scene} variant={variant} /></span>
+export function StoreSeasonCard({ settings }: { settings: HeroAppearance }) {
+  if (settings.scene === 'none' || settings.scene === 'winter' || settings.motif === 'none') return null;
+  return <div aria-hidden="true" className={`store-season-card store-season-card--${settings.scene}`} style={{ opacity: settings.motifOpacity / 100, '--season-accent': settings.accentColor } as CSSProperties}>
+    <span className="store-season-edge" />
   </div>;
+}
+
+export function StoreSnowCrown({ settings, variant }: { settings: HeroAppearance; variant: number }) {
+  if (settings.scene !== 'winter' || settings.motif === 'none' || settings.motifOpacity === 0) return null;
+  return <div className="store-snow-crown" aria-hidden="true" style={{ opacity: settings.motifOpacity / 100, '--crown-left': `${variant % 3 * 5}%`, '--crown-width': `${60 + variant % 4 * 10}%` } as CSSProperties}><img src={snowCaps[variant]} alt="" loading="lazy" decoding="async" fetchPriority="low" /></div>;
 }
 
 export default function StoreSeasonAtmosphere({ settings, paused = false }: { settings: HeroAppearance; paused?: boolean }) {
@@ -40,7 +44,7 @@ export default function StoreSeasonAtmosphere({ settings, paused = false }: { se
   useEffect(() => { const update = () => setAwake(!document.hidden); document.addEventListener('visibilitychange', update); return () => document.removeEventListener('visibilitychange', update); }, []);
   if (settings.scene === 'none' || settings.motif === 'none') return null;
   const designs = seasonalVariants(settings.scene, 16);
-  return <div aria-hidden="true" data-store-atmosphere={settings.scene} data-motion={settings.motionEnabled && awake && !paused ? 'running' : 'paused'} className="store-atmosphere" style={{ '--season-accent': settings.accentColor, '--atmosphere-opacity': Math.max(.12, Math.min(.36, settings.motifOpacity / 100)) } as CSSProperties}>
+  return <div aria-hidden="true" data-store-atmosphere={settings.scene} data-motion={settings.motionEnabled && awake && !paused ? 'running' : 'paused'} className="store-atmosphere" style={{ '--season-accent': settings.accentColor, '--atmosphere-opacity': Math.min(.36, settings.motifOpacity / 100) } as CSSProperties}>
     <div className="store-atmosphere-glow" />
     {designs.map((variant, i) => <span key={i} className="store-atmosphere-particle" style={{ left: `${(i * 61 + 7) % 97}%`, top: `${(i * 43) % 93}%`, '--drift': `${(i % 2 ? 1 : -1) * (12 + variant * 4)}px`, '--turn': `${(i % 2 ? -1 : 1) * (25 + variant * 13)}deg`, '--duration': `${15 + (i * 7) % 16}s`, '--delay': `${-((i * 11) % 29)}s`, '--size': `${12 + (i * 7) % 17}px` } as CSSProperties}><SeasonalGlyph scene={settings.scene} variant={variant} /></span>)}
   </div>;

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { DEFAULT_STORE_THEME, STORE_THEME_CONTROL, CUSTOM_THEMES_CONTROL, parseStoreTheme, paletteIssue, contrastRatio, onAccent, storeThemeVariables } from '../src/lib/storefrontTheme.ts';
+import { DEFAULT_STORE_THEME, STORE_THEME_CONTROL, CUSTOM_THEMES_CONTROL, parseStoreTheme, paletteIssue, contrastRatio, onAccent, storeThemeVariables, resolveStoreMode } from '../src/lib/storefrontTheme.ts';
 import { BANNER_THEMES, themeStorePalette } from '../src/lib/bannerThemes.ts';
 import { BANNER_TARGET_CONTROL, parseBannerTarget, matchesBannerTarget, hasUnloadedBannerProducts, bannerPageRequestKey } from '../src/lib/bannerTarget.ts';
 import { buildBannerChanges, captureSavedTheme, parseSavedThemes, savedThemeEdits } from '../src/lib/bannerEditor.ts';
@@ -23,6 +23,7 @@ test('all presets provide readable global palettes and automatic button text mee
       assert.equal(variables['--store-background'], store[mode].background);
       assert.ok(contrastRatio(store[mode].accent, variables['--store-on-accent']) >= 4.5);
       assert.ok(contrastRatio(variables['--store-link'], store[mode].surface) >= 4.5);
+      for (const appearance of ['light', 'dark']) assert.ok(contrastRatio(variables[`--store-utility-${appearance}`], variables[`--store-utility-${appearance}-text`]) >= 4.5);
     }
   }
   for (const color of ['#777777', '#787878', '#888888', '#ffffff', '#000000']) assert.ok(contrastRatio(color, onAccent(color)) >= 4.5);
@@ -85,4 +86,23 @@ test('empty banner results advance pages once per loaded set and defer to normal
   assert.equal(bannerPageRequestKey([{ id: 'later' }], target, false, 0), null);
   assert.equal(bannerPageRequestKey([], null, false, 0), null);
   assert.equal(bannerPageRequestKey([], null, true, 0), 'offers:0');
+});
+
+test('campaign identity stays fixed across visitor preferences; disabling restores full switching', () => {
+  for (const preset of BANNER_THEMES) {
+    const store = themeStorePalette(preset);
+    const day = resolveStoreMode(store, 'light', preset.id);
+    const night = resolveStoreMode(store, 'dark', preset.id);
+    assert.equal(day, night, preset.id);
+    assert.deepEqual(storeThemeVariables(store, day), storeThemeVariables(store, night));
+    for (const requested of ['light','dark'] as const) assert.equal(resolveStoreMode({ ...store, enabled: false }, requested, preset.id), requested);
+    assert.equal(resolveStoreMode({ ...store, campaignMode: 'light' }, 'dark', preset.id), 'light');
+    assert.equal(resolveStoreMode({ ...store, campaignMode: 'dark' }, 'light', preset.id), 'dark');
+  }
+  assert.equal(parseStoreTheme('{"campaignMode":"wrong"}').campaignMode, undefined);
+  assert.equal(parseStoreTheme('{"campaignMode":"light"}').campaignMode, 'light');
+  const customControls = { ...controls, [STORE_THEME_CONTROL]: { ...controls[STORE_THEME_CONTROL], actionValue: JSON.stringify({ ...DEFAULT_STORE_THEME, enabled: true, campaignMode: 'light' }) } };
+  const captured = captureSavedTheme('fixed-palette', 'Fixed palette', customControls);
+  const restored = savedThemeEdits(parseSavedThemes(JSON.stringify([captured]), true)[0]);
+  assert.equal(parseStoreTheme(restored[STORE_THEME_CONTROL].actionValue).campaignMode, 'light');
 });

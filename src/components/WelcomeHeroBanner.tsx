@@ -7,6 +7,7 @@ import { useSiteControls } from '../context/SiteControlsContext';
 import { toWesternNumerals } from '../admin/format';
 import AnimatedText from './ui/AnimatedText';
 import HeroBannerBackground from './HeroBannerBackground';
+import { StoreSeasonCard } from './StoreSeasonAtmosphere';
 import { HERO_BANNER_IMAGE } from '../lib/constants';
 import { HERO_APPEARANCE_CONTROL, parseHeroAppearance, heroBackgroundVariables } from '../lib/heroAppearance';
 import type { CSSProperties } from 'react';
@@ -204,7 +205,7 @@ export default function WelcomeHeroBanner({
                     <button
                       type="button"
                       onClick={onDismiss}
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#15171c]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/10 hover:text-[#15171c] dark:hover:text-white transition-all active:scale-90 cursor-pointer"
+                      className="hero-dismiss flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#15171c]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/10 hover:text-[#15171c] dark:hover:text-white transition-all active:scale-90 cursor-pointer"
                       aria-label={isAr ? 'إخفاء الواجهة' : 'Dismiss intro'}
                       title={isAr ? 'إخفاء' : 'Dismiss'}
                     >
@@ -318,6 +319,7 @@ export default function WelcomeHeroBanner({
               >
                 {activeTrendsList.map((trend) => (
                   <div
+                    data-store-trend
                     key={trend.id}
                     onClick={() => handleTrendClick(trend.category)}
                     role="button"
@@ -339,6 +341,7 @@ export default function WelcomeHeroBanner({
                       />
                     ) : null}
 
+                    <StoreSeasonCard settings={appearance} />
                     {/* Smooth, subtle bottom monochrome dark gradient */}
                     <div className="absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-black/95 via-black/50 to-transparent z-[2] pointer-events-none transition-all duration-400 group-hover:from-black group-hover:via-black/65" />
 

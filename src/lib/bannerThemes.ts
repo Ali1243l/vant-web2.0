@@ -1,6 +1,6 @@
 import { HERO_APPEARANCE_CONTROL, parseHeroAppearance, type HeroAppearance, type HeroMotif, type HeroScene } from './heroAppearance.ts';
 import type { BannerEdits } from './bannerEditor';
-import { parseStoreTheme, type StoreTheme } from './storefrontTheme.ts';
+import { parseStoreTheme, campaignColorMode, type StoreTheme } from './storefrontTheme.ts';
 
 export type ThemeCategory = 'seasons' | 'occasions' | 'offers';
 export interface BannerTheme {
@@ -50,7 +50,7 @@ export function bannerThemeEdits(theme: BannerTheme, current: string | undefined
 }
 export function themeStorePalette(theme: BannerTheme, current?: string): StoreTheme {
   const store = parseStoreTheme(current);
-  return { ...store, enabled: true,
+  return { ...store, enabled: true, campaignMode: campaignColorMode(theme.id),
     light: { ...store.light, background: theme.light, surface: '#ffffff', text: '#15171c', muted: '#525b68', accent: theme.accent, border: '#d4d8df' },
     dark: { ...store.dark, background: theme.dark, surface: theme.dark, text: '#f3f4f6', muted: '#b4becd', accent: theme.accent, border: '#586271' },
   };

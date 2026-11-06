@@ -1,7 +1,7 @@
 export const STORE_THEME_CONTROL = 'store_theme';
 export const CUSTOM_THEMES_CONTROL = 'store_custom_themes';
 export interface StorePalette { background: string; surface: string; text: string; muted: string; accent: string; border: string }
-export interface StoreTheme { enabled: boolean; light: StorePalette; dark: StorePalette; radius: number; spacing: number; pillButtons: boolean }
+export interface StoreTheme { enabled: boolean; light: StorePalette; dark: StorePalette; radius: number; spacing: number; pillButtons: boolean; campaignMode?: 'light' | 'dark' }
 export const DEFAULT_STORE_THEME: StoreTheme = {
   enabled: false, radius: 20, spacing: 16, pillButtons: true,
   light: { background: '#f8f9fa', surface: '#ffffff', text: '#15171c', muted: '#525b68', accent: '#004ad7', border: '#d4d8df' },
@@ -14,6 +14,7 @@ export function parseStoreTheme(raw?: string): StoreTheme {
   if (!value || typeof value !== 'object') return result;
   if (typeof value.enabled === 'boolean') result.enabled = value.enabled;
   if (typeof value.pillButtons === 'boolean') result.pillButtons = value.pillButtons;
+  if (value.campaignMode === 'light' || value.campaignMode === 'dark') result.campaignMode = value.campaignMode;
   for (const mode of ['light', 'dark'] as const) for (const key of Object.keys(result[mode]) as (keyof StorePalette)[]) {
     if (typeof value[mode]?.[key] === 'string' && /^#[0-9a-f]{6}$/i.test(value[mode][key])) result[mode][key] = value[mode][key];
   }
@@ -28,11 +29,22 @@ export function paletteIssue(theme: StoreTheme): 'light' | 'dark' | null {
   return null;
 }
 export const onAccent = (color: string) => contrastRatio(color, '#ffffff') >= contrastRatio(color, '#000000') ? '#ffffff' : '#000000';
+export function campaignColorMode(scene: string): 'light' | 'dark' {
+  return ['spring', 'summer', 'autumn', 'eid', 'holiday', 'school'].includes(scene) ? 'light' : 'dark';
+}
+export function resolveStoreMode(theme: StoreTheme, requested: 'light' | 'dark', scene: string): 'light' | 'dark' {
+  return theme.enabled ? theme.campaignMode ?? campaignColorMode(scene) : requested;
+}
 function readableAccent(palette: StorePalette) {
   if (contrastRatio(palette.accent, palette.surface) >= 4.5 && contrastRatio(palette.accent, palette.background) >= 4.5) return palette.accent;
   return palette.text;
 }
 export function storeThemeVariables(theme: StoreTheme, mode: 'light' | 'dark'): Record<string, string> {
   const palette = theme[mode];
-  return { ...Object.fromEntries(Object.entries(palette).map(([key, value]) => [`--store-${key}`, value])), '--store-on-accent': onAccent(palette.accent), '--store-link': readableAccent(palette), '--store-radius': `${theme.radius}px`, '--store-spacing': `${theme.spacing}px`, '--store-button-radius': theme.pillButtons ? '999px' : `${Math.min(theme.radius, 12)}px` };
+  const utility = Object.fromEntries((['light', 'dark'] as const).flatMap(appearance => {
+    const amount = appearance === 'light' ? .06 : .18;
+    const color = '#' + channels(palette.surface).map((v, i) => Math.round(v * (1 - amount) + channels(palette.text)[i] * amount).toString(16).padStart(2, '0')).join('');
+    return [[`--store-utility-${appearance}`, color], [`--store-utility-${appearance}-text`, onAccent(color)]];
+  }));
+  return { ...Object.fromEntries(Object.entries(palette).map(([key, value]) => [`--store-${key}`, value])), ...utility, '--store-on-accent': onAccent(palette.accent), '--store-link': readableAccent(palette), '--store-radius': `${theme.radius}px`, '--store-spacing': `${theme.spacing}px`, '--store-button-radius': theme.pillButtons ? '999px' : `${Math.min(theme.radius, 12)}px` };
 }

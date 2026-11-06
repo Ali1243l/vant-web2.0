@@ -14,14 +14,14 @@ export function seasonalVariants(scene: string, count: number): number[] {
 }
 
 export const snowCaps = [
-  'M0 0H200V7Q180 2 163 9T126 7T88 10T52 6T17 10L0 7Z',
-  'M0 0H200V4Q170 3 147 10L139 22L131 9Q110 4 85 9T40 5L26 16L19 6L0 8Z',
-  'M0 0H200V9Q188 16 174 9Q160 1 139 5Q119 12 97 6T54 11T0 5Z',
-  'M0 0H200V5L182 6L175 20L170 7Q150 1 128 8T81 4L67 18L60 6L32 9L0 4Z',
-  'M0 0H200V3Q170 8 146 4T108 10T65 5Q30 18 0 8Z',
-  'M0 0H200V8Q180 8 170 4L159 8L151 25L145 10Q123 3 100 9Q72 14 53 5T0 7Z',
-  'M0 0H200V6Q190 2 179 8T151 5Q128 16 112 8T77 6Q54 16 36 9T0 5Z',
-  'M0 0H200V10Q174 19 155 9T121 5L107 16L101 6Q80 15 63 9Q35 1 0 11Z',
-  'M0 0H200V5L185 11L167 8L155 4Q133 4 126 13L120 26L114 10Q83 3 62 9T0 4Z',
-  'M0 0H200V9Q181 4 165 11T128 6Q110 1 92 9L83 20L79 10Q62 5 44 12T0 6Z',
+  "/themes/snow-crown-0-8450d361.svg",
+  "/themes/snow-crown-1-9ca24f7c.svg",
+  "/themes/snow-crown-2-07b186f7.svg",
+  "/themes/snow-crown-3-657a3298.svg",
+  "/themes/snow-crown-4-12f6b534.svg",
+  "/themes/snow-crown-5-532e6861.svg",
+  "/themes/snow-crown-6-3b4e2a05.svg",
+  "/themes/snow-crown-7-438e8c7e.svg",
+  "/themes/snow-crown-8-5264a75f.svg",
+  "/themes/snow-crown-9-2a7e1af9.svg"
 ];

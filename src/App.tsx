@@ -1,5 +1,5 @@
 import { CATEGORY_TRANSLATIONS } from './lib/categoryLabel';
-import { lazy, Suspense, useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, useCallback, useMemo, useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from './components/Header';
 import CategoryFilter, { type AvailabilityFilterType } from './components/CategoryFilter';
@@ -24,7 +24,7 @@ import { Heart, Loader2, Check, X, Sparkles, Gift, Percent, Tag, ArrowUpDown, La
 import type { Product, Language, Theme } from './types';
 
 import { scrollStorefrontTo } from './lib/pageScroll';
-import { STORE_THEME_CONTROL, parseStoreTheme, storeThemeVariables } from './lib/storefrontTheme';
+import { STORE_THEME_CONTROL, parseStoreTheme, storeThemeVariables, resolveStoreMode } from './lib/storefrontTheme';
 import { HERO_APPEARANCE_CONTROL, parseHeroAppearance } from './lib/heroAppearance';
 import { BANNER_TARGET_CONTROL, parseBannerTarget, matchesBannerTarget, bannerPageRequestKey, type BannerTarget } from './lib/bannerTarget';
 import './storefront-theme.css';
@@ -102,16 +102,20 @@ function MainApp() {
   const storeThemeRaw = getControl(STORE_THEME_CONTROL).actionValue;
   const seasonalAppearance = getControl(HERO_APPEARANCE_CONTROL).actionValue;
   const storeSeason = useMemo(() => parseStoreTheme(storeThemeRaw).enabled ? parseHeroAppearance(seasonalAppearance) : undefined, [storeThemeRaw, seasonalAppearance]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = document.documentElement;
     const settings = parseStoreTheme(storeThemeRaw);
-    const variables = storeThemeVariables(settings, theme);
+    const scene = parseHeroAppearance(seasonalAppearance).scene;
+    const mode = resolveStoreMode(settings, theme, scene);
+    const variables = storeThemeVariables(settings, mode);
+    root.classList.toggle('dark', mode === 'dark');
     if (settings.enabled) {
       root.setAttribute('data-storefront-theme', 'active');
-      root.setAttribute('data-store-season', parseHeroAppearance(seasonalAppearance).scene);
+      root.setAttribute('data-store-season', scene);
+      root.setAttribute('data-store-ui-mode', theme);
       for (const [key, value] of Object.entries(variables)) root.style.setProperty(key, value);
     }
-    return () => { root.removeAttribute('data-storefront-theme'); root.removeAttribute('data-store-season'); for (const key of Object.keys(variables)) root.style.removeProperty(key); };
+    return () => { root.removeAttribute('data-storefront-theme'); root.removeAttribute('data-store-season'); root.removeAttribute('data-store-ui-mode'); root.classList.toggle('dark', theme === 'dark'); for (const key of Object.keys(variables)) root.style.removeProperty(key); };
   }, [storeThemeRaw, theme, seasonalAppearance]);
   const [selected, setSelected] = useState<Product | null>(null);
   const openedItemLink = useRef<string | null>(null);
@@ -242,12 +246,7 @@ function MainApp() {
 
   // Sync Theme (Dark Mode)
   useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    localStorage.setItem('vant-theme', theme);
+    try { localStorage.setItem('vant-theme', theme); } catch {}
   }, [theme]);
 
   // Listen for device OS theme change (System Dark Mode / Light Mode auto sync)

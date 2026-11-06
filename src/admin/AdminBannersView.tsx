@@ -10,7 +10,7 @@ import BannerTargetEditor from './BannerTargetEditor';
 import { STORE_THEME_CONTROL, CUSTOM_THEMES_CONTROL } from '../lib/storefrontTheme';
 import { BANNER_TARGET_CONTROL } from '../lib/bannerTarget';
 import { bannerThemeEdits, themeStorePalette } from '../lib/bannerThemes';
-import { HERO_APPEARANCE_CONTROL } from '../lib/heroAppearance';
+import { HERO_APPEARANCE_CONTROL, parseHeroAppearance } from '../lib/heroAppearance';
 import { fileToOptimizedDataUrl, uploadDataUrlToSupabase } from '../lib/storage';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { buildBannerChanges, validateBannerFile, parseSavedThemes, type BannerEdits, type TrendEdits } from '../lib/bannerEditor';
@@ -123,7 +123,7 @@ export const AdminBannersView: React.FC = () => {
         </div>
       </>}
       <div hidden={section !== 'identity'} className="space-y-5">
-        <StoreThemeEditor isAr={isAr} raw={draftControls[STORE_THEME_CONTROL]?.actionValue} image={draftControls.banner_hero_bg?.actionValue || HERO_BANNER_IMAGE} onChange={value => patchControl(STORE_THEME_CONTROL, { actionValue: JSON.stringify(value) })} />
+        <StoreThemeEditor isAr={isAr} raw={draftControls[STORE_THEME_CONTROL]?.actionValue} scene={parseHeroAppearance(draftControls[HERO_APPEARANCE_CONTROL]?.actionValue).scene} image={draftControls.banner_hero_bg?.actionValue || HERO_BANNER_IMAGE} onChange={value => patchControl(STORE_THEME_CONTROL, { actionValue: JSON.stringify(value) })} />
         <CustomThemeLibrary isAr={isAr} controls={draftControls} onPatch={patchMany} />
       </div>
       {section === 'destination' && <BannerTargetEditor isAr={isAr} raw={draftControls[BANNER_TARGET_CONTROL]?.actionValue} onChange={value => patchControl(BANNER_TARGET_CONTROL, { actionValue: JSON.stringify(value) })} />}

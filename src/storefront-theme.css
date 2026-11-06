@@ -30,11 +30,11 @@ html[data-store-season=ramadan] { --season-edge:radial-gradient(ellipse at botto
 html[data-store-season=holiday] { --season-edge:radial-gradient(ellipse at top,transparent 40%,var(--store-accent) 45% 55%,transparent 60%); }
 html[data-store-season=school] { --season-edge:repeating-linear-gradient(90deg,var(--store-accent) 0 2px,transparent 3px 18px); }
 html[data-store-season=weekend],html[data-store-season=eid] { --season-edge:repeating-linear-gradient(90deg,var(--store-accent) 0 8px,transparent 9px 18px); }
-html[data-store-season=black-friday] { --season-edge:repeating-linear-gradient(90deg,var(--store-accent) 0 2px,transparent 3px 5px,var(--store-accent) 6px 11px,transparent 12px 18px); }
+html[data-store-season=black-friday] { --season-edge:linear-gradient(90deg,transparent 5%,var(--store-accent) 5% 95%,transparent 95%); }
 html[data-storefront-theme=active]:not([data-store-season=none]) [data-store-footer] { background-image:var(--season-edge); background-size:80px 2px; background-repeat:repeat-x; }
 
 /* Shared editorial rhythm; palette controls remain the source of both color modes. */
-[data-storefront-theme] [data-store-hero]{border-color:color-mix(in srgb,var(--store-border) 70%,transparent);box-shadow:0 12px 36px rgb(0 0 0 / .045);border-radius:clamp(18px,2vw,28px)}
+[data-storefront-theme] [data-store-hero]{container-type:inline-size;border-color:color-mix(in srgb,var(--store-border) 70%,transparent);box-shadow:0 12px 36px rgb(0 0 0 / .045);border-radius:clamp(18px,2vw,28px)}
 [data-storefront-theme] .hero-caption :where(h1,h2){text-wrap:balance;letter-spacing:-.025em}
 [data-storefront-theme] .hero-caption p{text-wrap:pretty}
 [data-storefront-theme] [data-store-card-image]{isolation:isolate;box-shadow:inset 0 0 0 1px rgb(0 0 0 / .04)}
@@ -47,5 +47,27 @@ html[data-storefront-theme=active]:not([data-store-season=none]) [data-store-foo
 [data-storefront-theme] [data-store-footer]{background-color:color-mix(in srgb,var(--store-surface) 55%,var(--store-background));border-color:color-mix(in srgb,var(--store-border) 65%,transparent)}
 [data-storefront-theme] .store-category-rail [role=tab]{transition:background-color .18s,color .18s,border-color .18s;box-shadow:none}
 [data-storefront-theme] :where(button,a):focus-visible{outline-color:var(--store-link);outline-offset:4px}
-@media(min-width:768px){[data-storefront-theme] .hero-caption{padding-block:8px}[data-storefront-theme] .hero-caption :where(h1,h2){max-width:22ch;font-size:clamp(28px,3vw,42px);line-height:1.3}}
+@media(min-width:768px){[data-storefront-theme] .hero-caption{padding-block:8px}[data-storefront-theme] .hero-caption :where(h1,h2){max-width:22ch;font-size:clamp(24px,3cqw,42px);line-height:1.3}}
 @media(max-width:639px){[data-storefront-theme] [data-store-grid]{column-gap:12px;row-gap:24px}[data-storefront-theme] [data-store-card-meta]{margin-top:10px;padding-bottom:12px;gap:4px}[data-storefront-theme] [data-store-card] h3{font-size:14px;line-height:1.5}[data-storefront-theme] [data-store-newsletter]{padding:24px 18px}[data-storefront-theme] [data-store-newsletter] h2{font-size:21px}}
+
+/* Seasonal framing also reaches the offer photographs, never their colors. */
+html[data-storefront-theme][data-store-season] [data-store-card-image]{outline:1px solid color-mix(in srgb,var(--store-accent) 28%,transparent);outline-offset:-1px}
+html[data-store-season=winter] [data-store-card-image]{translate:none;box-shadow:inset 0 0 0 2px #dcefff80,0 8px 24px #426b8612}
+html[data-store-season=spring] [data-store-card-image]{border-radius:var(--store-radius) var(--store-radius) min(36px,calc(var(--store-radius) + 12px)) var(--store-radius)}
+html[data-store-season=summer] [data-store-card-meta]{border-bottom:2px solid color-mix(in srgb,var(--store-accent) 65%,transparent)}
+html[data-store-season=autumn] [data-store-card-image]{box-shadow:0 7px 20px #733b1814}
+html[data-store-season=new-year] [data-store-card-image],html[data-store-season=eid] [data-store-card-image]{outline-color:color-mix(in srgb,var(--store-accent) 70%,transparent);outline-width:2px;outline-offset:-2px}
+html[data-store-season=ramadan] [data-store-card-meta]{border-bottom-color:color-mix(in srgb,#dba85c 60%,var(--store-border))}
+html[data-store-season=holiday] [data-store-card-image]{border-radius:var(--store-radius) var(--store-radius) 28px 28px}
+html[data-store-season=school] [data-store-card-meta]{background-image:repeating-linear-gradient(0deg,transparent 0 23px,color-mix(in srgb,var(--store-border) 18%,transparent) 24px 25px)}
+html[data-store-season=weekend] [data-store-card-meta]{border-bottom-style:dashed}
+html[data-store-season=black-friday] [data-store-card-meta]{border-bottom:2px solid color-mix(in srgb,var(--store-text) 60%,transparent)}
+html[data-store-season=black-friday] [data-store-primary]{box-shadow:3px 3px 0 color-mix(in srgb,var(--store-text) 25%,transparent)}
+html[data-store-season=season-end] [data-store-card-meta]{border-bottom-style:double;border-bottom-width:3px}
+[data-storefront-theme] [data-store-trend]{border-color:color-mix(in srgb,var(--store-accent) 45%,transparent)}
+
+/* A campaign keeps its palette; only utility surfaces follow the visitor preference. */
+html[data-storefront-theme][data-store-ui-mode=light]{--store-utility:var(--store-utility-light);--store-utility-text:var(--store-utility-light-text)}
+html[data-storefront-theme][data-store-ui-mode=dark]{--store-utility:var(--store-utility-dark);--store-utility-text:var(--store-utility-dark-text)}
+html[data-storefront-theme] .store-toolbar-actions button{background-color:var(--store-utility);color:var(--store-utility-text)}
+html[data-storefront-theme] .store-toolbar-actions button:not([data-store-cart-active]) svg{color:var(--store-utility-text)}
