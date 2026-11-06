@@ -60,7 +60,10 @@
 [data-season-detail=sunlight]{animation:season-detail-light 20s ease-in-out infinite}
 [data-season-detail=copper]{animation:season-detail-light 17s ease-in-out infinite}
 [data-season-detail=spark]{transform-box:fill-box;transform-origin:center;animation:season-star 12s ease-in-out infinite}
-[data-season-detail=lanterns]{transform-box:view-box;transform-origin:50% 0;animation:season-lantern 20s ease-in-out infinite}
+[data-season-detail=lanterns]{animation:none}
+[data-season-part=lantern-high]{transform-box:view-box;transform-origin:72.6667% 0;animation:season-lantern 20s ease-in-out infinite}
+[data-season-part=lantern-low]{transform-box:view-box;transform-origin:25.3333% 0;animation:season-lantern 23s -6s ease-in-out infinite}
+[data-season-detail=bloom]{animation:season-detail-light 18s ease-in-out infinite}
 [data-season-detail=ribbon]{animation:season-detail-light 15s ease-in-out infinite}
 [data-season-detail=tide]{animation:season-tide 18s ease-in-out infinite}
 [data-season-detail=thread]{animation:season-detail-light 19s ease-in-out infinite}
@@ -72,6 +75,6 @@
   .hero-editorial .seasonal-art{width:128px;height:128px;inset-block:6px auto}
   .hero-editorial:has(.seasonal-art) .hero-caption{padding-top:84px}
   .hero-editorial:has(.seasonal-art) .hero-dismiss{position:absolute;inset-block-start:0;inset-inline-start:0}
-  .seasonal-particle:nth-last-child(-n+3){display:none}
+  .seasonal-particle:nth-of-type(n+3){display:none}
 }
 @media(prefers-reduced-motion:reduce){.seasonal-art *{animation:none!important}}

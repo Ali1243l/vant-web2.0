@@ -5,6 +5,7 @@ import SeasonalIllustration from './SeasonalIllustration';
 import '../seasonal-art.css';
 
 const icons = { winter: Snowflake, spring: Flower2, summer: Sun, autumn: Leaf, 'new-year': Sparkles, ramadan: Moon, eid: Gift, holiday: Waves, school: BookOpen, weekend: Ticket, 'black-friday': Percent, 'season-end': Tag };
+const particleCounts = { winter: 5, spring: 2, summer: 0, autumn: 3, 'new-year': 3, ramadan: 1, eid: 2, holiday: 0, school: 0, weekend: 0, 'black-friday': 0, 'season-end': 0 };
 
 export default function SeasonalArtwork({ settings, isAr }: { settings: HeroAppearance; isAr: boolean }) {
   const root = useRef<HTMLDivElement>(null);
@@ -22,6 +23,6 @@ export default function SeasonalArtwork({ settings, isAr }: { settings: HeroAppe
   const Icon = icons[settings.scene];
   return <div ref={root} aria-hidden="true" data-seasonal-scene={settings.scene} data-motion={settings.motionEnabled ? (visible ? 'running' : 'paused') : 'off'} className="seasonal-art" style={{ [isAr ? 'left' : 'right']: 0, '--season-accent': settings.accentColor, '--season-opacity': settings.motifOpacity / 100 } as CSSProperties}>
     <div className="seasonal-composition"><SeasonalIllustration scene={settings.scene} /></div>
-    {[0, 1, 2, 3, 4, 5].map(i => <span key={i} className="seasonal-particle" style={{ '--particle': i, left: `${12 + (i * 37) % 76}%`, top: `${8 + (i * 29) % 70}%` } as CSSProperties}><Icon strokeWidth={1.2} /></span>)}
+    {Array.from({ length: particleCounts[settings.scene] }, (_, i) => <span key={i} className="seasonal-particle" style={{ '--particle': i, left: `${12 + (i * 37) % 76}%`, top: `${8 + (i * 29) % 70}%` } as CSSProperties}><Icon strokeWidth={1.2} /></span>)}
   </div>;
 }

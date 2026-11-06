@@ -38,7 +38,17 @@ test('campaign illustrations have twelve distinct, self-contained compositions a
     const markup = renderToStaticMarkup(React.createElement(Illustration, { scene: theme.id }));
     assert.match(markup, /viewBox="0 0 300 300"/);
     assert.match(markup, /data-season-detail="[a-z-]+"/);
-    assert.doesNotMatch(markup, /NaN|undefined|<text|<image|href=/);
+    assert.doesNotMatch(markup, /NaN|undefined|<text|<image|<filter|foreignObject|href=/);
+    assert.ok(Buffer.byteLength(markup) < 6000, `${theme.id} artwork exceeds its inline size budget`);
+    assert.ok((markup.match(/<[a-z][a-z-]*(?=[\s>])/g) || []).length < 80, `${theme.id} artwork has too many elements`);
+    if (theme.id === 'ramadan') {
+      for (const part of ['lantern-high', 'lantern-low']) {
+        const lantern = markup.match(new RegExp(`<g data-season-part="${part}">([\\s\\S]*?)</g>`))?.[1];
+        assert.ok(lantern, 'each lantern is one moving unit');
+        assert.match(lantern, /V62|V108/, 'the cord moves with the lantern');
+        assert.match(lantern, /fill="var\(--season-paper/, 'the glass moves with the body');
+      }
+    }
     return markup.replace(/data-season-illustration="[^"]+"/, '');
   });
   assert.equal(new Set(drawings).size, 12);
