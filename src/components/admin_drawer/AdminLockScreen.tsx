@@ -78,6 +78,8 @@ export const AdminLockScreen: React.FC<AdminLockScreenProps> = ({
             <KeyRound className="pointer-events-none absolute ltr:left-3.5 rtl:right-3.5 h-4 w-4 text-white/40" />
             <input
               type={showPassword ? 'text' : 'password'}
+              aria-label={isAr ? 'رمز دخول الإدارة' : 'Admin access code'}
+              aria-invalid={passwordError}
               value={passwordInput}
               onChange={(e) => {
                 setPasswordInput(e.target.value);
@@ -85,7 +87,7 @@ export const AdminLockScreen: React.FC<AdminLockScreenProps> = ({
               }}
               placeholder="••••••••"
               autoFocus
-              maxLength={40}
+              maxLength={64}
               className={`h-12 w-full rounded-2xl border bg-black/60 px-10 text-center text-sm font-mono tracking-widest outline-none transition-all placeholder:text-white/20 ${
                 passwordError
                   ? 'border-[#3b82f6] ring-2 ring-[#3b82f6]/35 text-white shadow-[0_0_15px_rgba(59,130,246,0.2)]'
@@ -95,8 +97,8 @@ export const AdminLockScreen: React.FC<AdminLockScreenProps> = ({
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute ltr:right-3 rtl:left-3 flex h-7 w-7 items-center justify-center rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-              aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+              className="absolute ltr:right-1 rtl:left-1 flex h-11 w-11 items-center justify-center rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              aria-label={isAr ? (showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور') : (showPassword ? 'Hide access code' : 'Show access code')}
               title={showPassword ? 'إخفاء' : 'إظهار'}
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -105,6 +107,7 @@ export const AdminLockScreen: React.FC<AdminLockScreenProps> = ({
 
           {passwordError && (
             <motion.div
+              role="alert"
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
               className="flex items-center justify-center gap-1.5 text-xs text-[#93c5fd] font-medium"

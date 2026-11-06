@@ -1,6 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { pinChangeIssue } from '../src/lib/adminPinValidation.ts';
+import { pinChangeIssue, readAdminPin, matchesAdminPin } from '../src/lib/adminPinValidation.ts';
+
+test('the lock and security editor read the same stored code and accept no legacy bypass values', () => {
+  const code = readAdminPin({ getItem: key => key === 'vant_admin_pass_v3' ? 'Sample-Code' : 'old-key-value' });
+  assert.equal(code, 'Sample-Code');
+  assert.equal(matchesAdminPin('Sample-Code', code), true);
+  for (const input of ['sample-code', 'admin', '1234', '200710', 'old-key-value', '']) assert.equal(matchesAdminPin(input, code), false);
+  assert.equal(matchesAdminPin('anything', ''), false);
+  assert.equal(readAdminPin({ getItem: () => { throw Error('blocked'); } }), '');
+});
 test('access-code validation preserves password support and rejects incorrect current and mismatched confirmation', () => {
   assert.equal(pinChangeIssue('sample-old', 'sample-old', 'sample-new', 'sample-new'), null);
   assert.equal(pinChangeIssue('wrong', 'sample-old', 'sample-new', 'sample-new'), 'current');

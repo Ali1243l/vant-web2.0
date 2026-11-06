@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { saveSiteConfigToSupabase } from '../../lib/storage';
 import { safeStorage } from '../../utils/safeStorage';
 import { requireCloudAdmin } from '../../lib/cloudAdminAccess';
+import { matchesAdminPin } from '../../lib/adminPinValidation';
 import {
   CURRENCY_STORAGE_KEY,
   PIN_STORAGE_KEY,
@@ -78,16 +79,7 @@ export function useSiteSettingsAndAdmin() {
       currentPin = '@Ali200710';
       safeStorage.setItem(PIN_STORAGE_KEY, '@Ali200710');
     }
-    const clean = pin.trim();
-    if (
-      clean === currentPin ||
-      clean.toLowerCase() === currentPin.toLowerCase() ||
-      clean === '@Ali200710' ||
-      clean.toLowerCase() === '@ali200710' ||
-      clean.toLowerCase() === 'ali200710' ||
-      clean === '200710' ||
-      clean.toLowerCase() === 'admin'
-    ) {
+    if (matchesAdminPin(pin, currentPin)) {
       setIsAdminUnlocked(true);
       try {
         sessionStorage.setItem(SESSION_AUTH_KEY, 'true');
@@ -209,7 +201,7 @@ export function useSiteSettingsAndAdmin() {
           if (error || !data) throw new Error(error?.message || "No settings acknowledgment");
           const tableKeys = new Set(Object.keys(payload));
           const needsConfig = Object.keys(updates).some(key => !tableKeys.has(key));
-          if (needsConfig && !await saveSiteConfigToSupabase({ site_settings: next })) throw new Error('Extended settings save failed');
+          if (needsConfig && !await saveSiteConfigToSupabase({ site_settings: next }, true)) throw new Error('Extended settings save failed');
           setSiteSettings({ ...next, id: data.id });
           safeStorage.setItemJSON(SETTINGS_STORAGE_KEY, { ...next, id: data.id });
 

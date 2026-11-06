@@ -11,6 +11,7 @@ import { updateSystemErrorStatus } from '../lib/analytics';
 import { normalizeOrders } from '../lib/orderModel';
 import { saveOrderChange, type OrderChange } from '../lib/saveOrderChange';
 import { productPricePatch, recordedProductStock } from './products_manager/catalogModel';
+import { readAdminPin } from '../lib/adminPinValidation';
 
 export type AdminView = 'dashboard' | 'orders' | 'products' | 'sizes' | 'offers' | 'banners' | 'subscribers' | 'welcome_modal' | 'controls' | 'social' | 'backup' | 'settings' | 'security' | 'widgets' | 'activity' | 'policies';
 
@@ -323,7 +324,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return siteControls.unlockAdmin(cleanPin);
   }, [siteControls]);
 
-  const pin = siteControls.siteSettings ? (localStorage.getItem('vant_admin_pin') || '1234') : '1234';
+  const pin = readAdminPin(localStorage);
   const setPin = useCallback((newPin: string) => {
     siteControls.setAdminPin(newPin);
   }, [siteControls]);

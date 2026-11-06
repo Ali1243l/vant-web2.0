@@ -259,11 +259,11 @@ async function persistSiteConfig(config: Partial<CloudSiteConfig>, requireFresh:
     if (!existing) return false;
 
     const bannerBg =
-      config.banner_hero_bg ||
-      config.hero_bg ||
-      config.controls?.banner_hero_bg?.actionValue ||
-      existing?.banner_hero_bg ||
-      existing?.hero_bg ||
+      config.banner_hero_bg ??
+      config.hero_bg ??
+      config.controls?.banner_hero_bg?.actionValue ??
+      existing?.banner_hero_bg ??
+      existing?.hero_bg ??
       existing?.controls?.banner_hero_bg?.actionValue;
 
     const resolvedCurrency = config.currency || existing?.currency || 'د.ع';

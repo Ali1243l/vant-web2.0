@@ -51,8 +51,11 @@ test('catalog distinguishes an empty successful response from an outage, includi
   let queried = false;
   const client = { from: () => { queried = true; return { select: () => ({ order: () => ({ range: async () => ({ data: [], count: 0, error: null }) }) }) }; } };
   assert.deepEqual(await fetchCatalogPage(response({ success: true, data: [], count: 0 }), client, 12), { data: [], count: 0 });
-  assert.equal(queried, false);
+  assert.equal(queried, true);
   assert.deepEqual(await fetchCatalogPage(response({}, false), client, 12), { data: [], count: 0 });
   assert.equal(await fetchCatalogPage(response({}, false), null, 12), null);
   assert.equal(await fetchCatalogPage((async () => { throw new Error('offline'); }) as any, null, 12), null);
+  let proxyRequests = 0;
+  assert.deepEqual(await fetchCatalogPage((async () => { proxyRequests++; throw new Error('missing proxy'); }) as any, client, 12), { data: [], count: 0 });
+  assert.equal(proxyRequests, 0, 'a successful cloud read must not pay for the nonexistent production proxy');
 });

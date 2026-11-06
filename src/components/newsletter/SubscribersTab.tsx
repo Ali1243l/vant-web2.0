@@ -82,7 +82,10 @@ export const SubscribersTab: React.FC<SubscribersTabProps> = ({
 
   const handleDeleteSubscriber = async (id: string, email: string) => {
     if (window.confirm(isAr ? `هل أنت متأكد من حذف المشترك (${email})؟` : `Remove subscriber (${email})?`)) {
-      await removeSubscriber(id);
+      if (!await removeSubscriber(id)) {
+        setFeedbackMsg({ type: 'error', text: isAr ? 'تعذّر تأكيد الحذف من السحابة. القائمة باقية؛ أعد المحاولة.' : 'Cloud deletion was not confirmed. The list is unchanged; retry.' });
+        return;
+      }
       setSubscribers(getStoredSubscribers());
       setFeedbackMsg({
         type: 'success',

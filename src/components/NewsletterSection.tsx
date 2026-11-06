@@ -235,7 +235,7 @@ export default function NewsletterSection({ lang }: Props) {
 
     setIsDeleting(true);
     try {
-      await removeSubscriber(emailToDelete);
+      if (!await removeSubscriber(emailToDelete)) throw new Error('delete-not-confirmed');
 
       try {
         localStorage.removeItem(SUBSCRIPTION_STORAGE_KEY);
@@ -259,6 +259,8 @@ export default function NewsletterSection({ lang }: Props) {
           : '✓ Successfully unsubscribed and deleted your account from the database.'
       );
       setTimeout(() => setFeedbackNotice(null), 4500);
+    } catch {
+      setFeedbackNotice(isAr ? 'تعذّر تأكيد إلغاء الاشتراك. حسابك باقٍ؛ تواصل معنا لإكمال الطلب.' : 'Unsubscription could not be confirmed. Your account is unchanged; contact us to complete the request.');
     } finally {
       setIsDeleting(false);
     }

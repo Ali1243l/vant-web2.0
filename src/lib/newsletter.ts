@@ -36,7 +36,6 @@ const STORAGE_KEY = 'vant_subscribers_list_v2';
 const CAMPAIGNS_KEY = 'vant_campaign_offers_v1';
 const CUSTOM_TEMPLATES_KEY = 'vant_custom_email_templates_v1';
 
-const SUPABASE_FILE_PATH = 'config/newsletter_subscribers.json';
 const SUPABASE_CAMPAIGNS_PATH = 'config/newsletter_campaigns.json';
 const SUPABASE_TEMPLATES_PATH = 'config/newsletter_templates.json';
 
@@ -145,7 +144,7 @@ export function getStoredSubscribers(): NewsletterSubscriber[] {
 }
 
 /**
- * Save subscribers to localStorage and upload to Supabase cloud storage
+ * Cache subscribers locally; the RLS-protected table is the cloud source of truth.
  */
 export async function saveSubscribers(subscribers: NewsletterSubscriber[]): Promise<boolean> {
   try {
@@ -153,19 +152,6 @@ export async function saveSubscribers(subscribers: NewsletterSubscriber[]): Prom
       localStorage.setItem(STORAGE_KEY, JSON.stringify(subscribers));
     }
 
-    if (supabase) {
-      try {
-        const payload = JSON.stringify(subscribers, null, 2);
-        const blob = new Blob([payload], { type: 'application/json' });
-        await supabase.storage.from('product-images').upload(SUPABASE_FILE_PATH, blob, {
-          contentType: 'application/json',
-          cacheControl: '0',
-          upsert: true,
-        });
-      } catch (cloudErr) {
-        console.warn('Cloud sync for subscribers notice:', cloudErr);
-      }
-    }
     return true;
   } catch (err) {
     console.error('Failed to save subscribers:', err);
@@ -174,7 +160,7 @@ export async function saveSubscribers(subscribers: NewsletterSubscriber[]): Prom
 }
 
 /**
- * Fetch subscribers from Supabase database table and cloud storage, merged seamlessly with local cache
+ * Fetch subscribers only through table permissions, with an existing local cache fallback.
  */
 export async function syncSubscribersFromCloud(): Promise<NewsletterSubscriber[]> {
   if (!supabase) return getStoredSubscribers();
@@ -208,31 +194,6 @@ export async function syncSubscribersFromCloud(): Promise<NewsletterSubscriber[]
     }
   } catch (dbError) {
     console.log("Supabase Subscribers Fetch Error:", dbError);
-  }
-
-  // 2. Query Supabase Cloud Storage config/newsletter_subscribers.json if table missing
-  try {
-    const { data: pubData } = supabase.storage.from('product-images').getPublicUrl(SUPABASE_FILE_PATH);
-    if (pubData?.publicUrl) {
-      const res = await fetch(`${pubData.publicUrl}?t=${Date.now()}`, { cache: 'no-store' });
-      if (res.ok) {
-        const cloudList: NewsletterSubscriber[] = await res.json();
-        if (Array.isArray(cloudList)) {
-          const list = cloudList
-            .filter((s) => s && s.email)
-            .map((s) => ({
-              ...s,
-              email: s.email.trim().toLowerCase(),
-            }));
-          if (typeof window !== 'undefined') {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-          }
-          return list;
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('Could not sync subscribers from cloud storage:', err);
   }
 
   return getStoredSubscribers();
@@ -312,18 +273,18 @@ export async function removeSubscriber(idOrEmail: string): Promise<boolean> {
     (s) => s.id?.toLowerCase() !== cleanKey && s.email.toLowerCase() !== targetEmail
   );
   
-  // 1. Update local storage & cloud storage backup
-  const ok = await saveSubscribers(updated);
-
-  // 2. Direct delete from Supabase database table
+  // Do not erase the local account before the database acknowledges deletion.
   if (supabase && targetEmail) {
     try {
-      await supabase
+      const { data, error } = await supabase
         .from('newsletter_subscribers')
         .delete()
-        .or(`email.ilike.${targetEmail},id.eq.${cleanKey}`);
+        .eq('email', targetEmail)
+        .select('id');
+      if (error || !data?.length) return false;
     } catch (e) {
       console.warn('Supabase delete subscriber error/notice:', e);
+      return false;
     }
 
     // 3. Log deletion audit event
@@ -335,7 +296,7 @@ export async function removeSubscriber(idOrEmail: string): Promise<boolean> {
       });
     } catch {}
   }
-  return ok;
+  return saveSubscribers(updated);
 }
 
 /**

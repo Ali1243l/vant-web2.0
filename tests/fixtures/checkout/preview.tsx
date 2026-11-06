@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client';
 import CartCheckout from '../../../src/components/CartCheckout';
 import '../../../src/index.css';
 
+if (!import.meta.env.DEV || import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_ANON_KEY) {
+  throw new Error('This checkout fixture requires isolated local development without a cloud connection.');
+}
+
 // Test this fixture on an isolated localhost port, never against a customer session.
 localStorage.setItem('vant_offers_v1', JSON.stringify([{ id: 'local-ui-test', title: 'اختبار', titleEn: 'Test', code: 'SAVE10', discountType: 'percentage', discountValue: 10, status: 'active', usedCount: 0, startDate: '2020-01-01', endDate: '2099-12-31' }]));
 document.documentElement.classList.add('dark');

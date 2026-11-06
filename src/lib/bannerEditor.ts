@@ -1,11 +1,18 @@
 import type { SiteControlItem } from '../context/siteControlsTypes';
 import type { TrendItem } from '../types';
 import { DEFAULT_SITE_CONTROLS } from '../context/defaultSiteControls.ts';
-import { HERO_APPEARANCE_CONTROL, parseHeroAppearance } from './heroAppearance.ts';
+import { HERO_APPEARANCE_CONTROL, parseHeroAppearance, DEFAULT_HERO_APPEARANCE } from './heroAppearance.ts';
 import { STORE_THEME_CONTROL, CUSTOM_THEMES_CONTROL, parseStoreTheme, paletteIssue, type StoreTheme } from './storefrontTheme.ts';
 import { BANNER_TARGET_CONTROL, parseBannerTarget } from './bannerTarget.ts';
 export type BannerEdits = Record<string, Partial<SiteControlItem>>;
 export type TrendEdits = Record<string, Partial<TrendItem>>;
+export function disableSeasonalTheme(controls: Record<string, SiteControlItem>): BannerEdits {
+  const appearance = parseHeroAppearance(controls[HERO_APPEARANCE_CONTROL]?.actionValue);
+  return {
+    [STORE_THEME_CONTROL]: { actionValue: JSON.stringify({ ...parseStoreTheme(controls[STORE_THEME_CONTROL]?.actionValue), enabled: false }) },
+    [HERO_APPEARANCE_CONTROL]: { actionValue: JSON.stringify({ ...appearance, scene: 'none', motif: 'none', accentColor: DEFAULT_HERO_APPEARANCE.accentColor, lightColor: DEFAULT_HERO_APPEARANCE.lightColor, darkColor: DEFAULT_HERO_APPEARANCE.darkColor }) },
+  };
+}
 const bannerIds = ['banner_hero_visible', 'banner_hero_title', 'banner_hero_subtitle', 'banner_hero_tag', 'banner_hero_btn', 'banner_hero_bg', HERO_APPEARANCE_CONTROL, STORE_THEME_CONTROL, CUSTOM_THEMES_CONTROL, BANNER_TARGET_CONTROL];
 export function validBannerImage(value: string): boolean {
   if (!value) return true;

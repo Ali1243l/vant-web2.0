@@ -1,8 +1,23 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildBannerChanges, validateBannerFile, validBannerImage, validateWelcomeDraft, storeBannerDraft } from '../src/lib/bannerEditor.ts';
+import { buildBannerChanges, disableSeasonalTheme, validateBannerFile, validBannerImage, validateWelcomeDraft, storeBannerDraft } from '../src/lib/bannerEditor.ts';
 const controls = { banner_hero_title: { id: 'banner_hero_title', label_ar: 'old', label_en: 'old en', visible: true }, banner_hero_bg: { id: 'banner_hero_bg', actionValue: 'https://example.test/old.jpg' }, banner_hero_visible: { id: 'banner_hero_visible', visible: true }, banner_hero_appearance: { id: 'banner_hero_appearance', actionValue: '{}' }, unrelated: { id: 'unrelated', label_ar: 'keep' } } as any;
 const trends = [{ id: 't1', category: 'shirts', titleAr: 'old', titleEn: 'old en', image: 'https://example.test/old.jpg' }] as any;
+
+test('removing a theme disables both the store identity and banner ornaments without removing content or palettes', () => {
+  const original = { ...controls, store_theme: { actionValue: JSON.stringify({ enabled: true, dark: { accent: '#ddaa88' } }) }, banner_hero_appearance: { actionValue: JSON.stringify({ scene: 'winter', motif: 'snow', zoom: 125, positionX: 72 }) } } as any;
+  const edits = disableSeasonalTheme(original);
+  const saved = buildBannerChanges(original, trends, edits, {});
+  assert.deepEqual(Object.keys(edits).sort(), ['banner_hero_appearance', 'store_theme']);
+  const store = JSON.parse(saved.controls.store_theme.actionValue!);
+  const art = JSON.parse(saved.controls.banner_hero_appearance.actionValue!);
+  assert.equal(store.enabled, false); assert.equal(store.dark.accent, '#ddaa88');
+  assert.equal(art.scene, 'none'); assert.equal(art.motif, 'none'); assert.equal(art.lightColor, '#ffffff');
+  assert.equal(art.zoom, 125); assert.equal(art.positionX, 72);
+  assert.equal(JSON.parse(original.store_theme.actionValue).enabled, true);
+  assert.equal(saved.controls.banner_hero_bg, undefined);
+  assert.deepEqual(saved.trendItems, trends);
+});
 
 test('banner save produces one scoped patch and preserves unrelated controls, category and order', () => {
   const result = buildBannerChanges(controls, trends, { banner_hero_title: { label_ar: 'new' }, banner_hero_visible: { visible: false } }, { t1: { titleEn: 'New title' } });

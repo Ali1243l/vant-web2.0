@@ -125,7 +125,7 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
   const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
   const saveControlEdits = async (edits: ControlEdits): Promise<'cloud' | 'local'> => {
     const changed = buildControlChanges(controls, edits);
-    if (isSupabaseConfigured && !await saveSiteConfigToSupabase({ controls: changed })) throw new Error('save');
+    if (isSupabaseConfigured && !await saveSiteConfigToSupabase({ controls: changed }, true)) throw new Error('save');
     const next = { ...controls, ...changed };
     if (!isSupabaseConfigured) localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     setControls(prev => ({ ...prev, ...changed }));
