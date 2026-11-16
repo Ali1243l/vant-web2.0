@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { verifyCart, productForCartQuote } from '../src/lib/cartQuote';
+import { verifyCart, productForCartQuote } from '../src/lib/cartQuote.ts';
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Cache-Control', 'no-store');
