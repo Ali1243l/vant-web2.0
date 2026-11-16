@@ -21,7 +21,7 @@ interface Props {
   layout?: 'grid-4' | 'grid-2';
 }
 
-export default function MasonryGrid({
+function MasonryGrid({
   products,
   season,
   loading,
@@ -88,3 +88,5 @@ export default function MasonryGrid({
     </div>
   );
 }
+
+export default React.memo(MasonryGrid);

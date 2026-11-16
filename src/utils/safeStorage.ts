@@ -1,3 +1,4 @@
+import { reportCaughtError } from '../lib/caughtErrors.ts';
 /**
  * Safe wrapper for localStorage operations.
  * Protects against SSR/iframe access exceptions and browser quota overflow.
@@ -9,7 +10,8 @@ export const safeStorage = {
       if (typeof window === 'undefined' || !window.localStorage) return fallback;
       const val = window.localStorage.getItem(key);
       return val !== null ? val : fallback;
-    } catch {
+    } catch (caught) {
+      reportCaughtError(caught, 'browser-cache');
       return fallback;
     }
   },
@@ -19,7 +21,8 @@ export const safeStorage = {
       const item = safeStorage.getItem(key);
       if (!item) return fallback;
       return JSON.parse(item) as T;
-    } catch {
+    } catch (caught) {
+      reportCaughtError(caught, 'browser-cache');
       return fallback;
     }
   },
@@ -35,6 +38,7 @@ export const safeStorage = {
       window.localStorage.setItem(key, value);
       return true;
     } catch (err) {
+      reportCaughtError(err, 'browser-cache-write');
       console.warn(`[safeStorage] Failed to setItem "${key}":`, err);
       return false;
     }
@@ -43,7 +47,8 @@ export const safeStorage = {
   setItemJSON: (key: string, value: unknown): boolean => {
     try {
       return safeStorage.setItem(key, JSON.stringify(value));
-    } catch {
+    } catch (caught) {
+      reportCaughtError(caught, 'browser-cache');
       return false;
     }
   },
@@ -53,7 +58,8 @@ export const safeStorage = {
       if (typeof window === 'undefined' || !window.localStorage) return false;
       window.localStorage.removeItem(key);
       return true;
-    } catch {
+    } catch (caught) {
+      reportCaughtError(caught, 'browser-cache');
       return false;
     }
   },

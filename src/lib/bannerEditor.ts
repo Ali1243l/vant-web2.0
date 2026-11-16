@@ -1,3 +1,4 @@
+import { reportCaughtError } from './caughtErrors.ts';
 import type { SiteControlItem } from '../context/siteControlsTypes';
 import type { TrendItem } from '../types';
 import { DEFAULT_SITE_CONTROLS } from '../context/defaultSiteControls.ts';
@@ -92,7 +93,7 @@ export function storeBannerDraft(storage: Pick<Storage, 'getItem' | 'setItem' | 
   try { for (const [key, value] of entries) storage.setItem(key, value); }
   catch (error) {
     for (const [key, value] of previous) {
-      try { if (value === null) storage.removeItem(key); else storage.setItem(key, value); } catch {}
+      try { if (value === null) storage.removeItem(key); else storage.setItem(key, value); } catch (caught) { reportCaughtError(caught, 'bannerEditor'); }
     }
     throw error;
   }

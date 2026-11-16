@@ -49,9 +49,11 @@ test('responsive image sizes preserve admin grid options and leave private/custo
 test('catalog distinguishes an empty successful response from an outage, including direct-client fallback', async () => {
   const response = (json: unknown, ok = true) => (async () => ({ ok, json: async () => json })) as any;
   let queried = false;
-  const client = { from: () => { queried = true; return { select: () => ({ order: () => ({ range: async () => ({ data: [], count: 0, error: null }) }) }) }; } };
+  const ordering: string[] = [];
+  const query = { order: (column: string) => { ordering.push(column); return query; }, range: async () => ({ data: [], count: 0, error: null }) };
+  const client = { from: () => { queried = true; return { select: () => query }; } };
   assert.deepEqual(await fetchCatalogPage(response({ success: true, data: [], count: 0 }), client, 12), { data: [], count: 0 });
-  assert.equal(queried, true);
+  assert.equal(queried, true); assert.deepEqual(ordering.slice(0, 2), ['created_at', 'id'], 'ties use a stable unique order');
   assert.deepEqual(await fetchCatalogPage(response({}, false), client, 12), { data: [], count: 0 });
   assert.equal(await fetchCatalogPage(response({}, false), null, 12), null);
   assert.equal(await fetchCatalogPage((async () => { throw new Error('offline'); }) as any, null, 12), null);

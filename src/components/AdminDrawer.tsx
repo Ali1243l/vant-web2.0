@@ -1,3 +1,4 @@
+import { reportCaughtError } from '../lib/caughtErrors.ts';
 import { useScrollLock } from '../hooks/useScrollLock';
 import { initialAdminModule } from '../lib/initialAdminModule';
 import React, { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
@@ -113,7 +114,7 @@ export default function AdminDrawer({ lang = 'ar' }: Props) {
     setAdminMode(mode);
     try {
       localStorage.setItem('vant_admin_interface_mode', mode);
-    } catch {}
+    } catch (caught) { reportCaughtError(caught, 'AdminDrawer'); }
   };
   const [showTestsDropdown, setShowTestsDropdown] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

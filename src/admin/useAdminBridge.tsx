@@ -1,3 +1,4 @@
+import { reportCaughtError } from '../lib/caughtErrors.ts';
 import type { CatalogImage } from '../lib/catalogImage';
 import { subscriberDetails, subscriberOrderTotals } from '../lib/adminAudience';
 import { useState, useEffect, createContext, useContext, useCallback, useMemo, useRef } from 'react';
@@ -603,7 +604,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const next = normalizeOffers(remote);
         offersRef.current = next;
         setOffers(next);
-        try { localStorage.setItem('vant_offers_v1', JSON.stringify(next)); } catch {}
+        try { localStorage.setItem('vant_offers_v1', JSON.stringify(next)); } catch (caught) { reportCaughtError(caught, 'useAdminBridge'); }
       }
     }).catch(() => {});
     return () => { cancelled = true; };
@@ -614,7 +615,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       if (supabase && !await saveOffersToSupabase(next)) throw new Error('save');
       if (supabase) {
-        try { localStorage.setItem('vant_offers_v1', JSON.stringify(next)); } catch {}
+        try { localStorage.setItem('vant_offers_v1', JSON.stringify(next)); } catch (caught) { reportCaughtError(caught, 'useAdminBridge'); }
       } else localStorage.setItem('vant_offers_v1', JSON.stringify(next));
       offersRef.current = next;
       setOffers(next);
@@ -745,7 +746,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (!error && data && Array.isArray(data)) {
         const mappedOrders = normalizeOrders(data);
         setOrders(mappedOrders);
-        try { localStorage.setItem('vant_orders_v1', JSON.stringify(mappedOrders)); } catch {}
+        try { localStorage.setItem('vant_orders_v1', JSON.stringify(mappedOrders)); } catch (caught) { reportCaughtError(caught, 'useAdminBridge'); }
         return;
       }
 
@@ -754,7 +755,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const remoteOrders = await fetchOrdersFromSupabase();
         if (remoteOrders && Array.isArray(remoteOrders)) {
           setOrders(normalizeOrders(remoteOrders));
-          try { localStorage.setItem('vant_orders_v1', JSON.stringify(remoteOrders)); } catch {}
+          try { localStorage.setItem('vant_orders_v1', JSON.stringify(remoteOrders)); } catch (caught) { reportCaughtError(caught, 'useAdminBridge'); }
           return;
         }
       }
@@ -800,7 +801,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     setOrders((prev) => {
       const updated = [newOrder, ...prev];
-      try { localStorage.setItem('vant_orders_v1', JSON.stringify(updated)); } catch {}
+      try { localStorage.setItem('vant_orders_v1', JSON.stringify(updated)); } catch (caught) { reportCaughtError(caught, 'useAdminBridge'); }
       saveOrdersToSupabase(updated);
       return updated;
     });

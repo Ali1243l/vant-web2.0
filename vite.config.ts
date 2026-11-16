@@ -1,3 +1,5 @@
+import cartQuoteHandler from './api/cart-quote';
+import shopperSessionHandler from './api/shopper-session';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
@@ -9,7 +11,7 @@ function localApiPlugin(env: Record<string, string | undefined>): Plugin {
     name: 'vant-local-api',
     configureServer(server) {
       // Use the production handler locally; never send from the browser.
-      const emailHandler = (req: any, res: any) => {
+      const adaptHandler = (handler: typeof welcomeEmailHandler, maxBytes = 256 * 1024) => (req: any, res: any) => {
         res.status = (code: number) => { res.statusCode = code; return res; };
         res.json = (payload: unknown) => {
           res.setHeader('Content-Type', 'application/json');
@@ -20,7 +22,7 @@ function localApiPlugin(env: Record<string, string | undefined>): Plugin {
         let bytes = 0;
         req.on('data', (chunk: Buffer) => {
           bytes += chunk.length;
-          if (bytes > 256 * 1024) {
+          if (bytes > maxBytes) {
             if (!res.writableEnded) res.status(413).json({ success: false, error: 'Request too large' });
             return;
           }
@@ -29,9 +31,13 @@ function localApiPlugin(env: Record<string, string | undefined>): Plugin {
         req.on('end', () => {
           if (res.writableEnded) return;
           req.body = body;
-          void welcomeEmailHandler(req, res);
+          void handler(req, res);
         });
       };
+      const emailHandler = adaptHandler(welcomeEmailHandler);
+      for (const name of ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY']) if (env[name]) process.env[name] = env[name];
+      server.middlewares.use('/api/cart-quote', adaptHandler(cartQuoteHandler));
+      server.middlewares.use('/api/shopper-session', adaptHandler(shopperSessionHandler, 1024 * 1024));
       server.middlewares.use('/api/send-welcome', emailHandler);
       server.middlewares.use('/api/send-email', emailHandler);
       server.middlewares.use('/api/products', async (req, res) => {

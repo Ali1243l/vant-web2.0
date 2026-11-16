@@ -1,3 +1,4 @@
+import { reportCaughtError } from './caughtErrors.ts';
 export function campaignAudience<T extends { email: string; status: string; totalSpent: number; tags: string[] }>(rows: T[], kind: 'active' | 'all' | 'vip'): T[] {
   const seen = new Set<string>();
   return rows.filter(row => {
@@ -22,7 +23,7 @@ export function subscriberDetails(notes?: string): { name?: string; phone: strin
   try {
     const value = JSON.parse(notes || '');
     if (value.kind === 'vant-contact' && typeof value.name === 'string' && typeof value.phone === 'string') return value;
-  } catch {}
+  } catch (caught) { reportCaughtError(caught, 'adminAudience'); }
   return { phone: notes && /^[+\d\s()-]{6,25}$/.test(notes) ? notes : '' };
 }
 

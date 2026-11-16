@@ -1,3 +1,6 @@
+import { reportCaughtError } from './lib/caughtErrors.ts';
+import { useWishlistCatalog } from './hooks/useWishlistCatalog';
+import ShopperAccount from './components/ShopperAccount';
 import { CATEGORY_TRANSLATIONS } from './lib/categoryLabel';
 import { lazy, Suspense, useCallback, useMemo, useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -19,6 +22,7 @@ import { trackEvent, trackVisitorRegion } from './lib/analytics';
 import { useProducts } from './hooks/useProducts';
 import { useInitialImagesReady } from './hooks/useInitialImagesReady';
 import { useWishlist } from './hooks/useWishlist';
+import { useShopperLifecycle } from './hooks/useShopper';
 import { productMatchesQuery } from './lib/search';
 import { Heart, Loader2, Check, X, Sparkles, Gift, Percent, Tag, ArrowUpDown, LayoutGrid, Grid2X2 } from 'lucide-react';
 import type { Product, Language, Theme } from './types';
@@ -38,6 +42,7 @@ const AdminDrawer = lazy(() => initialAdminModule(() => import('./components/Adm
 
 
 function MainApp() {
+  useShopperLifecycle();
   const {
     isAdminOpen,
     setIsAdminOpen,
@@ -73,7 +78,7 @@ function MainApp() {
       if (typeof window !== 'undefined') {
         return sessionStorage.getItem('vant_splash_completed') === 'true';
       }
-    } catch {}
+    } catch (caught) { reportCaughtError(caught, 'App'); }
     return false;
   });
 
@@ -81,12 +86,12 @@ function MainApp() {
     setHasFinishedSplash(true);
     try {
       sessionStorage.setItem('vant_splash_completed', 'true');
-    } catch {}
+    } catch (caught) { reportCaughtError(caught, 'App'); }
   }, []);
 
   const [lang, setLang] = useState<Language>(() => {
     let saved: string | null = null;
-    try { saved = localStorage.getItem('vant-language'); } catch {}
+    try { saved = localStorage.getItem('vant-language'); } catch (caught) { reportCaughtError(caught, 'App'); }
     return resolveStoreLanguage(saved, navigator.languages || [navigator.language]);
   });
   const [theme, setTheme] = useState<Theme>(() => {
@@ -96,7 +101,7 @@ function MainApp() {
   });
   const [category, setCategory] = useState(ALL);
   const [isWishlistOnly, setIsWishlistOnly] = useState(false);
-  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(() => new URLSearchParams(window.location.search).get('shopper') === '1');
   const [isOffersOnly, setIsOffersOnly] = useState(false);
   const [bannerSelection, setBannerSelection] = useState<BannerTarget | null>(null);
   const lastBannerPageAttempt = useRef<string | null>(null);
@@ -150,7 +155,7 @@ function MainApp() {
   useEffect(() => {
     try {
       sessionStorage.removeItem('vant-banner-dismissed');
-    } catch {}
+    } catch (caught) { reportCaughtError(caught, 'App'); }
   }, []);
 
   // Guard against any browser horizontal window displacement on category or filter switch
@@ -242,12 +247,12 @@ function MainApp() {
     document.documentElement.lang = lang;
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
     document.title = STORE_TITLES[lang];
-    try { localStorage.setItem('vant-language', lang); } catch {}
+    try { localStorage.setItem('vant-language', lang); } catch (caught) { reportCaughtError(caught, 'App'); }
   }, [lang]);
 
   // Sync Theme (Dark Mode)
   useEffect(() => {
-    try { localStorage.setItem('vant-theme', theme); } catch {}
+    try { localStorage.setItem('vant-theme', theme); } catch (caught) { reportCaughtError(caught, 'App'); }
   }, [theme]);
 
   // Listen for device OS theme change (System Dark Mode / Light Mode auto sync)
@@ -301,12 +306,24 @@ function MainApp() {
     [lang, products]
   );
 
+  const productIndex = useMemo(() => new Map(products.map(row => [String(row.id), row])), [products]);
+  const onWishlistToggle = useCallback((id: string | number) => {
+    const nextState = !isWishlisted(id); toggleWishlist(id);
+    const found = productIndex.get(String(id));
+    trackEvent('wishlist_toggle', { productId: id, productTitle: found?.title_ar || found?.title || '', isAdded: nextState });
+  }, [isWishlisted, toggleWishlist, productIndex]);
+  const onProductOpen = useCallback((product: Product) => {
+    setSelected(product);
+    trackEvent('product_view', { productId: product.id, productTitle: product.title_ar || product.title, category: product.category, price: product.price });
+  }, []);
+  const favouriteCatalog = useWishlistCatalog(wishlist, isWishlistOnly, products);
+  const scopedProducts = isWishlistOnly ? favouriteCatalog.products : products;
   const offersCount = useMemo(() => products.filter((p) => p.is_offer).length, [products]);
 
   // Compute live counts per availability filter
   const availabilityCounts = useMemo(() => {
     const base = isWishlistOnly
-      ? products.filter((p) => isWishlisted(p.id))
+      ? scopedProducts.filter((p) => isWishlisted(p.id))
       : isOffersOnly
       ? products.filter((p) => p.is_offer)
       : products;
@@ -331,11 +348,11 @@ function MainApp() {
     });
 
     return counts;
-  }, [products, isWishlisted, isWishlistOnly, isOffersOnly, category, searchQuery, bannerSelection]);
+  }, [products, scopedProducts, isWishlisted, isWishlistOnly, isOffersOnly, category, searchQuery, bannerSelection]);
 
   // Combined Filtering & Sorting Pipeline: Offers -> Wishlist -> Category -> Availability -> Search -> Sort
   const visible = useMemo(() => {
-    const filtered = products.filter((p) => {
+    const filtered = scopedProducts.filter((p) => {
       if (bannerSelection && !matchesBannerTarget(p, bannerSelection)) return false;
       // 0. Offers Only Filter
       if (isOffersOnly && !p.is_offer) {
@@ -374,7 +391,7 @@ function MainApp() {
     }
     // Default: 'newest' (products are ordered in natural chronological order, latest first)
     return filtered;
-  }, [products, isOffersOnly, category, wishlist, isWishlistOnly, availabilityFilter, searchQuery, catalogSort, bannerSelection]);
+  }, [scopedProducts, products, isOffersOnly, category, wishlist, isWishlistOnly, availabilityFilter, searchQuery, catalogSort, bannerSelection]);
   useEffect(() => {
     const key = searchQuery.trim() ? null : bannerPageRequestKey(products, bannerSelection, isOffersOnly, visible.length);
     if (!key) { lastBannerPageAttempt.current = null; return; }
@@ -613,6 +630,7 @@ function MainApp() {
         )}
 
         {/* Empty Search/Filter State */}
+        {isWishlistOnly && <div className="mb-4"><ShopperAccount lang={lang}/>{favouriteCatalog.error && <p role="status" className="mt-2 text-xs">{lang === 'ar' ? 'تعذّر تحديث بعض المفضلة؛ المعروض قد يكون من النسخة المحفوظة.' : 'Some favourites could not refresh; cached items may be shown.'}</p>}</div>}
         {visible.length === 0 && !loading && !isWishlistOnly ? (
           <div className="py-20 text-center">
             <h3 className="text-base sm:text-lg font-semibold text-[#15171c] dark:text-white">
@@ -665,7 +683,7 @@ function MainApp() {
           </div>
         ) : (
           <div id="catalog-grid" className="w-full">
-            <MasonryGrid
+          <MasonryGrid
               season={storeSeason}
               products={visible}
               loading={loading}
@@ -673,25 +691,8 @@ function MainApp() {
               lang={lang}
               layout={gridLayout}
               isWishlisted={isWishlisted}
-              onToggleWishlist={(id) => {
-                const nextState = !isWishlisted(id);
-                toggleWishlist(id);
-                const found = products.find((x) => String(x.id) === String(id));
-                trackEvent('wishlist_toggle', {
-                  productId: id,
-                  productTitle: found?.title_ar || found?.title || `Piece #${id}`,
-                  isAdded: nextState,
-                });
-              }}
-              onOpen={(p) => {
-                setSelected(p);
-                trackEvent('product_view', {
-                  productId: p.id,
-                  productTitle: p.title_ar || p.title,
-                  category: p.category,
-                  price: p.price,
-                });
-              }}
+              onToggleWishlist={onWishlistToggle}
+              onOpen={onProductOpen}
             />
 
             {/* Pagination / Infinite Scroll Load More Action */}

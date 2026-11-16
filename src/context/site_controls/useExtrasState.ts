@@ -1,3 +1,4 @@
+import { reportCaughtError } from '../../lib/caughtErrors.ts';
 import { useState, useEffect, useRef } from 'react';
 import type { TrendItem } from '../../types';
 import { DEFAULT_FEATURED_TRENDS } from '../../data/trends';
@@ -41,9 +42,9 @@ export function useExtrasState() {
     queue.current = operation;
     return operation;
   };
-  useEffect(() => { try { localStorage.setItem(keys.trendItems, JSON.stringify(trendItems)); } catch {} }, [trendItems]);
-  useEffect(() => { try { localStorage.setItem(keys.socialLinks, JSON.stringify(socialLinks)); } catch {} }, [socialLinks]);
-  useEffect(() => { try { localStorage.setItem(keys.masterSizes, JSON.stringify(masterSizes)); } catch {} }, [masterSizes]);
+  useEffect(() => { try { localStorage.setItem(keys.trendItems, JSON.stringify(trendItems)); } catch (caught) { reportCaughtError(caught, 'useExtrasState'); } }, [trendItems]);
+  useEffect(() => { try { localStorage.setItem(keys.socialLinks, JSON.stringify(socialLinks)); } catch (caught) { reportCaughtError(caught, 'useExtrasState'); } }, [socialLinks]);
+  useEffect(() => { try { localStorage.setItem(keys.masterSizes, JSON.stringify(masterSizes)); } catch (caught) { reportCaughtError(caught, 'useExtrasState'); } }, [masterSizes]);
   return {
     trendItems, setTrendItems,
     updateTrendItem: (id: string, patch: Partial<TrendItem>) => commit('trendItems', rows => rows.map(row => row.id === id ? { ...row, ...patch } : row)),

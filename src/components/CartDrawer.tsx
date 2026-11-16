@@ -1,3 +1,6 @@
+import { reportCaughtError } from '../lib/caughtErrors';
+import { useShopper } from '../hooks/useShopper';
+import ShopperAccount from './ShopperAccount';
 import CartCheckout from './CartCheckout';
 import { controlActive } from '../lib/siteControlModel';
 import React, { useState, useEffect, useRef } from 'react';
@@ -8,17 +11,9 @@ import { DEFAULT_WHATSAPP_PHONE } from '../lib/constants';
 import { useSiteControls } from '../context/SiteControlsContext';
 import { useScrollLock } from '../hooks/useScrollLock';
 import { useModalFocus } from '../hooks/useModalFocus';
-import { readCart, writeCart, resolveWhatsAppPhone } from '../lib/cart';
+import { resolveWhatsAppPhone } from '../lib/cart';
 
-export interface CartItem {
-  id: string;
-  title: string;
-  image: string;
-  price: number;
-  quantity: number;
-  size?: string;
-  color?: string;
-}
+export type { CartItem } from '../lib/cart';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -33,27 +28,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
   const whatsappPhone = resolveWhatsAppPhone(whatsappPhoneControl?.actionValue, DEFAULT_WHATSAPP_PHONE);
 
   const [cartError, setCartError] = useState('');
-  const [cartItems, setCartItems] = useState<CartItem[]>(() => {
-    try {
-      return readCart();
-    } catch {
-      return [];
-    }
-  });
-
-  const syncCartState = () => {
-    try {
-      setCartItems(readCart());
-    } catch {}
-  };
-
-  useEffect(() => {
-    syncCartState();
-    const handleUpdate = () => syncCartState();
-    window.addEventListener('vant-cart-update', handleUpdate);
-    return () => window.removeEventListener('vant-cart-update', handleUpdate);
-  }, []);
-
+  const { items: cartItems, store } = useShopper();
   useScrollLock(isOpen);
 
   const panelRef = useRef<HTMLDivElement>(null);
@@ -62,36 +37,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
   const isAr = lang === 'ar';
 
   const updateQuantity = (id: string, delta: number) => {
-    const updated = cartItems
-      .map((item) => {
-        if (item.id === id) {
-          const nextQty = item.quantity + delta;
-          return nextQty > 0 ? { ...item, quantity: nextQty } : null;
-        }
-        return item;
-      })
-      .filter(Boolean) as CartItem[];
-
-    saveAndNotify(updated);
+    const item = cartItems.find(row => row.id === id);
+    if (!item) return;
+    try { store.change(item, delta); setCartError(''); }
+    catch (error) { reportCaughtError(error, 'cart-quantity'); setCartError(isAr ? 'الكمية المطلوبة غير متاحة أو تتجاوز الحد.' : 'Quantity is unavailable or exceeds the limit.'); }
   };
-
-  const removeItem = (id: string) => {
-    const updated = cartItems.filter((item) => item.id !== id);
-    saveAndNotify(updated);
-  };
-
-  const clearCart = () => {
-    saveAndNotify([]);
-  };
-
-  const saveAndNotify = (items: CartItem[]) => {
-    try {
-      const totalCount = writeCart(items);
-      setCartItems(items);
-      setCartError('');
-      window.dispatchEvent(new CustomEvent('vant-cart-update', { detail: { count: totalCount, items } }));
-    } catch { setCartError(isAr ? 'تعذّر حفظ التغيير. السلة السابقة باقية؛ حاول مجدداً.' : 'Could not save this change. Your previous cart is unchanged; retry.'); }
-  };
+  const removeItem = (id: string) => store.remove(id);
+  const clearCart = () => store.clear();
   const totalCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
@@ -149,6 +101,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, lang })
 
             {/* Item List */}
             <div data-scroll-lock-scrollable className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 space-y-4">
+              <ShopperAccount lang={lang} />
               {cartError && <p role="alert" className="text-sm text-red-600 dark:text-red-300">{cartError}</p>}
               {cartItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center py-12">

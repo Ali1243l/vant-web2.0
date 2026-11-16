@@ -1,5 +1,7 @@
+import { isShopperCallback } from './shopperAuthUrl.ts';
 export function isPasswordRecoveryUrl(url: string): boolean {
   const parsed = new URL(url);
+  if (isShopperCallback(parsed)) return false;
   const fragment = new URLSearchParams(parsed.hash.slice(1));
   return parsed.searchParams.get('auth') === 'recovery' || fragment.get('type') === 'recovery' || fragment.get('error_code') === 'otp_expired';
 }

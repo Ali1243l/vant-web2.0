@@ -1,3 +1,4 @@
+import { reportCaughtError } from './caughtErrors.ts';
 export interface CartItem {
   id: string;
   title: string;
@@ -6,6 +7,8 @@ export interface CartItem {
   quantity: number;
   size?: string;
   color?: string;
+  productId?: string;
+  variantId?: string;
 }
 
 export function cartItemId(productId: string | number, size = '', color = ''): string {
@@ -16,8 +19,8 @@ export function changeCartQuantity(items: CartItem[], item: CartItem, delta: num
   const existing = items.find((entry) => entry.id === item.id);
   const quantity = (existing?.quantity ?? 0) + delta;
   if (!Number.isSafeInteger(quantity) || quantity > 99) throw new Error('quantity');
-  const remaining = items.filter((entry) => entry.id !== item.id);
-  return quantity > 0 ? [...remaining, { ...item, quantity }] : remaining;
+  if (quantity <= 0) return items.filter(entry => entry.id !== item.id);
+  return existing ? items.map(entry => entry.id === item.id ? { ...item, quantity } : entry) : [...items, { ...item, quantity }];
 }
 
 export function readCart(): CartItem[] {
@@ -33,7 +36,7 @@ export function writeCart(items: CartItem[], storage: Pick<Storage, 'setItem'> =
   const count = items.reduce((sum, item) => sum + item.quantity, 0);
   storage.setItem('vant_cart_items', JSON.stringify(items));
   // The item list is authoritative; the count is a compatibility cache.
-  try { storage.setItem('vant_cart_count', String(count)); } catch {}
+  try { storage.setItem('vant_cart_count', String(count)); } catch (caught) { reportCaughtError(caught, 'cart'); }
   return count;
 }
 

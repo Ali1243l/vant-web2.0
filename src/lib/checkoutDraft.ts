@@ -26,6 +26,15 @@ export function prepareCheckoutDraft(storage: Pick<Storage, 'getItem' | 'setItem
 }
 export type CheckoutDraft = ReturnType<typeof prepareCheckoutDraft>;
 
+export function saveVerifiedCheckoutDraft(storage: Pick<Storage, 'getItem' | 'setItem'>, quote: { items: CartItem[]; subtotal: number; discount: number; total: number; code: string; blocked: boolean; checkedAt: number }, now = Date.now(), id = crypto.randomUUID()): CheckoutDraft {
+  if (quote.blocked || !quote.items.length || now - quote.checkedAt > 30000 || quote.checkedAt > now + 5000 || ![quote.subtotal, quote.discount, quote.total].every(Number.isSafeInteger) || quote.discount < 0 || quote.total < 0 || quote.subtotal - quote.discount !== quote.total || checkoutQuote(quote.items, '', []).subtotal !== quote.subtotal) throw Error('quote');
+  const draft: CheckoutDraft = { id: `VANT-${id}`, status: 'draft', createdAt: new Date(now).toISOString(), items: quote.items.map(item => ({ ...item })), subtotal: quote.subtotal, discount: quote.discount, total: quote.total, code: quote.code };
+  const previous = JSON.parse(storage.getItem(CHECKOUT_DRAFTS_KEY) || '[]');
+  if (!Array.isArray(previous)) throw Error('storage');
+  storage.setItem(CHECKOUT_DRAFTS_KEY, JSON.stringify([...previous.slice(-19), draft]));
+  return draft;
+}
+
 export function checkoutMessage(draft: CheckoutDraft, ar: boolean, format: (value: number) => string) {
   const lines = [ar ? 'مرحباً، أود تثبيت الطلب التالي (الدفع عند الاستلام):' : 'Hello, please confirm this cash-on-delivery order:', `${ar ? 'مرجع الطلب' : 'Reference'}: ${draft.id}`, ''];
   draft.items.forEach((item, index) => lines.push(`${index + 1}. ${item.title}`, `${item.size || '—'} · ${item.color || '—'} · ${ar ? 'الكمية' : 'Qty'}: ${item.quantity}`, format(item.price * item.quantity)));

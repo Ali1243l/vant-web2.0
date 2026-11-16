@@ -1,3 +1,4 @@
+import { reportCaughtError } from './caughtErrors.ts';
 import { supabase } from './supabase';
 import { uploadImageToSupabase, resolveStoredImages } from './storage';
 import { normalizeEmailImageUrl } from './emailImage';
@@ -86,7 +87,7 @@ export async function saveCampaignTemplate(template: CampaignTemplateConfig): Pr
     if (typeof window !== 'undefined') {
       localStorage.setItem(CUSTOM_TEMPLATES_KEY, JSON.stringify(updated));
     }
-  } catch {}
+  } catch (caught) { reportCaughtError(caught, 'newsletter'); }
 
   if (supabase) {
     try {
@@ -118,7 +119,7 @@ export async function deleteCampaignTemplate(templateId: string): Promise<Campai
     if (typeof window !== 'undefined') {
       localStorage.setItem(CUSTOM_TEMPLATES_KEY, JSON.stringify(customOnly));
     }
-  } catch {}
+  } catch (caught) { reportCaughtError(caught, 'newsletter'); }
 
   return updated;
 }
@@ -221,7 +222,7 @@ export async function addSubscriber(
             .from('newsletter_subscribers')
             .update({ status: 'active', subscribed_at: existing.subscribed_at })
             .eq('email', cleanEmail);
-        } catch {}
+        } catch (caught) { reportCaughtError(caught, 'newsletter'); }
       }
     }
     return { success: true, isNew: false, subscriber: existing };
@@ -294,7 +295,7 @@ export async function removeSubscriber(idOrEmail: string): Promise<boolean> {
         details: { email: targetEmail, deleted_at: new Date().toISOString() },
         created_at: new Date().toISOString(),
       });
-    } catch {}
+    } catch (caught) { reportCaughtError(caught, 'newsletter'); }
   }
   return saveSubscribers(updated);
 }
@@ -310,7 +311,7 @@ export function getSavedCampaigns(): CampaignOffer[] {
         return JSON.parse(raw);
       }
     }
-  } catch {}
+  } catch (caught) { reportCaughtError(caught, 'newsletter'); }
   return [];
 }
 
@@ -356,7 +357,7 @@ export async function recordCampaign(campaign: Omit<CampaignOffer, 'id' | 'creat
     if (typeof window !== 'undefined') {
       localStorage.setItem(CAMPAIGNS_KEY, JSON.stringify(updated));
     }
-  } catch {}
+  } catch (caught) { reportCaughtError(caught, 'newsletter'); }
 
   if (supabase) {
     try {
@@ -538,7 +539,7 @@ export async function dispatchCampaignEmail(params: {
       sent_count: 1,
       template_id: tpl?.id || 'custom',
     });
-  } catch {}
+  } catch (caught) { reportCaughtError(caught, 'newsletter'); }
 
   return {
     success: emailSent,

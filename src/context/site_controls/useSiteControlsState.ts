@@ -1,3 +1,4 @@
+import { reportCaughtError } from '../../lib/caughtErrors.ts';
 import { useState, useEffect } from 'react';
 import type { SiteControlItem, CurrencyType } from '../siteControlsTypes';
 import { DEFAULT_SITE_CONTROLS } from '../defaultSiteControls';
@@ -38,7 +39,7 @@ export function useSiteControlsState(
           return merged;
         }
       }
-    } catch {}
+    } catch (caught) { reportCaughtError(caught, 'useSiteControlsState'); }
     return { ...DEFAULT_SITE_CONTROLS };
   });
 
@@ -86,7 +87,7 @@ export function useSiteControlsState(
       };
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(nextControls));
-      } catch {}
+      } catch (caught) { reportCaughtError(caught, 'useSiteControlsState'); }
       saveSiteConfigToSupabase({
         controls: nextControls,
         currency,
@@ -111,7 +112,7 @@ export function useSiteControlsState(
       };
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(nextControls));
-      } catch {}
+      } catch (caught) { reportCaughtError(caught, 'useSiteControlsState'); }
       saveSiteConfigToSupabase({
         controls: nextControls,
         currency,
@@ -138,7 +139,7 @@ export function useSiteControlsState(
       nextControlsState = nextControls;
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(nextControls));
-      } catch {}
+      } catch (caught) { reportCaughtError(caught, 'useSiteControlsState'); }
       return nextControls;
     });
 
@@ -165,7 +166,7 @@ export function useSiteControlsState(
         };
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(nextControls));
-        } catch {}
+        } catch (caught) { reportCaughtError(caught, 'useSiteControlsState'); }
         saveSiteConfigToSupabase({
           controls: nextControls,
           currency,
@@ -182,7 +183,7 @@ export function useSiteControlsState(
     setControls({ ...DEFAULT_SITE_CONTROLS });
     try {
       localStorage.removeItem(STORAGE_KEY);
-    } catch {}
+    } catch (caught) { reportCaughtError(caught, 'useSiteControlsState'); }
     saveSiteConfigToSupabase({
       controls: { ...DEFAULT_SITE_CONTROLS },
       currency,
@@ -206,7 +207,7 @@ export function useSiteControlsState(
         }));
         return true;
       }
-    } catch {}
+    } catch (caught) { reportCaughtError(caught, 'useSiteControlsState'); }
     return false;
   };
 

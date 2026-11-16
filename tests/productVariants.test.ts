@@ -36,6 +36,13 @@ test('an empty configured color does not inherit another color image or sizes', 
   assert.deepEqual(resolved.variants[0].sizes, []);
 });
 
+test('configured variant identities survive edits and duplicate IDs remain unique', () => {
+  assert.deepEqual(resolveProductColorVariants(product).variants.map(row => row.id), ['black', 'white']);
+  const variants = product.variants!.map(row => ({ ...row, id: 'same' }));
+  const ids = resolveProductColorVariants({ ...product, variants }).variants.map(row => row.id);
+  assert.equal(ids[0], 'same'); assert.equal(new Set(ids).size, ids.length);
+});
+
 test('legacy products still infer colors; malformed URL encoding does not crash the catalog', () => {
   const resolved = resolveProductColorVariants({ ...product, variants: undefined, images: ['/shirt_Black_1.svg', '/shirt_White_1.svg'] });
   assert.equal(resolved.hasMultipleColors, true);

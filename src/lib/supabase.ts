@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { isShopperCallback } from './shopperAuthUrl';
 
 const supabaseUrl =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
@@ -11,7 +12,12 @@ export const isSupabaseConfigured = Boolean(
 );
 
 export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey, { auth: { detectSessionInUrl: url => !isShopperCallback(url) } })
+  : null;
+
+// Customer login must never replace the administrator's session.
+export const shopperClient = isSupabaseConfigured
+  ? createClient(supabaseUrl, supabaseAnonKey, { auth: { storageKey: 'vant_customer_auth_v1', persistSession: false, autoRefreshToken: false, detectSessionInUrl: url => isShopperCallback(url) } })
   : null;
 
 /**

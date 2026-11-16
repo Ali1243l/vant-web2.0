@@ -1,10 +1,12 @@
+import { reportCaughtError } from '../../lib/caughtErrors';
 import { controlActive } from '../../lib/siteControlModel';
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Minus, ShoppingCart, Trash2 } from 'lucide-react';
 import { useSiteControls } from '../../context/SiteControlsContext';
 import type { Language } from '../../types';
-import { cartItemId, changeCartQuantity, readCart, writeCart } from '../../lib/cart';
+import { cartItemId } from '../../lib/cart';
+import { useShopper } from '../../hooks/useShopper';
 
 interface FlyingThumbnail {
   id: string;
@@ -23,6 +25,7 @@ interface CartInteractionWrapperProps {
   productPrice?: number;
   size?: string;
   color?: string;
+  variantId?: string;
   disabled?: boolean;
   lang?: Language;
   onAddToCart?: () => void;
@@ -43,6 +46,7 @@ export const CartInteractionWrapper: React.FC<CartInteractionWrapperProps> = ({
   productPrice = 0,
   size,
   color,
+  variantId,
   disabled = false,
   lang = 'ar',
   onAddToCart,
@@ -66,17 +70,11 @@ export const CartInteractionWrapper: React.FC<CartInteractionWrapperProps> = ({
       ? cartAnimControl.enabled !== false && cartAnimControl.visible !== false
       : true;
 
-  const [quantity, setQuantity] = useState<number>(initialQuantity);
+  const { items, store } = useShopper();
   const [flyingItems, setFlyingItems] = useState<FlyingThumbnail[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
-  const itemId = cartItemId(productId ?? productTitle, size, color);
-
-  useEffect(() => {
-    const sync = () => setQuantity(readCart().find((item) => item.id === itemId)?.quantity ?? 0);
-    sync();
-    window.addEventListener('vant-cart-update', sync);
-    return () => window.removeEventListener('vant-cart-update', sync);
-  }, [itemId]);
+  const itemId = cartItemId(productId ?? productTitle, size, variantId || color);
+  const quantity = items.find(item => item.id === itemId || item.productId === String(productId) && item.size === size && !item.variantId && item.color === color)?.quantity || 0;
 
   const triggerFlyAnimation = useCallback(
     (e?: React.MouseEvent) => {
@@ -140,20 +138,12 @@ export const CartInteractionWrapper: React.FC<CartInteractionWrapperProps> = ({
   const [cartError, setCartError] = useState('');
   const updateGlobalCartCount = (delta: number) => {
     try {
-      const currentItems = readCart();
-      const itemTitle = productTitle || 'قطعة مميزة من التشكيلة';
-      const itemImage = productImage || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?q=80&w=200&auto=format&fit=crop';
-
-      const items = changeCartQuantity(currentItems, {
-        id: itemId, title: itemTitle, image: itemImage,
-        price: productPrice, quantity: 0, size, color,
-      }, delta);
-
-      const nextCount = writeCart(items);
-      window.dispatchEvent(new CustomEvent('vant-cart-update', { detail: { count: nextCount, items } }));
+      if (productId === undefined) throw Error('Missing product identity');
+      store.change({ id: itemId, productId: String(productId), variantId, title: productTitle, image: productImage,
+        price: productPrice, quantity: 1, size, color }, delta);
       setCartError('');
       return true;
-    } catch { setCartError(lang === 'ar' ? 'تعذّر حفظ السلة. حاول مجدداً.' : 'Could not save cart. Please retry.'); return false; }
+    } catch (error) { reportCaughtError(error, 'cart-change'); setCartError(lang === 'ar' ? 'تعذّر حفظ السلة. حاول مجدداً.' : 'Could not save cart. Please retry.'); return false; }
   };
 
   const removeFlyingItem = useCallback((id: string) => {
@@ -169,7 +159,6 @@ export const CartInteractionWrapper: React.FC<CartInteractionWrapperProps> = ({
     if (quantity >= 99) return;
     const nextQty = quantity + 1;
     if (!updateGlobalCartCount(1)) return;
-    setQuantity(nextQty);
     if (quantity === 0) {
       if (onAddToCart) onAddToCart();
     }
@@ -183,7 +172,6 @@ export const CartInteractionWrapper: React.FC<CartInteractionWrapperProps> = ({
     if (disabled || !controlActive(addToCartBtnControl) || quantity <= 0) return;
     const nextQty = quantity - 1;
     if (!updateGlobalCartCount(-1)) return;
-    setQuantity(nextQty);
     if (onQuantityChange) onQuantityChange(nextQty);
   };
 

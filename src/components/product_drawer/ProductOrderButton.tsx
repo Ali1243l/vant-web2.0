@@ -19,6 +19,7 @@ interface ProductOrderButtonProps {
   displayTitle?: string;
   activePrice: number;
   color?: string;
+  variantId?: string;
   unavailable?: boolean;
   selectedSize: string | null;
   buttonLabel: string;
@@ -32,6 +33,7 @@ export const ProductOrderButton: React.FC<ProductOrderButtonProps> = ({
   displayTitle,
   activePrice,
   color,
+  variantId,
   unavailable,
   selectedSize,
   lang,
@@ -88,6 +90,7 @@ export const ProductOrderButton: React.FC<ProductOrderButtonProps> = ({
           productPrice={activePrice}
           size={selectedSize || undefined}
           color={color}
+          variantId={variantId}
           disabled={!product || !selectedSize || unavailable || !controlActive(cartControl)}
           lang={lang}
           onAddToCart={handleAddToCartTrack}

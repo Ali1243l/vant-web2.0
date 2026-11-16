@@ -1,3 +1,4 @@
+import { reportCaughtError } from '../../lib/caughtErrors.ts';
 import { parseCatalogBackup, storeCatalogRestore } from '../../lib/catalogBackup';
 import { buildBannerChanges, storeBannerDraft, type BannerEdits, type TrendEdits } from '../../lib/bannerEditor';
 import { isSupabaseConfigured } from '../../lib/supabase';
@@ -168,7 +169,7 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
         setCurrencyState(cloudConfig.currency as CurrencyType);
         try {
           localStorage.setItem(CURRENCY_STORAGE_KEY, cloudConfig.currency);
-        } catch {}
+        } catch (caught) { reportCaughtError(caught, 'SiteControlsProvider'); }
       }
 
       // 2. Controls & Banner Image
@@ -201,7 +202,7 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
           });
           try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-          } catch {}
+          } catch (caught) { reportCaughtError(caught, 'SiteControlsProvider'); }
           return merged;
         });
       }
@@ -211,7 +212,7 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
         setTrendItems(cloudConfig.trendItems);
         try {
           localStorage.setItem('vant_custom_trends_v2', JSON.stringify(cloudConfig.trendItems));
-        } catch {}
+        } catch (caught) { reportCaughtError(caught, 'SiteControlsProvider'); }
       }
 
       // 4. Social Links
@@ -219,7 +220,7 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
         setSocialLinks(cloudConfig.socialLinks);
         try {
           localStorage.setItem('vant_social_links_v1', JSON.stringify(cloudConfig.socialLinks));
-        } catch {}
+        } catch (caught) { reportCaughtError(caught, 'SiteControlsProvider'); }
       }
 
       // 4.5 Master Sizes & Measurements
@@ -227,7 +228,7 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
         setMasterSizes(cloudConfig.sizeGuideRows);
         try {
           localStorage.setItem(SIZES_STORAGE_KEY, JSON.stringify(cloudConfig.sizeGuideRows));
-        } catch {}
+        } catch (caught) { reportCaughtError(caught, 'SiteControlsProvider'); }
       }
 
       // 5. Enhancements
@@ -236,7 +237,7 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
           const current = getStoredEnhancements();
           const mergedEnhancements = mergeProductEnhancements(current, cloudConfig.enhancements);
           localStorage.setItem(ENHANCEMENTS_STORAGE_KEY, JSON.stringify(mergedEnhancements));
-        } catch {}
+        } catch (caught) { reportCaughtError(caught, 'SiteControlsProvider'); }
         loadProductsFromSupabase(true);
       }
 
@@ -246,7 +247,7 @@ export function SiteControlsProvider({ children }: { children: ReactNode }) {
           const merged = { ...prev, ...cloudConfig.site_settings };
           try {
             localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(merged));
-          } catch {}
+          } catch (caught) { reportCaughtError(caught, 'SiteControlsProvider'); }
           return merged;
         });
       }

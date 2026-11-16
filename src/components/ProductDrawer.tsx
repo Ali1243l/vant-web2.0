@@ -414,6 +414,7 @@ export default function ProductDrawer({ product, loading, lang, onClose }: Props
                       displayTitle={displayTitle}
                       activePrice={activePrice}
                       color={colorSpecLabel}
+                      variantId={activeVariant?.id}
                       unavailable={availability === 'sold_out' || availability === 'coming_soon' || (selectedSize !== null && !availableSizes.has(selectedSize.toUpperCase()))}
                       selectedSize={selectedSize}
                       buttonLabel={buttonLabel}

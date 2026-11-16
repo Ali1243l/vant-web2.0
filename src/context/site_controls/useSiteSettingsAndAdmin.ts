@@ -1,3 +1,4 @@
+import { reportCaughtError } from '../../lib/caughtErrors.ts';
 import { useState, useCallback, useEffect } from 'react';
 import type { CurrencyType, SiteSettings } from '../siteControlsTypes';
 import { DEFAULT_SITE_SETTINGS } from '../siteControlsTypes';
@@ -46,7 +47,7 @@ export function useSiteSettingsAndAdmin() {
       if (typeof window !== 'undefined') {
         return sessionStorage.getItem(SESSION_AUTH_KEY) === 'true';
       }
-    } catch {}
+    } catch (caught) { reportCaughtError(caught, 'useSiteSettingsAndAdmin'); }
     return false;
   });
 
@@ -61,7 +62,7 @@ export function useSiteSettingsAndAdmin() {
         await requireCloudAdmin(client);
         if (!active || current !== revision) return;
         setIsAdminUnlocked(true);
-        try { sessionStorage.setItem(SESSION_AUTH_KEY, 'true'); } catch {}
+        try { sessionStorage.setItem(SESSION_AUTH_KEY, 'true'); } catch (caught) { reportCaughtError(caught, 'useSiteSettingsAndAdmin'); }
       } catch { /* Keep the local lock available when cloud sign-in is unavailable. */ }
     };
     void restore();
@@ -69,7 +70,7 @@ export function useSiteSettingsAndAdmin() {
       if (event === 'SIGNED_OUT') {
         revision++;
         setIsAdminUnlocked(false);
-        try { sessionStorage.removeItem(SESSION_AUTH_KEY); } catch {}
+        try { sessionStorage.removeItem(SESSION_AUTH_KEY); } catch (caught) { reportCaughtError(caught, 'useSiteSettingsAndAdmin'); }
       } else setTimeout(() => { if (active) void restore(); }, 0);
     });
     return () => { active = false; revision++; data.subscription.unsubscribe(); };
@@ -85,7 +86,7 @@ export function useSiteSettingsAndAdmin() {
       setIsAdminUnlocked(true);
       try {
         sessionStorage.setItem(SESSION_AUTH_KEY, 'true');
-      } catch {}
+      } catch (caught) { reportCaughtError(caught, 'useSiteSettingsAndAdmin'); }
       return true;
     }
     return false;
@@ -96,7 +97,7 @@ export function useSiteSettingsAndAdmin() {
     setIsAdminUnlocked(false);
     try {
       sessionStorage.removeItem(SESSION_AUTH_KEY);
-    } catch {}
+    } catch (caught) { reportCaughtError(caught, 'useSiteSettingsAndAdmin'); }
     setIsAdminOpen(false);
   };
 
@@ -160,7 +161,7 @@ export function useSiteSettingsAndAdmin() {
         setSiteSettings(current => ({ ...merged, legal_pages: current.legal_pages ?? merged.legal_pages }));
         try {
           localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(merged));
-        } catch {}
+        } catch (caught) { reportCaughtError(caught, 'useSiteSettingsAndAdmin'); }
       }
     } catch (err) {
       console.warn('Failed to load site_settings from Supabase:', err);

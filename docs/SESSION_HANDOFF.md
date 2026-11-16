@@ -232,3 +232,9 @@ The agent cannot see the user's remaining allowance and must not state it reache
 
 
 Final published follow-up: d337e8b deployed successfully. After the owner reported a Supabase quota outage, the last production reload could not refresh catalog/activity and displayed explicit unavailable/error messages. No new cloud writes were attempted after that report. Earlier live save/restore and audit verification succeeded; current cloud availability is not confirmed. Recheck live reads after service recovery. Owner reports quota reset on December 1; this date was not independently verified.
+
+
+## 2026-11-16 — Shopping state, validation and cloud-ready sync
+- See docs/SHOPPER_SYNC.md for behaviour, security, algorithm limits, local evidence and activation steps. Cart/wishlist/coupon share a durable store with batching, retry deduplication, merge, offline statuses, authoritative quote review and separate HttpOnly customer sessions. Catalog keyset pagination/deduplication improved; handled failures feed diagnostics.
+- Owner reconfirmed Supabase is stopped. New migration 20261116_shopper_state.sql tested on disposable PostgreSQL only, NOT applied live. Customer magic-link redirect must be added after recovery, followed by real-device and live RLS/quote tests. No real messages/orders sent.
+- Local browser fixtures at320/390/1440 with zero page errors; all check results and audit logs under ignored .cache, screenshots under the chat visualization directory. Existing user-staged .rooignore left untouched. Production build still warns about large chunks.

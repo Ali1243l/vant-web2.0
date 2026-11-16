@@ -1,3 +1,6 @@
+import { mapCatalogProducts as mapSupabaseProducts } from '../../lib/mapCatalogProducts';
+import { mergeProducts } from '../../lib/catalogIndex';
+import { trackSystemError } from '../../lib/analytics/tracker';
 import { saveCatalogProduct } from '../../lib/saveCatalogProduct';
 import { fetchCatalogPage } from '../../lib/catalogFetch';
 import { useState, useCallback, useRef, useEffect } from 'react';
@@ -23,7 +26,7 @@ export function useCatalogProducts() {
           if (Array.isArray(parsed) && parsed.length > 0) return parsed;
         }
       }
-    } catch {}
+    } catch (error) { trackSystemError('Catalog cache read failed', '', { kind: 'save', operation: 'catalog-cache' }); }
     return localPreview ? FALLBACK_CATALOG_PRODUCTS : [];
   });
   const [loading, setLoading] = useState<boolean>(false);
@@ -38,78 +41,30 @@ export function useCatalogProducts() {
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const hasLoadedOnceRef = useRef(false);
   const PAGE_SIZE = 12;
-
-  const mapSupabaseProducts = (data: any[]): Product[] => {
-    const enhancements = resolveStoredImages(getStoredEnhancements());
-    return resolveStoredImages(data || []).map((p) => {
-      const pIdStr = String(p.id);
-      const enh = { ...(enhancements[pIdStr] || {}), ...(p.admin_metadata || {}) };
-      const statusStr = String(p.status || '').toUpperCase();
-      let availability: ProductAvailability = 'in_stock';
-      if (statusStr === 'SOLD_OUT' || statusStr === 'OUT_OF_STOCK') {
-        availability = 'sold_out';
-      } else if (statusStr === 'COMING_SOON') {
-        availability = 'coming_soon';
-      } else if (statusStr === 'LIMITED') {
-        availability = 'limited';
-      }
-
-      const rawMedia = p.product_media || [];
-      const sortedMedia = Array.isArray(rawMedia)
-        ? [...rawMedia].sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
-        : [];
-      const mediaUrls = sortedMedia.map((m: any) => m.media_url).filter(Boolean);
-
-      const defaultImg =
-        enh.image_url ||
-        mediaUrls[0] ||
-        'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=800&q=80';
-      const imagesList = enh.images && enh.images.length > 0 ? enh.images : mediaUrls.length > 0 ? mediaUrls : [defaultImg];
-
-      return {
-        id: p.id,
-        title: p.title || enh.title_ar || 'قطعة فاخرة',
-        title_ar: enh.title_ar || p.title || 'قطعة فاخرة',
-        price: typeof p.price === 'number' ? p.price : parseFloat(p.price || 0),
-        original_price: typeof enh.original_price === 'number' ? enh.original_price : undefined,
-        is_offer: enh.is_offer ?? Boolean(p.is_exclusive_drop),
-        offer_badge_ar: enh.offer_badge_ar || undefined,
-        offer_badge_en: enh.offer_badge_en || undefined,
-        category: p.category || 'Tailoring',
-        category_ar: enh.category_ar || p.category || 'الأزياء الرسمية',
-        description: p.description || '',
-        description_ar: enh.description_ar ?? p.description ?? '',
-        material: p.material || '',
-        fit_details: p.fit_details || 'قصة إيطالية سليم فيت محددة بدقة',
-        availability,
-        sizes: Array.isArray(p.sizes) && p.sizes.length > 0 ? p.sizes : ['S', 'M', 'L', 'XL'],
-        catalog_image: enh.catalog_image ?? p.catalog_image,
-        image_url: defaultImg,
-        images: imagesList,
-        colors: enh.colors ?? p.colors,
-        variants: enh.variants ?? p.variants,
-        sku: enh.sku ?? p.sku,
-        stock: enh.stock ?? p.stock,
-        created_at: p.created_at,
-        tags: enh.tags || [],
-      };
-    });
-  };
+  const productsRef = useRef(products); productsRef.current = products;
+  const pageBusy = useRef(false);
+  const cursor = useRef<{ created_at: string; id: string } | null>(null);
+  const generation = useRef(0);
+  const recordError = (error: unknown, operation: string) => trackSystemError(error instanceof Error ? error.message : 'Catalog request failed', '', { kind: 'save', operation });
 
   const loadProductsFromSupabase = useCallback(async (isSilent = false) => {
     try {
-      if (!isSilent && !hasLoadedOnceRef.current && products.length === 0) {
+      if (!isSilent && !hasLoadedOnceRef.current && productsRef.current.length === 0) {
         setLoading(true);
       }
       setError(null);
 
+      const requestGeneration = ++generation.current;
       const result = await fetchCatalogPage(fetch, supabase, PAGE_SIZE);
+      if (requestGeneration !== generation.current) return;
       const fetchedData = result?.data;
       const fetchedCount = result?.count;
 
       if (fetchedData && (fetchedData.length > 0 || !localPreview)) {
         const mapped = mapSupabaseProducts(fetchedData);
-        setProducts(mapped);
+        setProducts(mergeProducts([], mapped));
+        const last = fetchedData[fetchedData.length - 1];
+        cursor.current = last ? { created_at: last.created_at, id: String(last.id) } : null;
         setTotalProductsCount(fetchedCount || mapped.length);
         setCurrentPage(1);
         setHasMore((fetchedCount ?? mapped.length) > mapped.length);
@@ -125,7 +80,8 @@ export function useCatalogProducts() {
         setTotalProductsCount((prev) => (prev > 0 ? prev : localPreview ? FALLBACK_CATALOG_PRODUCTS.length : 0));
         hasLoadedOnceRef.current = true;
       }
-    } catch {
+    } catch (error) {
+      recordError(error, 'catalog-refresh');
       if (!localPreview) setError('catalog_unavailable');
       // Keep a cached catalog available when the network fails.
       setHasMore(false);
@@ -134,62 +90,50 @@ export function useCatalogProducts() {
     } finally {
       setLoading(false);
     }
-  }, [products.length]);
+  }, []);
 
   const loadMoreProducts = useCallback(async () => {
-    if (!supabase || loadingMore || !hasMore) return;
-
+    if (!supabase || pageBusy.current || !hasMore || !cursor.current) return;
+    const after = cursor.current;
+    if (!/^[0-9TZ:.+ -]+$/.test(after.created_at) || !/^[a-zA-Z0-9-]{1,80}$/.test(after.id)) { setError('catalog_unavailable'); return; }
+    pageBusy.current = true; setLoadingMore(true);
+    const requestGeneration = generation.current;
     try {
-      setLoadingMore(true);
-      const start = currentPage * PAGE_SIZE;
-      const end = start + PAGE_SIZE - 1;
+      const { data, count, error } = await supabase.from('products').select('*, product_media(*)', { count: 'exact' })
+        .order('created_at', { ascending: false }).order('id', { ascending: false })
+        .or(`created_at.lt.${after.created_at},and(created_at.eq.${after.created_at},id.lt.${after.id})`).limit(PAGE_SIZE);
+      if (error) throw error;
+      if (requestGeneration !== generation.current) return;
+      const mapped = mapSupabaseProducts(data || []);
+      setProducts(previous => mergeProducts(previous, mapped));
+      const last = data?.[data.length - 1];
+      if (last) cursor.current = { created_at: last.created_at, id: String(last.id) };
+      setHasMore((count ?? mapped.length) > mapped.length);
+      setCurrentPage(previous => previous + 1); setError(null);
+    } catch (error) { setError('catalog_unavailable'); recordError(error, 'catalog-page'); }
+    finally { pageBusy.current = false; setLoadingMore(false); }
+  }, [hasMore]);
 
-      const { data, count, error: sbError } = await supabase
-        .from('products')
-        .select('*, product_media(*)', { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range(start, end);
-
-      if (sbError) {
-        if (!sbError.message.includes('Failed to fetch')) {
-          console.warn('Supabase pagination fetch info:', sbError.message);
-        }
-      } else {
-        const mapped = mapSupabaseProducts(data || []);
-        setProducts((prev) => {
-          const existingIds = new Set(prev.map((p) => String(p.id)));
-          const uniqueNew = mapped.filter((p) => !existingIds.has(String(p.id)));
-          return [...prev, ...uniqueNew];
-        });
-        setCurrentPage((prev) => prev + 1);
-        setHasMore(start + mapped.length < (count || 0));
-      }
-    } catch (err: any) {
-      if (!err?.message?.includes('Failed to fetch')) {
-        console.warn('Pagination fetch fallback:', err?.message);
-      }
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [currentPage, hasMore, loadingMore]);
-
-  // Realtime subscription setup
+  // Realtime refreshes the changed record, rather than resetting the loaded pages.
   useEffect(() => {
-    loadProductsFromSupabase();
+    void loadProductsFromSupabase();
     const client = supabase;
-    if (client) {
-      const channel = client
-        .channel('site_controls_products')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
-          loadProductsFromSupabase(true);
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'product_media' }, () => {
-          loadProductsFromSupabase(true);
-        })
-        .subscribe();
-      return () => {        client.removeChannel(channel);
-      };
-    }
+    if (!client) return;
+    let active = true;
+    const update = async (event: any, media = false) => {
+      const id = media ? event.new?.product_id || event.old?.product_id : event.new?.id || event.old?.id;
+      if (!id) return;
+      if (!media && event.eventType === 'DELETE') { setProducts(previous => previous.filter(row => String(row.id) !== String(id))); return; }
+      try {
+        const { data, error } = await client.from('products').select('*, product_media(*)').eq('id', id).maybeSingle();
+        if (error) throw error;
+        if (active && data) setProducts(previous => event.eventType === 'INSERT' && !media ? mergeProducts(mapSupabaseProducts([data]), previous.filter(row => String(row.id) !== String(id))) : previous.some(row => String(row.id) === String(id)) ? mergeProducts(previous, mapSupabaseProducts([data])) : previous);
+      } catch (error) { recordError(error, 'catalog-realtime'); }
+    };
+    const channel = client.channel('site_controls_products')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, event => { void update(event); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'product_media' }, event => { void update(event, true); }).subscribe();
+    return () => { active = false; void client.removeChannel(channel); };
   }, [loadProductsFromSupabase]);
 
   // Save products whenever modified
@@ -197,6 +141,7 @@ export function useCatalogProducts() {
     try {
       localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(products));
     } catch (e) {
+      recordError(e, 'catalog-cache');
       console.warn('Failed to save products to localStorage', e);
     }
   }, [products]);
@@ -215,6 +160,7 @@ export function useCatalogProducts() {
       setProducts(prev => [product, ...prev.filter(item => String(item.id) !== String(product.id))]);
       return product;
     } catch (error) {
+      recordError(error, 'product-save');
       console.warn('Product save failed:', error instanceof Error ? error.message : 'save');
       return null;
     }
@@ -283,7 +229,7 @@ export function useCatalogProducts() {
         setProducts(parsed);
         return true;
       }
-    } catch {}
+    } catch (error) { recordError(error, 'catalog-import'); }
     return false;
   };
 

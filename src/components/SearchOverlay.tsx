@@ -1,3 +1,4 @@
+import { reportCaughtError } from '../lib/caughtErrors.ts';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, History, Trash2, Sparkles } from 'lucide-react';
@@ -45,7 +46,7 @@ export default function SearchOverlay({
       const updated = [cleaned, ...filtered].slice(0, 8);
       try {
         localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(updated));
-      } catch {}
+      } catch (caught) { reportCaughtError(caught, 'SearchOverlay'); }
       return updated;
     });
   }, []);
@@ -56,7 +57,7 @@ export default function SearchOverlay({
       const updated = prev.filter((item) => item !== termToRemove);
       try {
         localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(updated));
-      } catch {}
+      } catch (caught) { reportCaughtError(caught, 'SearchOverlay'); }
       return updated;
     });
   };
@@ -65,7 +66,7 @@ export default function SearchOverlay({
     setRecentSearches([]);
     try {
       localStorage.removeItem(SEARCH_HISTORY_KEY);
-    } catch {}
+    } catch (caught) { reportCaughtError(caught, 'SearchOverlay'); }
   };
 
   useScrollLock(isOpen);
@@ -75,7 +76,7 @@ export default function SearchOverlay({
       try {
         const saved = localStorage.getItem(SEARCH_HISTORY_KEY);
         if (saved) setRecentSearches(JSON.parse(saved));
-      } catch {}
+      } catch (caught) { reportCaughtError(caught, 'SearchOverlay'); }
 
     }
   }, [isOpen]);

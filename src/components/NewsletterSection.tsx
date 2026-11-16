@@ -1,3 +1,4 @@
+import { reportCaughtError } from '../lib/caughtErrors.ts';
 import { useState, useEffect, type FormEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -126,7 +127,7 @@ export default function NewsletterSection({ lang }: Props) {
               setIsSubscribed(true);
             }
           }
-        } catch {}
+        } catch (caught) { reportCaughtError(caught, 'NewsletterSection'); }
       })
       .catch(() => {});
 
@@ -178,7 +179,7 @@ export default function NewsletterSection({ lang }: Props) {
               ip: clientIp || undefined,
             })
           );
-        } catch {}
+        } catch (caught) { reportCaughtError(caught, 'NewsletterSection'); }
 
         // Save to IP map
         if (clientIp) {
@@ -187,7 +188,7 @@ export default function NewsletterSection({ lang }: Props) {
             const map = mapRaw ? JSON.parse(mapRaw) : {};
             map[clientIp] = cleanEmail;
             localStorage.setItem(IP_MAP_KEY, JSON.stringify(map));
-          } catch {}
+          } catch (caught) { reportCaughtError(caught, 'NewsletterSection'); }
         }
 
         // Automatically dispatch welcome email copy
@@ -247,7 +248,7 @@ export default function NewsletterSection({ lang }: Props) {
             localStorage.setItem(IP_MAP_KEY, JSON.stringify(map));
           }
         }
-      } catch {}
+      } catch (caught) { reportCaughtError(caught, 'NewsletterSection'); }
 
       setIsSubscribed(false);
       setSavedEmail('');

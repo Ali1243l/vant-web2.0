@@ -1,4 +1,4 @@
-import { readCart } from '../lib/cart';
+import { useShopper } from '../hooks/useShopper';
 import { controlActive } from '../lib/siteControlModel';
 import { useEffect, useLayoutEffect, useState, useRef, type ReactNode } from 'react';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent, useReducedMotion } from 'framer-motion';
@@ -67,36 +67,18 @@ export default function Header({
   const scrollState = useRef(INITIAL_HEADER_SCROLL);
   const reduceMotion = useReducedMotion();
   const [kineticLang, setKineticLang] = useState<'en' | 'ar'>(lang);
-  const [cartCount, setCartCount] = useState<number>(() => {
-    try {
-      return readCart().reduce((sum, item) => sum + item.quantity, 0);
-    } catch {
-      return 0;
-    }
-  });
+  const { items: cartItems } = useShopper();
+  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const [isCartBouncing, setIsCartBouncing] = useState(false);
 
   useEffect(() => {
-    const handleCartUpdate = (e: Event) => {
-      const customEv = e as CustomEvent;
-      if (customEv.detail && typeof customEv.detail.count === 'number') {
-        setCartCount(customEv.detail.count);
-      } else {
-        try {
-          setCartCount(readCart().reduce((sum, item) => sum + item.quantity, 0));
-        } catch {}
-      }
-    };
-
     const handleCartBounce = () => {
       setIsCartBouncing(true);
       setTimeout(() => setIsCartBouncing(false), 600);
     };
 
-    window.addEventListener('vant-cart-update', handleCartUpdate);
     window.addEventListener('vant-cart-bounce', handleCartBounce);
     return () => {
-      window.removeEventListener('vant-cart-update', handleCartUpdate);
       window.removeEventListener('vant-cart-bounce', handleCartBounce);
     };
   }, []);

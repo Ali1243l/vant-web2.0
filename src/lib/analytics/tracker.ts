@@ -1,4 +1,5 @@
 import { supabase } from '../supabase';
+import { setCaughtErrorReporter } from '../caughtErrors.ts';
 import { diagnosticText, diagnosticPath, sanitizeTelemetry, diagnosticDevice, diagnosticHint, errorFingerprint, type ErrorContext } from '../diagnostics';
 import { queueDiagnostic, flushDiagnosticQueue } from '../errorDelivery';
 import { mergeCloudEvents } from './mergeCloudEvents';
@@ -184,7 +185,7 @@ export function trackSystemError(errorMessage: string, errorStack?: string, cont
       breadcrumbs: breadcrumbs.slice(), hint: diagnosticHint(kind, online, message),
     };
     const newEvent: AnalyticsEvent = { id: eventId, type: 'system_error', timestamp: nowTimestamp, device: device.device, sessionId: visitor.sessionId, data: errorData };
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify([newEvent, ...getStoredEvents()].slice(0, 2000))); } catch {}
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify([newEvent, ...getStoredEvents()].slice(0, 2000))); } catch { console.warn('[VANT] Diagnostic local cache unavailable'); }
     queueDiagnostic(newEvent);
     if (typeof window !== 'undefined') setTimeout(() => window.dispatchEvent(new CustomEvent('vant_analytics_updated', { detail: newEvent })), 0);
     return eventId;
@@ -203,7 +204,7 @@ export async function updateSystemErrorStatus(logId: string, newStatus: 'open' |
       if (result.error || !result.data) return false;
     }
     const events = getStoredEvents().map(event => event.id === logId || event.data?.eventId === logId ? { ...event, data: { ...event.data, status: newStatus } } : event);
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(events)); } catch {}
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(events)); } catch { console.warn('[VANT] Diagnostic local cache unavailable'); }
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('vant_analytics_updated'));
     return true;
   } catch { return false; }
@@ -235,7 +236,7 @@ export function clearStoredAnalytics() {
         window.dispatchEvent(new CustomEvent('vant_analytics_updated'));
       }, 0);
     }
-  } catch {}
+  } catch { console.warn('[VANT] Diagnostic local cache unavailable'); }
 }
 
 export async function resetAnalyticsData(): Promise<boolean> {
@@ -249,7 +250,7 @@ export async function resetAnalyticsData(): Promise<boolean> {
       localStorage.removeItem(LAST_ACTIVITY_KEY);
       try {
         sessionStorage.clear();
-      } catch {}
+      } catch { console.warn('[VANT] Diagnostic local cache unavailable'); }
     }
     if (supabase) {
       try {
@@ -277,6 +278,7 @@ let errorTrackingInstalled = false;
 export function installErrorTracking() {
   if (errorTrackingInstalled || typeof window === 'undefined') return;
   errorTrackingInstalled = true;
+  setCaughtErrorReporter((error, operation) => trackSystemError(error instanceof SyntaxError ? 'Stored data could not be parsed' : error instanceof Error ? error.message : 'Handled operation failed', error instanceof SyntaxError ? error.stack?.split('\n').slice(1).join('\n') : error instanceof Error ? error.stack : '', { kind: 'runtime', operation }));
   window.addEventListener('error', (event) => {
     const target = event.target as HTMLElement | null;
     if (target?.tagName && ['IMG', 'SCRIPT', 'LINK'].includes(target.tagName)) {

@@ -405,6 +405,7 @@ export function resolveProductColorVariants(
 
   // 4. Build variant objects
   const rawVariants: Array<{
+    sourceId?: string;
     colorNameEn: string;
     colorNameAr: string;
     hex: string;
@@ -427,6 +428,7 @@ export function resolveProductColorVariants(
       const hasSale = typeof salePrice === 'number' && Number.isFinite(salePrice) && salePrice > 0 && salePrice < basePrice;
       const hex = typeof variant.colorHex === 'string' && /^#[a-f\d]{6}$/i.test(variant.colorHex) ? variant.colorHex : palette.hex;
       rawVariants.push({
+        sourceId: typeof variant.id === 'string' ? variant.id : undefined,
         colorNameAr: colorNameAr || palette.colorNameAr,
         colorNameEn: colorNameEn || palette.colorNameEn,
         hex, rgb: hexToRgb(hex),
@@ -536,8 +538,10 @@ export function resolveProductColorVariants(
       }`;
     }
 
-    const varId = `${product.id}_${skuAbbr}`;
-    const uniqueVarId = usedVariantIds.has(varId) ? `${varId}_${idx}` : varId;
+    const varId = rv.sourceId || `${product.id}_${skuAbbr}`;
+    let uniqueVarId = varId;
+    let suffix = idx;
+    while (usedVariantIds.has(uniqueVarId)) uniqueVarId = `${varId}_${suffix++}`;
     usedVariantIds.add(uniqueVarId);
 
     return {

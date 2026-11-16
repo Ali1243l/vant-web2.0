@@ -1,3 +1,4 @@
+import { reportCaughtError } from '../../lib/caughtErrors.ts';
 import React, { useState, useEffect } from "react";
 import {
   MessageCircle,
@@ -26,7 +27,7 @@ export const AdminWhatsAppManager: React.FC<AdminWhatsAppManagerProps> = ({ isAr
           if (Array.isArray(parsed) && parsed.length > 0) return parsed;
         }
       }
-    } catch {}
+    } catch (caught) { reportCaughtError(caught, 'AdminWhatsAppManager'); }
     const activeNum = controls['cfg_whatsapp_phone']?.actionValue || '9647000000000';
     return [
       {
@@ -88,7 +89,7 @@ export const AdminWhatsAppManager: React.FC<AdminWhatsAppManagerProps> = ({ isAr
 
       try {
         localStorage.setItem(WHATSAPP_NUMBERS_KEY, JSON.stringify(updated));
-      } catch {}
+      } catch (caught) { reportCaughtError(caught, 'AdminWhatsAppManager'); }
 
       updateControl('cfg_whatsapp_phone', { actionValue: cleanNum });
       updateControl('cfg_bespoke_phone', { actionValue: cleanNum });
@@ -109,7 +110,7 @@ export const AdminWhatsAppManager: React.FC<AdminWhatsAppManagerProps> = ({ isAr
       }));
       try {
         localStorage.setItem(WHATSAPP_NUMBERS_KEY, JSON.stringify(updated));
-      } catch {}
+      } catch (caught) { reportCaughtError(caught, 'AdminWhatsAppManager'); }
 
       const activeItem = updated.find((item) => item.id === id);
       if (activeItem) {
@@ -141,7 +142,7 @@ export const AdminWhatsAppManager: React.FC<AdminWhatsAppManagerProps> = ({ isAr
     setWhatsappNumbers(updated);
     try {
       localStorage.setItem(WHATSAPP_NUMBERS_KEY, JSON.stringify(updated));
-    } catch {}
+    } catch (caught) { reportCaughtError(caught, 'AdminWhatsAppManager'); }
 
     if (newEntry.isActive) {
       setPrimaryPhoneInput(newEntry.number);
@@ -181,7 +182,7 @@ export const AdminWhatsAppManager: React.FC<AdminWhatsAppManagerProps> = ({ isAr
 
       try {
         localStorage.setItem(WHATSAPP_NUMBERS_KEY, JSON.stringify(updated));
-      } catch {}
+      } catch (caught) { reportCaughtError(caught, 'AdminWhatsAppManager'); }
 
       const editedItem = updated.find((item) => item.id === id);
       if (editedItem?.isActive) {
@@ -212,7 +213,7 @@ export const AdminWhatsAppManager: React.FC<AdminWhatsAppManagerProps> = ({ isAr
       }
       try {
         localStorage.setItem(WHATSAPP_NUMBERS_KEY, JSON.stringify(updated));
-      } catch {}
+      } catch (caught) { reportCaughtError(caught, 'AdminWhatsAppManager'); }
       setSavedSuccessMsg(isAr ? 'تم حذف الرقم من القائمة' : 'Number removed from list');
       setPhoneSaveSuccess(true);
       setTimeout(() => setPhoneSaveSuccess(false), 3000);

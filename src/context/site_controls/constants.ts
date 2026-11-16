@@ -1,3 +1,4 @@
+import { reportCaughtError } from '../../lib/caughtErrors.ts';
 import type { ProductEnhancement } from '../siteControlsTypes';
 
 export const STORAGE_KEY = 'vant_site_controls_v2';
@@ -17,7 +18,7 @@ export function getStoredEnhancements(): Record<string, ProductEnhancement> {
   try {
     const raw = localStorage.getItem(ENHANCEMENTS_STORAGE_KEY);
     if (raw) return JSON.parse(raw);
-  } catch {}
+  } catch (caught) { reportCaughtError(caught, 'constants'); }
   return {};
 }
 
@@ -28,7 +29,7 @@ export function saveProductEnhancement(id: string | number, enhancement: Partial
     const provided = Object.fromEntries(Object.entries(enhancement).filter(([, value]) => value !== undefined));
     current[String(id)] = { ...existing, ...provided, ...(enhancement.is_offer === false ? { original_price: undefined, offer_badge_ar: undefined, offer_badge_en: undefined } : {}) };
     localStorage.setItem(ENHANCEMENTS_STORAGE_KEY, JSON.stringify(current));
-  } catch {}
+  } catch (caught) { reportCaughtError(caught, 'constants'); }
 }
 
 export function removeProductEnhancement(id: string | number) {
@@ -36,5 +37,5 @@ export function removeProductEnhancement(id: string | number) {
     const current = getStoredEnhancements();
     delete current[String(id)];
     localStorage.setItem(ENHANCEMENTS_STORAGE_KEY, JSON.stringify(current));
-  } catch {}
+  } catch (caught) { reportCaughtError(caught, 'constants'); }
 }
